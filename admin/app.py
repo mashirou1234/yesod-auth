@@ -163,6 +163,67 @@ def show_valkey_status():
         st.error(f"Failed to connect to Valkey: {e}")
 
 
+def show_audit_logs():
+    st.header("📋 Audit Logs")
+    
+    try:
+        # Stats
+        stats = db.get_audit_stats()
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Logins (24h) ✅", stats["logins_success_24h"])
+        col2.metric("Logins (24h) ❌", stats["logins_failed_24h"])
+        col3.metric("Events (24h)", stats["events_24h"])
+        
+        st.divider()
+        
+        # Tabs for different log types
+        tab1, tab2 = st.tabs(["🔐 Login History", "📝 Auth Events"])
+        
+        with tab1:
+            st.subheader("Login History")
+            
+            login_df = db.get_login_history(100)
+            if login_df.empty:
+                st.info("No login history found. Audit schema may not be initialized yet.")
+            else:
+                # Filter options
+                col1, col2 = st.columns(2)
+                with col1:
+                    show_success = st.checkbox("Show successful", value=True, key="login_success")
+                with col2:
+                    show_failed = st.checkbox("Show failed", value=True, key="login_failed")
+                
+                filtered_df = login_df.copy()
+                if not show_success:
+                    filtered_df = filtered_df[filtered_df["Success"] == False]
+                if not show_failed:
+                    filtered_df = filtered_df[filtered_df["Success"] == True]
+                
+                st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+        
+        with tab2:
+            st.subheader("Authentication Events")
+            
+            events_df = db.get_auth_events(100)
+            if events_df.empty:
+                st.info("No auth events found. Audit schema may not be initialized yet.")
+            else:
+                # Filter by event type
+                event_types = events_df["Event Type"].unique().tolist()
+                selected_types = st.multiselect(
+                    "Filter by Event Type",
+                    event_types,
+                    default=event_types,
+                )
+                
+                filtered_df = events_df[events_df["Event Type"].isin(selected_types)]
+                st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+    
+    except Exception as e:
+        st.error(f"Failed to load audit logs: {e}")
+
+
 def show_api_test():
     st.header("🧪 API Test Console")
     
@@ -528,7 +589,7 @@ def main():
     # Sidebar navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Overview", "👥 Users", "🔑 Sessions", "⚡ Valkey Status", "🗄️ DB Schema", "🧪 API Test"]
+        ["📊 Overview", "👥 Users", "🔑 Sessions", "📋 Audit Logs", "⚡ Valkey Status", "🗄️ DB Schema", "🧪 API Test"]
     )
     
     if st.sidebar.button("🔄 Refresh"):
@@ -544,6 +605,8 @@ def main():
         show_users()
     elif page == "🔑 Sessions":
         show_sessions()
+    elif page == "📋 Audit Logs":
+        show_audit_logs()
     elif page == "⚡ Valkey Status":
         show_valkey_status()
     elif page == "🗄️ DB Schema":

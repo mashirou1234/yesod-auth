@@ -248,3 +248,87 @@ def get_table_relationships() -> list:
             })
         
         return relationships
+
+
+def get_login_history(limit: int = 100) -> pd.DataFrame:
+    """Get recent login history from audit schema."""
+    with Session() as session:
+        try:
+            result = session.execute(text("""
+                SELECT 
+                    id,
+                    user_id,
+                    provider,
+                    ip_address,
+                    user_agent,
+                    success,
+                    failure_reason,
+                    created_at
+                FROM audit.login_history
+                ORDER BY created_at DESC
+                LIMIT :limit
+            """), {"limit": limit})
+            rows = result.fetchall()
+            return pd.DataFrame(rows, columns=[
+                "ID", "User ID", "Provider", "IP Address", "User Agent",
+                "Success", "Failure Reason", "Created At"
+            ])
+        except Exception:
+            return pd.DataFrame()
+
+
+def get_auth_events(limit: int = 100) -> pd.DataFrame:
+    """Get recent auth events from audit schema."""
+    with Session() as session:
+        try:
+            result = session.execute(text("""
+                SELECT 
+                    id,
+                    user_id,
+                    event_type,
+                    details,
+                    ip_address,
+                    created_at
+                FROM audit.auth_events
+                ORDER BY created_at DESC
+                LIMIT :limit
+            """), {"limit": limit})
+            rows = result.fetchall()
+            return pd.DataFrame(rows, columns=[
+                "ID", "User ID", "Event Type", "Details", "IP Address", "Created At"
+            ])
+        except Exception:
+            return pd.DataFrame()
+
+
+def get_audit_stats() -> dict:
+    """Get audit statistics."""
+    with Session() as session:
+        try:
+            # Logins last 24h
+            logins_24h = session.execute(text("""
+                SELECT 
+                    COUNT(*) FILTER (WHERE success = true) as success,
+                    COUNT(*) FILTER (WHERE success = false) as failed
+                FROM audit.login_history
+                WHERE created_at > NOW() - INTERVAL '24 hours'
+            """))
+            login_row = logins_24h.fetchone()
+            
+            # Events last 24h
+            events_24h = session.execute(text("""
+                SELECT COUNT(*) FROM audit.auth_events
+                WHERE created_at > NOW() - INTERVAL '24 hours'
+            """))
+            
+            return {
+                "logins_success_24h": login_row[0] if login_row else 0,
+                "logins_failed_24h": login_row[1] if login_row else 0,
+                "events_24h": events_24h.scalar() or 0,
+            }
+        except Exception:
+            return {
+                "logins_success_24h": 0,
+                "logins_failed_24h": 0,
+                "events_24h": 0,
+            }

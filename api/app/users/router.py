@@ -2,7 +2,7 @@
 import json
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.db.session import get_db
 from app.models import User, UserProfile, UserEmail, DeletedUser, OAuthAccount
 from app.auth.jwt import get_current_user
+from app.audit import AuditLogger, AuthEventType
 from .schemas import UserResponse, UserUpdateRequest, UserDeleteResponse, SyncFromProviderResponse
 
 settings = get_settings()
@@ -18,6 +19,13 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # Soft delete grace period (days)
 SOFT_DELETE_GRACE_DAYS = 30
+
+
+def _get_client_info(request: Request) -> tuple[str | None, str | None]:
+    """Extract device info and IP address from request."""
+    device_info = request.headers.get("User-Agent")
+    ip_address = request.client.host if request.client else None
+    return device_info, ip_address
 
 
 @router.get("/me", response_model=UserResponse)
@@ -41,11 +49,14 @@ async def get_current_user_profile(
 
 @router.patch("/me", response_model=UserResponse)
 async def update_profile(
+    request: Request,
     update_data: UserUpdateRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Update current user profile."""
+    device_info, ip_address = _get_client_info(request)
+    
     # Reload user with profile
     result = await db.execute(
         select(User)
@@ -58,6 +69,9 @@ async def update_profile(
     )
     user = result.scalar_one()
     
+    # Track changes for audit
+    changes = {}
+    
     # Update profile (create if not exists)
     if not user.profile:
         profile = UserProfile(user_id=user.id)
@@ -65,11 +79,22 @@ async def update_profile(
         user.profile = profile
     
     if update_data.display_name is not None:
+        if user.profile.display_name != update_data.display_name:
+            changes["display_name"] = {"old": user.profile.display_name, "new": update_data.display_name}
         user.profile.display_name = update_data.display_name
     if update_data.avatar_url is not None:
+        if user.profile.avatar_url != update_data.avatar_url:
+            changes["avatar_url"] = {"old": user.profile.avatar_url, "new": update_data.avatar_url}
         user.profile.avatar_url = update_data.avatar_url
     
     await db.commit()
+    
+    # Log profile update
+    if changes:
+        await AuditLogger.log_event(
+            db, AuthEventType.PROFILE_UPDATED, user.id,
+            {"changes": changes}, ip_address, device_info
+        )
     
     # Reload with all relationships
     result = await db.execute(
@@ -88,6 +113,7 @@ async def update_profile(
 
 @router.delete("/me", response_model=UserDeleteResponse)
 async def delete_account(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -99,6 +125,8 @@ async def delete_account(
     During the grace period, the user cannot log in but
     data can be recovered by an administrator.
     """
+    device_info, ip_address = _get_client_info(request)
+    
     # Reload user with all relationships
     result = await db.execute(
         select(User)
@@ -117,6 +145,13 @@ async def delete_account(
     
     # Get OAuth providers for reference
     oauth_providers = [oa.provider for oa in user.oauth_accounts]
+    
+    # Log account deletion before deleting
+    await AuditLogger.log_event(
+        db, AuthEventType.ACCOUNT_DELETED, user_id,
+        {"email": email, "oauth_providers": oauth_providers},
+        ip_address, device_info
+    )
     
     # Create soft delete record
     deleted_user = DeletedUser(
@@ -141,6 +176,7 @@ async def delete_account(
 
 @router.post("/me/sync-from-provider", response_model=SyncFromProviderResponse)
 async def sync_profile_from_provider(
+    request: Request,
     provider: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -150,6 +186,8 @@ async def sync_profile_from_provider(
     Restores display_name and avatar_url from the specified
     OAuth provider's stored information.
     """
+    device_info, ip_address = _get_client_info(request)
+    
     if provider not in ["google", "discord"]:
         raise HTTPException(status_code=400, detail="Unsupported provider")
     
@@ -198,6 +236,13 @@ async def sync_profile_from_provider(
         updated_fields.append("avatar_url")
     
     await db.commit()
+    
+    # Log profile sync
+    await AuditLogger.log_event(
+        db, AuthEventType.PROFILE_SYNCED, current_user.id,
+        {"provider": provider, "updated_fields": updated_fields},
+        ip_address, device_info
+    )
     
     return SyncFromProviderResponse(
         message=f"Profile synced from {provider}",

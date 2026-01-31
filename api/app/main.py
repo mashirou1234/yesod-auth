@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -12,6 +12,7 @@ from app.auth import router as auth_router
 from app.accounts import router as accounts_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
+from app.metrics import router as metrics_router
 from app.auth.rate_limit import limiter
 from app.valkey import close_valkey
 
@@ -52,6 +53,9 @@ app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(accounts_router, prefix=API_PREFIX)
 app.include_router(sessions_router, prefix=API_PREFIX)
 app.include_router(users_router, prefix=API_PREFIX)
+
+# Metrics at root level (for Prometheus scraping)
+app.include_router(metrics_router)
 
 
 @app.get("/")

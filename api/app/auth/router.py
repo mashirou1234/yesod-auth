@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db.session import get_db
 from app.models import User, OAuthAccount
 from app.valkey import OAuthStateStore
+from app.audit import AuditLogger, AuthEventType
 from .jwt import get_current_user
 from .tokens import (
     create_access_token,
@@ -69,9 +70,14 @@ async def google_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+    
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "google":
+        await AuditLogger.log_login(
+            db, None, "google", False, ip_address, device_info, "Invalid state"
+        )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     
     code_verifier = state_data.get("code_verifier")
@@ -80,11 +86,17 @@ async def google_callback(
     # Exchange code for tokens
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
+        await AuditLogger.log_login(
+            db, None, "google", False, ip_address, device_info, "Code exchange failed"
+        )
         raise HTTPException(status_code=400, detail="Failed to exchange code")
     
     # Get user info
     user_info = await GoogleOAuth.get_user_info(token_data["access_token"])
     if not user_info:
+        await AuditLogger.log_login(
+            db, None, "google", False, ip_address, device_info, "Failed to get user info"
+        )
         raise HTTPException(status_code=400, detail="Failed to get user info")
     
     # Find or create user
@@ -100,10 +112,16 @@ async def google_callback(
     )
     
     # Create tokens
-    device_info, ip_address = _get_client_info(request)
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(
         db, user.id, device_info, ip_address
+    )
+    
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "google", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id,
+        {"provider": "google"}, ip_address, device_info
     )
     
     # In development, redirect to debug page to show tokens
@@ -145,9 +163,14 @@ async def discord_callback(
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Discord OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+    
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "discord":
+        await AuditLogger.log_login(
+            db, None, "discord", False, ip_address, device_info, "Invalid state"
+        )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
@@ -155,11 +178,17 @@ async def discord_callback(
     # Exchange code for tokens
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri)
     if not token_data:
+        await AuditLogger.log_login(
+            db, None, "discord", False, ip_address, device_info, "Code exchange failed"
+        )
         raise HTTPException(status_code=400, detail="Failed to exchange code")
     
     # Get user info
     user_info = await DiscordOAuth.get_user_info(token_data["access_token"])
     if not user_info:
+        await AuditLogger.log_login(
+            db, None, "discord", False, ip_address, device_info, "Failed to get user info"
+        )
         raise HTTPException(status_code=400, detail="Failed to get user info")
     
     # Find or create user
@@ -175,10 +204,16 @@ async def discord_callback(
     )
     
     # Create tokens
-    device_info, ip_address = _get_client_info(request)
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(
         db, user.id, device_info, ip_address
+    )
+    
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "discord", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id,
+        {"provider": "discord"}, ip_address, device_info
     )
     
     # In development, redirect to debug page to show tokens
@@ -211,6 +246,10 @@ async def refresh_tokens(
     )
     
     if not result:
+        await AuditLogger.log_event(
+            db, AuthEventType.TOKEN_REFRESH_FAILED, None,
+            {"reason": "Invalid or expired token"}, ip_address, device_info
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired refresh token",
@@ -232,6 +271,12 @@ async def refresh_tokens(
     
     access_token = create_access_token(str(user.id), user.email)
     
+    # Log token refresh
+    await AuditLogger.log_event(
+        db, AuthEventType.TOKEN_REFRESH, user.id,
+        None, ip_address, device_info
+    )
+    
     return TokenPairResponse(
         access_token=access_token,
         refresh_token=new_refresh_token,
@@ -240,12 +285,22 @@ async def refresh_tokens(
 
 @router.post("/logout")
 async def logout(
+    request: Request,
     body: RefreshTokenRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Logout - revoke the refresh token."""
+    device_info, ip_address = _get_client_info(request)
+    
     await revoke_refresh_token(db, body.refresh_token)
+    
+    # Log logout
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGOUT, current_user.id,
+        None, ip_address, device_info
+    )
+    
     return {"message": "Logged out successfully"}
 
 
