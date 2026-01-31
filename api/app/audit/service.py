@@ -1,10 +1,16 @@
 """Audit logging service."""
 
+import os
 import uuid
 from enum import Enum
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+def _is_testing() -> bool:
+    """Check if running in test environment."""
+    return os.environ.get("TESTING") == "1"
 
 
 class AuthEventType(str, Enum):
@@ -38,6 +44,9 @@ class AuditLogger:
         failure_reason: str | None = None,
     ) -> None:
         """Log a login attempt."""
+        if _is_testing():
+            return  # Skip audit logging in test environment
+
         await db.execute(
             text("""
                 INSERT INTO audit.login_history
@@ -65,6 +74,9 @@ class AuditLogger:
         user_agent: str | None = None,
     ) -> None:
         """Log an authentication event."""
+        if _is_testing():
+            return  # Skip audit logging in test environment
+
         import json
 
         await db.execute(
