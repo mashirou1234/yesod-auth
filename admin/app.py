@@ -305,9 +305,22 @@ def show_api_test():
         st.divider()
         
         st.write("**Link New Provider**")
-        link_provider = st.selectbox("Provider to Link", ["google", "discord"], key="link_prov")
-        st.write(f"Link URL: `{API_BASE}/accounts/link/{link_provider}`")
-        st.warning("⚠️ This requires browser redirect. Open the URL manually with valid token.")
+        st.caption("Add another OAuth provider to your account")
+        
+        st.markdown(f"""
+        <div style="display: flex; gap: 20px; margin: 20px 0;">
+            <a href="{API_BASE}/accounts/link/google" target="_blank" 
+               style="background: #4285f4; color: white; padding: 12px 24px; 
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                🔵 Link Google
+            </a>
+            <a href="{API_BASE}/accounts/link/discord" target="_blank"
+               style="background: #5865f2; color: white; padding: 12px 24px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                🟣 Link Discord
+            </a>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.divider()
         
