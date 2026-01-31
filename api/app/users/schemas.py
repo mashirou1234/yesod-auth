@@ -40,3 +40,12 @@ class UserDeleteResponse(BaseModel):
     message: str
     deleted_user_id: uuid.UUID
     deleted_email: str
+
+
+class SyncFromProviderResponse(BaseModel):
+    """Response for sync from provider."""
+    message: str
+    provider: str
+    updated_fields: list[str]
+    display_name: Optional[str] = None
+    avatar_url: Optional[str] = None

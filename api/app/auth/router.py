@@ -334,17 +334,15 @@ async def _find_or_create_user(
     oauth_account = result.scalar_one_or_none()
     
     if oauth_account:
-        # Update tokens
+        # Update tokens and provider info
         oauth_account.access_token = access_token
         oauth_account.refresh_token = refresh_token
+        oauth_account.provider_display_name = display_name
+        oauth_account.provider_avatar_url = avatar_url
+        oauth_account.provider_email = email
         
-        # Update user profile
+        # Don't auto-update user profile - let user control their profile
         user = oauth_account.user
-        if user.profile:
-            if display_name:
-                user.profile.display_name = display_name
-            if avatar_url:
-                user.profile.avatar_url = avatar_url
         
         await db.commit()
         return user
@@ -369,16 +367,19 @@ async def _find_or_create_user(
             user_id=user.id,
             provider=provider,
             provider_user_id=provider_user_id,
+            provider_display_name=display_name,
+            provider_avatar_url=avatar_url,
+            provider_email=email,
             access_token=access_token,
             refresh_token=refresh_token,
         )
         db.add(oauth_account)
         
-        # Update user profile if needed
+        # Update user profile only if empty
         if user.profile:
             if display_name and not user.profile.display_name:
                 user.profile.display_name = display_name
-            if avatar_url:
+            if avatar_url and not user.profile.avatar_url:
                 user.profile.avatar_url = avatar_url
         
         await db.commit()
@@ -389,7 +390,7 @@ async def _find_or_create_user(
     db.add(user)
     await db.flush()
     
-    # Create profile
+    # Create profile with provider info
     profile = UserProfile(
         user_id=user.id,
         display_name=display_name,
@@ -405,11 +406,14 @@ async def _find_or_create_user(
     )
     db.add(user_email)
     
-    # Create OAuth account
+    # Create OAuth account with provider info
     oauth_account = OAuthAccount(
         user_id=user.id,
         provider=provider,
         provider_user_id=provider_user_id,
+        provider_display_name=display_name,
+        provider_avatar_url=avatar_url,
+        provider_email=email,
         access_token=access_token,
         refresh_token=refresh_token,
     )

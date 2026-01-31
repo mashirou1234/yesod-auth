@@ -9,9 +9,9 @@ from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.db.session import get_db
-from app.models import User, UserProfile, UserEmail, DeletedUser
+from app.models import User, UserProfile, UserEmail, DeletedUser, OAuthAccount
 from app.auth.jwt import get_current_user
-from .schemas import UserResponse, UserUpdateRequest, UserDeleteResponse
+from .schemas import UserResponse, UserUpdateRequest, UserDeleteResponse, SyncFromProviderResponse
 
 settings = get_settings()
 router = APIRouter(prefix="/users", tags=["users"])
@@ -136,4 +136,73 @@ async def delete_account(
         message=f"Account scheduled for deletion. Will be permanently removed after {SOFT_DELETE_GRACE_DAYS} days.",
         deleted_user_id=user_id,
         deleted_email=email,
+    )
+
+
+@router.post("/me/sync-from-provider", response_model=SyncFromProviderResponse)
+async def sync_profile_from_provider(
+    provider: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Sync user profile from OAuth provider.
+    
+    Restores display_name and avatar_url from the specified
+    OAuth provider's stored information.
+    """
+    if provider not in ["google", "discord"]:
+        raise HTTPException(status_code=400, detail="Unsupported provider")
+    
+    # Find OAuth account for this provider
+    result = await db.execute(
+        select(OAuthAccount).where(
+            OAuthAccount.user_id == current_user.id,
+            OAuthAccount.provider == provider,
+        )
+    )
+    oauth_account = result.scalar_one_or_none()
+    
+    if not oauth_account:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No {provider} account linked"
+        )
+    
+    if not oauth_account.provider_display_name and not oauth_account.provider_avatar_url:
+        raise HTTPException(
+            status_code=400,
+            detail=f"No provider info stored for {provider}. Try re-logging in with {provider}."
+        )
+    
+    # Reload user with profile
+    result = await db.execute(
+        select(User)
+        .options(selectinload(User.profile))
+        .where(User.id == current_user.id)
+    )
+    user = result.scalar_one()
+    
+    # Create profile if not exists
+    if not user.profile:
+        profile = UserProfile(user_id=user.id)
+        db.add(profile)
+        user.profile = profile
+    
+    # Sync from provider
+    updated_fields = []
+    if oauth_account.provider_display_name:
+        user.profile.display_name = oauth_account.provider_display_name
+        updated_fields.append("display_name")
+    if oauth_account.provider_avatar_url:
+        user.profile.avatar_url = oauth_account.provider_avatar_url
+        updated_fields.append("avatar_url")
+    
+    await db.commit()
+    
+    return SyncFromProviderResponse(
+        message=f"Profile synced from {provider}",
+        provider=provider,
+        updated_fields=updated_fields,
+        display_name=oauth_account.provider_display_name,
+        avatar_url=oauth_account.provider_avatar_url,
     )

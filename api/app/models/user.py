@@ -192,6 +192,20 @@ class OAuthAccount(Base):
         String(255),
         nullable=False,
     )
+    # Provider profile info (for recovery)
+    provider_display_name: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    provider_avatar_url: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    provider_email: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+    )
+    # OAuth tokens
     access_token: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,

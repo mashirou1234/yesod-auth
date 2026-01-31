@@ -271,6 +271,24 @@ def show_api_test():
                 st.write(f"Status: {resp.status_code}")
             except Exception as e:
                 st.error(f"Error: {e}")
+        
+        st.divider()
+        
+        st.write("**Sync from OAuth Provider**")
+        st.caption("Restore display name and avatar from your linked OAuth account")
+        sync_provider = st.selectbox("Provider", ["google", "discord"], key="sync_prov")
+        
+        if st.button(f"POST /users/me/sync-from-provider?provider={sync_provider}", key="sync_profile"):
+            try:
+                import requests
+                resp = requests.post(
+                    f"{API_INTERNAL}/users/me/sync-from-provider?provider={sync_provider}",
+                    headers=headers,
+                )
+                st.json(resp.json())
+                st.write(f"Status: {resp.status_code}")
+            except Exception as e:
+                st.error(f"Error: {e}")
     
     with tab2:
         st.subheader("OAuth Account Linking")
