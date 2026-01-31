@@ -69,6 +69,8 @@ docker compose up -d
 
 ## API Endpoints
 
+Base URL: `http://localhost:8000/api/v1`
+
 ### Authentication
 
 | Method | Endpoint | Description |
@@ -77,8 +79,33 @@ docker compose up -d
 | GET | `/auth/google/callback` | Google OAuth callback |
 | GET | `/auth/discord` | Start Discord OAuth flow |
 | GET | `/auth/discord/callback` | Discord OAuth callback |
-| GET | `/auth/me` | Get current user info |
+| POST | `/auth/refresh` | Refresh access token |
 | POST | `/auth/logout` | Logout (invalidate token) |
+
+### Users
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users/me` | Get current user info |
+| PUT | `/users/me` | Update profile |
+| DELETE | `/users/me` | Delete account (soft delete) |
+| POST | `/users/me/sync-from-provider` | Sync profile from OAuth provider |
+
+### Accounts
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/accounts/me` | Get linked OAuth accounts |
+| GET | `/accounts/me/link/{provider}` | Link additional OAuth provider |
+| DELETE | `/accounts/me/{provider}` | Unlink OAuth provider |
+
+### Sessions
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/sessions/me` | Get active sessions |
+| DELETE | `/sessions/me/{session_id}` | Revoke specific session |
+| DELETE | `/sessions/me` | Revoke all sessions |
 
 ### Response Format
 
@@ -114,14 +141,14 @@ docker compose up -d
 
 ```javascript
 // Redirect to OAuth login
-window.location.href = 'http://localhost:8000/auth/google';
+window.location.href = 'http://localhost:8000/api/v1/auth/google';
 
 // After callback, store the token
 const token = new URLSearchParams(window.location.search).get('token');
 localStorage.setItem('auth_token', token);
 
 // Use token for API requests
-fetch('http://localhost:8000/auth/me', {
+fetch('http://localhost:8000/api/v1/users/me', {
   headers: {
     'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
   }
@@ -137,7 +164,7 @@ export function useAuth() {
   const user = ref(null);
 
   const login = (provider: 'google' | 'discord') => {
-    window.location.href = `http://localhost:8000/auth/${provider}`;
+    window.location.href = `http://localhost:8000/api/v1/auth/${provider}`;
   };
 
   const logout = () => {
@@ -148,7 +175,7 @@ export function useAuth() {
 
   const fetchUser = async () => {
     if (!token.value) return;
-    const res = await fetch('http://localhost:8000/auth/me', {
+    const res = await fetch('http://localhost:8000/api/v1/users/me', {
       headers: { 'Authorization': `Bearer ${token.value}` }
     });
     user.value = await res.json();
@@ -178,6 +205,62 @@ export function useAuth() {
 | `secrets/discord_client_id.txt` | Discord OAuth Client ID |
 | `secrets/discord_client_secret.txt` | Discord OAuth Client Secret |
 | `secrets/jwt_secret.txt` | JWT signing secret |
+
+## Admin Panel
+
+管理画面は http://localhost:8501 でアクセスできます。
+
+### Features
+- **Users**: ユーザー一覧・検索
+- **Sessions**: アクティブセッション管理
+- **DB Schema**: ER図・テーブル詳細・統計
+- **Audit Logs**: ログイン履歴・認証イベント
+- **API Test**: APIエンドポイントのテスト
+
+### Default Credentials
+```
+Username: admin
+Password: (secrets/admin_password.txt の内容)
+```
+
+## Monitoring
+
+### Prometheus Metrics
+
+`/api/v1/metrics` エンドポイントでPrometheus形式のメトリクスを取得できます。
+
+```bash
+curl http://localhost:8000/api/v1/metrics
+```
+
+### Audit Logs
+
+監査ログは `audit` スキーマに保存されます（36ヶ月保持、月次パーティション）。
+
+- `audit.login_history`: ログイン試行履歴
+- `audit.auth_events`: 認証イベント（ログイン、ログアウト、プロフィール更新等）
+
+## Development
+
+### Seed Test Data
+
+監査ログのテストデータを投入する場合：
+
+```bash
+docker exec -i yesod-db psql -U yesod_user -d yesod < scripts/seed_audit_data.sql
+```
+
+これにより `login_history` と `auth_events` に各10万件のテストデータが投入されます。
+
+### Database Migrations
+
+```bash
+# マイグレーション実行（コンテナ起動時に自動実行）
+docker exec yesod-api alembic upgrade head
+
+# マイグレーション状態確認
+docker exec yesod-api alembic current
+```
 
 ## License
 
