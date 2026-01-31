@@ -56,6 +56,24 @@ services:
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
+  admin:
+    build: ./admin
+    container_name: yesod-admin
+    ports:
+      - "8501:8501"
+    environment:
+      - DATABASE_URL=postgresql://yesod_user:yesod_password@db:5432/yesod
+      - VALKEY_URL=redis://valkey:6379/0
+      - ADMIN_USER=admin
+      - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
+    secrets:
+      - admin_password
+    depends_on:
+      db:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+
 secrets:
   google_client_id:
     file: ./secrets/google_client_id.txt
@@ -67,6 +85,8 @@ secrets:
     file: ./secrets/discord_client_secret.txt
   jwt_secret:
     file: ./secrets/jwt_secret.txt
+  admin_password:
+    file: ./secrets/admin_password.txt
 
 volumes:
   postgres_data:
