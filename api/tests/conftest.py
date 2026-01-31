@@ -69,14 +69,18 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides[get_db] = override_get_db
 
-    # Mock Valkey operations
-    with patch("app.valkey.get_valkey_client") as mock_valkey:
-        mock_client = AsyncMock()
-        mock_client.get.return_value = None
-        mock_client.set.return_value = True
-        mock_client.delete.return_value = True
-        mock_valkey.return_value = mock_client
+    # Mock Valkey client
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_redis.setex.return_value = True
+    mock_redis.delete.return_value = True
+    mock_redis.exists.return_value = 0
+    mock_redis.pipeline.return_value = AsyncMock(execute=AsyncMock(return_value=[None, 0]))
 
+    async def mock_get_valkey():
+        return mock_redis
+
+    with patch("app.valkey.get_valkey", mock_get_valkey):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             yield ac
