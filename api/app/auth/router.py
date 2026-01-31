@@ -359,6 +359,108 @@ async def debug_tokens(access_token: str, refresh_token: str):
     return HTMLResponse(content=html)
 
 
+# =============================================================================
+# Mock OAuth Endpoints (Development Only)
+# =============================================================================
+
+@router.get("/mock/login", include_in_schema=True, tags=["mock-oauth"])
+async def mock_login(
+    request: Request,
+    user: str = "alice",
+    provider: str = "google",
+    db: AsyncSession = Depends(get_db),
+):
+    """Mock OAuth login for development/testing.
+    
+    Bypasses real OAuth flow and creates a user directly.
+    Only available when MOCK_OAUTH_ENABLED=1.
+    
+    Available mock users: alice, bob, charlie
+    Available providers: google, discord
+    """
+    from .mock_oauth import is_mock_oauth_enabled, get_mock_user
+    
+    if not settings.MOCK_OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=403,
+            detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
+        )
+    
+    if provider not in ["google", "discord"]:
+        raise HTTPException(status_code=400, detail="Provider must be 'google' or 'discord'")
+    
+    device_info, ip_address = _get_client_info(request)
+    mock_user = get_mock_user(user)
+    
+    # Get user info in provider format
+    if provider == "google":
+        user_info = mock_user.to_google_format()
+        display_name = user_info.get("name")
+        avatar_url = user_info.get("picture")
+    else:
+        user_info = mock_user.to_discord_format()
+        display_name = user_info.get("username")
+        avatar_url = user_info.get("avatar_url")
+    
+    # Find or create user
+    db_user = await _find_or_create_user(
+        db=db,
+        provider=provider,
+        provider_user_id=user_info["id"],
+        email=user_info["email"],
+        display_name=display_name,
+        avatar_url=avatar_url,
+        access_token="mock-access-token",
+        refresh_token="mock-refresh-token",
+    )
+    
+    # Create tokens
+    access_token = create_access_token(str(db_user.id), db_user.email)
+    refresh_token = await create_refresh_token(
+        db, db_user.id, device_info, ip_address
+    )
+    
+    # Log mock login
+    await AuditLogger.log_login(db, db_user.id, f"mock-{provider}", True, ip_address, device_info)
+    
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+        "mock_user": user,
+        "provider": provider,
+        "user_id": str(db_user.id),
+        "email": db_user.email,
+    }
+
+
+@router.get("/mock/users", include_in_schema=True, tags=["mock-oauth"])
+async def list_mock_users():
+    """List available mock users for testing.
+    
+    Only available when MOCK_OAUTH_ENABLED=1.
+    """
+    from .mock_oauth import MOCK_USERS
+    
+    if not settings.MOCK_OAUTH_ENABLED:
+        raise HTTPException(
+            status_code=403,
+            detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
+        )
+    
+    return {
+        "mock_users": {
+            name: {
+                "email": user.email,
+                "name": user.name,
+                "picture": user.picture,
+            }
+            for name, user in MOCK_USERS.items()
+        },
+        "usage": "GET /api/v1/auth/mock/login?user=alice&provider=google",
+    }
+
+
 async def _find_or_create_user(
     db: AsyncSession,
     provider: str,

@@ -1,44 +1,49 @@
 """Auth schemas."""
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional
 import uuid
 
 
 class UserResponse(BaseModel):
     """User response schema."""
-    id: uuid.UUID
-    email: str
-    display_name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    created_at: datetime
+    id: uuid.UUID = Field(..., description="Unique user identifier")
+    email: str = Field(..., description="User's primary email address")
+    display_name: Optional[str] = Field(None, description="User's display name")
+    avatar_url: Optional[str] = Field(None, description="URL to user's avatar image")
+    created_at: datetime = Field(..., description="Account creation timestamp")
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class OAuthAccountInfo(BaseModel):
     """OAuth account info."""
-    provider: str
-    provider_user_id: str
-    created_at: datetime
+    provider: str = Field(..., description="OAuth provider name (google, discord)")
+    provider_user_id: str = Field(..., description="User ID from the OAuth provider")
+    created_at: datetime = Field(..., description="When the account was linked")
     
-    class Config:
-        from_attributes = True
+    model_config = {"from_attributes": True}
 
 
 class UserWithAccountsResponse(UserResponse):
     """User with linked OAuth accounts."""
-    oauth_accounts: list[OAuthAccountInfo] = []
+    oauth_accounts: list[OAuthAccountInfo] = Field(
+        default_factory=list,
+        description="List of linked OAuth accounts"
+    )
 
 
 class TokenPairResponse(BaseModel):
-    """Access and refresh token pair."""
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+    """Access and refresh token pair response.
+    
+    The access token is short-lived (default 15 minutes) and used for API requests.
+    The refresh token is long-lived (default 7 days) and used to obtain new access tokens.
+    """
+    access_token: str = Field(..., description="JWT access token for API authentication")
+    refresh_token: str = Field(..., description="Refresh token for obtaining new access tokens")
+    token_type: str = Field(default="bearer", description="Token type (always 'bearer')")
 
 
 class RefreshTokenRequest(BaseModel):
     """Request body for refresh token operations."""
-    refresh_token: str
+    refresh_token: str = Field(..., description="The refresh token to use or revoke")

@@ -242,6 +242,55 @@ curl http://localhost:8000/api/v1/metrics
 
 ## Development
 
+### Mock OAuth (Development Mode)
+
+実際のOAuthプロバイダーなしでテストするには、`MOCK_OAUTH_ENABLED=1` を設定します。
+
+```bash
+# docker-compose.ymlに追加
+environment:
+  - MOCK_OAUTH_ENABLED=1
+```
+
+利用可能なモックユーザー:
+- `alice` - alice@example.com
+- `bob` - bob@example.com  
+- `charlie` - charlie@example.com
+
+```bash
+# モックログイン
+curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
+
+# 利用可能なモックユーザー一覧
+curl "http://localhost:8000/api/v1/auth/mock/users"
+```
+
+### Running Tests
+
+```bash
+cd api
+pip install -r requirements.txt
+pytest
+```
+
+### Generate TypeScript Types
+
+OpenAPIスキーマからTypeScript型定義を生成:
+
+```bash
+# 前提: npm install -g openapi-typescript
+./scripts/generate-types.sh ./frontend/src/types
+```
+
+生成された型の使用例:
+
+```typescript
+import type { paths, components } from "./types/api";
+
+type User = components["schemas"]["UserResponse"];
+type TokenPair = components["schemas"]["TokenPairResponse"];
+```
+
 ### Seed Test Data
 
 監査ログのテストデータを投入する場合：

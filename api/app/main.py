@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.openapi.utils import get_openapi
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -29,9 +30,41 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="YESOD Auth",
-    description="OAuth authentication API with Google & Discord support",
+    description="""
+## OAuth Authentication API
+
+YESOD Auth provides a complete OAuth 2.0 authentication solution with support for multiple providers.
+
+### Features
+
+- 🔑 **OAuth 2.0** - Google and Discord authentication with PKCE support
+- 🔄 **Token Rotation** - Secure refresh token rotation
+- 👤 **User Management** - Profile updates, account linking
+- 📊 **Audit Logging** - Complete authentication event tracking
+- 🛡️ **Rate Limiting** - Protection against abuse
+
+### Authentication Flow
+
+1. Redirect user to `/api/v1/auth/{provider}` to start OAuth flow
+2. User authenticates with the provider
+3. Callback returns `access_token` and `refresh_token`
+4. Use `access_token` in `Authorization: Bearer <token>` header
+5. Refresh tokens via `/api/v1/auth/refresh` when expired
+
+### Development Mode
+
+Set `MOCK_OAUTH_ENABLED=1` to enable mock OAuth endpoints for testing without real OAuth providers.
+    """,
     version="2.0.0",
     lifespan=lifespan,
+    contact={
+        "name": "YESOD Auth",
+        "url": "https://github.com/mashirou1234/yesod-auth",
+    },
+    license_info={
+        "name": "MIT",
+        "url": "https://opensource.org/licenses/MIT",
+    },
 )
 
 # Rate limiter

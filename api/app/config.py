@@ -15,6 +15,10 @@ def read_secret(name: str, default: str = "") -> str:
 class Settings:
     """Application settings."""
     
+    # Environment
+    TESTING: bool = os.getenv("TESTING", "").lower() in ("1", "true", "yes")
+    MOCK_OAUTH_ENABLED: bool = os.getenv("MOCK_OAUTH_ENABLED", "").lower() in ("1", "true", "yes")
+    
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
