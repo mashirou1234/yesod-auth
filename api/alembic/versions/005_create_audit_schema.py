@@ -150,18 +150,31 @@ def upgrade() -> None:
     """)
 
     # Schedule pg_cron job (runs daily at 2:00 AM)
+    # Skip if pg_cron extension is not available (e.g., CI environment)
     op.execute("""
-        SELECT cron.schedule(
-            'audit_partition_management',
-            '0 2 * * *',
-            'SELECT audit.manage_partitions()'
-        )
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+                PERFORM cron.schedule(
+                    'audit_partition_management',
+                    '0 2 * * *',
+                    'SELECT audit.manage_partitions()'
+                );
+            END IF;
+        END $$;
     """)
 
 
 def downgrade() -> None:
-    # Remove pg_cron job
-    op.execute("SELECT cron.unschedule('audit_partition_management')")
+    # Remove pg_cron job (if pg_cron is available)
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') THEN
+                PERFORM cron.unschedule('audit_partition_management');
+            END IF;
+        END $$;
+    """)
 
     # Drop function
     op.execute("DROP FUNCTION IF EXISTS audit.manage_partitions()")
