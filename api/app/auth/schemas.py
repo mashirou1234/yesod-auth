@@ -17,13 +17,6 @@ class UserResponse(BaseModel):
         from_attributes = True
 
 
-class TokenResponse(BaseModel):
-    """Token response schema."""
-    access_token: str
-    token_type: str = "bearer"
-    user: UserResponse
-
-
 class OAuthAccountInfo(BaseModel):
     """OAuth account info."""
     provider: str
@@ -37,3 +30,15 @@ class OAuthAccountInfo(BaseModel):
 class UserWithAccountsResponse(UserResponse):
     """User with linked OAuth accounts."""
     oauth_accounts: list[OAuthAccountInfo] = []
+
+
+class TokenPairResponse(BaseModel):
+    """Access and refresh token pair."""
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    """Request body for refresh token operations."""
+    refresh_token: str

@@ -47,6 +47,11 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    refresh_tokens: Mapped[list["RefreshToken"]] = relationship(
+        "RefreshToken",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
 
 class OAuthAccount(Base):
@@ -90,3 +95,7 @@ class OAuthAccount(Base):
         "User",
         back_populates="oauth_accounts",
     )
+
+
+# Import for type hints
+from app.models.refresh_token import RefreshToken

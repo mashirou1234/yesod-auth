@@ -5,12 +5,10 @@ from functools import lru_cache
 
 def read_secret(name: str, default: str = "") -> str:
     """Read secret from Docker secrets or environment variable."""
-    # Try Docker secrets first
     secret_path = f"/run/secrets/{name}"
     if os.path.exists(secret_path):
         with open(secret_path, "r") as f:
             return f.read().strip()
-    # Fall back to environment variable
     return os.getenv(name.upper(), default)
 
 
@@ -23,10 +21,20 @@ class Settings:
         "postgresql+asyncpg://yesod_user:yesod_password@localhost:5432/yesod"
     )
     
-    # JWT
+    # Valkey (Redis-compatible)
+    VALKEY_URL: str = os.getenv("VALKEY_URL", "redis://localhost:6379/0")
+    
+    # JWT / Tokens
     JWT_SECRET: str = read_secret("jwt_secret", "change-me-in-production")
     JWT_ALGORITHM: str = "HS256"
-    JWT_LIFETIME_SECONDS: int = int(os.getenv("JWT_LIFETIME_SECONDS", "86400"))
+    ACCESS_TOKEN_LIFETIME_SECONDS: int = int(os.getenv("ACCESS_TOKEN_LIFETIME_SECONDS", "900"))
+    REFRESH_TOKEN_LIFETIME_DAYS: int = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7"))
+    
+    # OAuth State TTL (seconds)
+    OAUTH_STATE_TTL: int = int(os.getenv("OAUTH_STATE_TTL", "300"))
+    
+    # Rate Limiting
+    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "20"))
     
     # OAuth - Google
     GOOGLE_CLIENT_ID: str = read_secret("google_client_id", "")

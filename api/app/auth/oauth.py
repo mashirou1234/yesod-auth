@@ -7,15 +7,20 @@ settings = get_settings()
 
 
 class GoogleOAuth:
-    """Google OAuth implementation."""
+    """Google OAuth implementation with PKCE support."""
     
     AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
     TOKEN_URL = "https://oauth2.googleapis.com/token"
     USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
     
     @classmethod
-    def get_authorize_url(cls, redirect_uri: str, state: str) -> str:
-        """Get the Google OAuth authorization URL."""
+    def get_authorize_url(
+        cls,
+        redirect_uri: str,
+        state: str,
+        code_challenge: Optional[str] = None,
+    ) -> str:
+        """Get the Google OAuth authorization URL with optional PKCE."""
         params = {
             "client_id": settings.GOOGLE_CLIENT_ID,
             "redirect_uri": redirect_uri,
@@ -25,23 +30,33 @@ class GoogleOAuth:
             "access_type": "offline",
             "prompt": "consent",
         }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
+        
         query = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{cls.AUTHORIZE_URL}?{query}"
     
     @classmethod
-    async def exchange_code(cls, code: str, redirect_uri: str) -> Optional[dict]:
+    async def exchange_code(
+        cls,
+        code: str,
+        redirect_uri: str,
+        code_verifier: Optional[str] = None,
+    ) -> Optional[dict]:
         """Exchange authorization code for tokens."""
+        data = {
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
+        
         async with httpx.AsyncClient() as client:
-            response = await client.post(
-                cls.TOKEN_URL,
-                data={
-                    "client_id": settings.GOOGLE_CLIENT_ID,
-                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
-                    "code": code,
-                    "grant_type": "authorization_code",
-                    "redirect_uri": redirect_uri,
-                },
-            )
+            response = await client.post(cls.TOKEN_URL, data=data)
             if response.status_code == 200:
                 return response.json()
             return None
@@ -110,6 +125,9 @@ class DiscordOAuth:
                 data = response.json()
                 # Add avatar URL
                 if data.get("avatar"):
-                    data["avatar_url"] = f"https://cdn.discordapp.com/avatars/{data['id']}/{data['avatar']}.png"
+                    data["avatar_url"] = (
+                        f"https://cdn.discordapp.com/avatars/"
+                        f"{data['id']}/{data['avatar']}.png"
+                    )
                 return data
             return None

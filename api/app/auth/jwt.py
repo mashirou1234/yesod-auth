@@ -1,45 +1,19 @@
-"""JWT token handling."""
-from datetime import datetime, timedelta, timezone
+"""JWT token handling and user authentication."""
 from typing import Optional
 import uuid
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.db.session import get_db
 from app.models import User
+from .tokens import decode_access_token
 
 settings = get_settings()
 security = HTTPBearer()
-
-
-def create_access_token(user_id: str, email: str) -> str:
-    """Create a JWT access token."""
-    expire = datetime.now(timezone.utc) + timedelta(seconds=settings.JWT_LIFETIME_SECONDS)
-    payload = {
-        "sub": user_id,
-        "email": email,
-        "exp": expire,
-        "iat": datetime.now(timezone.utc),
-    }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
-
-
-def verify_token(token: str) -> Optional[dict]:
-    """Verify and decode a JWT token."""
-    try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET,
-            algorithms=[settings.JWT_ALGORITHM]
-        )
-        return payload
-    except JWTError:
-        return None
 
 
 async def get_current_user(
@@ -48,7 +22,7 @@ async def get_current_user(
 ) -> User:
     """Get the current authenticated user."""
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = decode_access_token(token)
     
     if payload is None:
         raise HTTPException(
