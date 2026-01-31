@@ -59,10 +59,10 @@ openssl rand -hex 32 > secrets/jwt_secret.txt
 
 ```bash
 # API + DB + Valkey (開発用)
-docker compose up -d
+docker compose --profile default up -d
 
 # Admin画面も含めて起動
-docker compose --profile full up -d
+docker compose --profile default --profile full up -d
 
 # CI用（軽量構成）
 docker compose --profile ci up -d

@@ -1,9 +1,10 @@
 services:
   # =============================================================================
-  # Core Services (always started)
+  # Core Services (default profile)
   # =============================================================================
   db:
     build: ./db
+    profiles: ["default"]
     container_name: yesod-db
     ports:
       - "5432:5432"
@@ -24,22 +25,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # CI用の軽量DB（pg_cronなし）
-  db-ci:
-    image: postgres:16-alpine
-    profiles: ["ci"]
-    ports:
-      - "5432:5432"
-    environment:
-      - POSTGRES_DB=yesod
-      - POSTGRES_USER=yesod_user
-      - POSTGRES_PASSWORD=yesod_password
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U yesod_user -d yesod"]
-      interval: 5s
-      timeout: 3s
-      retries: 3
-
   valkey:
     image: valkey/valkey:alpine
     container_name: yesod-valkey
@@ -55,6 +40,7 @@ services:
 
   api:
     build: ./api
+    profiles: ["default"]
     container_name: yesod-api
     ports:
       - "8000:8000"
@@ -80,7 +66,24 @@ services:
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
-  # CI用API（軽量DB使用）
+  # =============================================================================
+  # CI Profile (lightweight)
+  # =============================================================================
+  db-ci:
+    image: postgres:16-alpine
+    profiles: ["ci"]
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=yesod
+      - POSTGRES_USER=yesod_user
+      - POSTGRES_PASSWORD=yesod_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yesod_user -d yesod"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+
   api-ci:
     build: ./api
     profiles: ["ci"]
@@ -106,7 +109,7 @@ services:
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
   # =============================================================================
-  # Full Profile (development tools)
+  # Full Profile (includes admin)
   # =============================================================================
   admin:
     build: ./admin
