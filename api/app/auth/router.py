@@ -18,20 +18,20 @@ from .tokens import (
     create_refresh_token,
     rotate_refresh_token,
     revoke_refresh_token,
-    revoke_all_user_tokens,
 )
 from .oauth import GoogleOAuth, DiscordOAuth
 from .pkce import generate_code_verifier, generate_code_challenge
 from .rate_limit import limiter
 from .schemas import (
-    UserResponse,
-    UserWithAccountsResponse,
     TokenPairResponse,
     RefreshTokenRequest,
 )
 
 settings = get_settings()
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# API prefix for building URLs
+API_V1_PREFIX = "/api/v1"
 
 
 def _get_client_info(request: Request) -> tuple[Optional[str], Optional[str]]:
@@ -52,7 +52,7 @@ async def google_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "google", code_verifier)
     
-    redirect_uri = f"{settings.API_URL}/auth/google/callback"
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
     authorize_url = GoogleOAuth.get_authorize_url(
         redirect_uri, state, code_challenge
     )
@@ -75,7 +75,7 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}/auth/google/callback"
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
     
     # Exchange code for tokens
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -106,7 +106,14 @@ async def google_callback(
         db, user.id, device_info, ip_address
     )
     
-    # Redirect to frontend with tokens
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+    
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
         f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -123,7 +130,7 @@ async def discord_login(request: Request):
     # Store state in Valkey (Discord doesn't support PKCE)
     await OAuthStateStore.save(state, "discord")
     
-    redirect_uri = f"{settings.API_URL}/auth/discord/callback"
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
     authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state)
     
     return RedirectResponse(url=authorize_url)
@@ -143,7 +150,7 @@ async def discord_callback(
     if not state_data or state_data.get("provider") != "discord":
         raise HTTPException(status_code=400, detail="Invalid or expired state")
     
-    redirect_uri = f"{settings.API_URL}/auth/discord/callback"
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
     
     # Exchange code for tokens
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri)
@@ -174,7 +181,14 @@ async def discord_callback(
         db, user.id, device_info, ip_address
     )
     
-    # Redirect to frontend with tokens
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+    
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
         f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -224,21 +238,6 @@ async def refresh_tokens(
     )
 
 
-@router.get("/me", response_model=UserWithAccountsResponse)
-async def get_me(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Get current user info."""
-    result = await db.execute(
-        select(User)
-        .options(selectinload(User.oauth_accounts))
-        .where(User.id == current_user.id)
-    )
-    user = result.scalar_one()
-    return user
-
-
 @router.post("/logout")
 async def logout(
     body: RefreshTokenRequest,
@@ -250,14 +249,59 @@ async def logout(
     return {"message": "Logged out successfully"}
 
 
-@router.post("/logout/all")
-async def logout_all(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    """Logout from all devices - revoke all refresh tokens."""
-    count = await revoke_all_user_tokens(db, current_user.id)
-    return {"message": f"Logged out from {count} sessions"}
+@router.get("/debug-tokens")
+async def debug_tokens(access_token: str, refresh_token: str):
+    """Debug endpoint to display tokens after OAuth login.
+    
+    Only use in development!
+    """
+    from fastapi.responses import HTMLResponse
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>YESOD Auth - Login Success</title>
+        <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                   max-width: 800px; margin: 50px auto; padding: 20px; }}
+            h1 {{ color: #2563eb; }}
+            .token-box {{ background: #f3f4f6; padding: 15px; border-radius: 8px; 
+                         margin: 10px 0; word-break: break-all; font-family: monospace; }}
+            .label {{ font-weight: bold; color: #374151; margin-bottom: 5px; }}
+            button {{ background: #2563eb; color: white; border: none; padding: 10px 20px;
+                     border-radius: 5px; cursor: pointer; margin: 5px; }}
+            button:hover {{ background: #1d4ed8; }}
+            .success {{ color: #059669; }}
+        </style>
+    </head>
+    <body>
+        <h1>✅ Login Successful!</h1>
+        <p>Copy these tokens to use in the Admin API Test console:</p>
+        
+        <div class="label">Access Token:</div>
+        <div class="token-box" id="access">{access_token}</div>
+        <button onclick="copyToken('access')">📋 Copy Access Token</button>
+        
+        <div class="label" style="margin-top: 20px;">Refresh Token:</div>
+        <div class="token-box" id="refresh">{refresh_token}</div>
+        <button onclick="copyToken('refresh')">📋 Copy Refresh Token</button>
+        
+        <p style="margin-top: 30px;">
+            <a href="http://localhost:8501">← Back to Admin Dashboard</a>
+        </p>
+        
+        <script>
+            function copyToken(id) {{
+                const text = document.getElementById(id).innerText;
+                navigator.clipboard.writeText(text);
+                alert('Copied to clipboard!');
+            }}
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
 
 
 async def _find_or_create_user(
@@ -271,11 +315,17 @@ async def _find_or_create_user(
     refresh_token: str | None,
 ) -> User:
     """Find existing user or create new one."""
+    from app.models import UserProfile, UserEmail
     
     # First, check if OAuth account exists
     result = await db.execute(
         select(OAuthAccount)
-        .options(selectinload(OAuthAccount.user))
+        .options(
+            selectinload(OAuthAccount.user)
+            .selectinload(User.profile),
+            selectinload(OAuthAccount.user)
+            .selectinload(User.emails),
+        )
         .where(
             OAuthAccount.provider == provider,
             OAuthAccount.provider_user_id == provider_user_id,
@@ -288,23 +338,32 @@ async def _find_or_create_user(
         oauth_account.access_token = access_token
         oauth_account.refresh_token = refresh_token
         
-        # Update user info
+        # Update user profile
         user = oauth_account.user
-        if display_name:
-            user.display_name = display_name
-        if avatar_url:
-            user.avatar_url = avatar_url
+        if user.profile:
+            if display_name:
+                user.profile.display_name = display_name
+            if avatar_url:
+                user.profile.avatar_url = avatar_url
         
         await db.commit()
         return user
     
     # Check if user with same email exists
     result = await db.execute(
-        select(User).where(User.email == email)
+        select(UserEmail)
+        .options(
+            selectinload(UserEmail.user)
+            .selectinload(User.profile),
+            selectinload(UserEmail.user)
+            .selectinload(User.emails),
+        )
+        .where(UserEmail.email == email)
     )
-    user = result.scalar_one_or_none()
+    user_email = result.scalar_one_or_none()
     
-    if user:
+    if user_email:
+        user = user_email.user
         # Link new OAuth account to existing user
         oauth_account = OAuthAccount(
             user_id=user.id,
@@ -315,23 +374,36 @@ async def _find_or_create_user(
         )
         db.add(oauth_account)
         
-        # Update user info
-        if display_name and not user.display_name:
-            user.display_name = display_name
-        if avatar_url:
-            user.avatar_url = avatar_url
+        # Update user profile if needed
+        if user.profile:
+            if display_name and not user.profile.display_name:
+                user.profile.display_name = display_name
+            if avatar_url:
+                user.profile.avatar_url = avatar_url
         
         await db.commit()
         return user
     
-    # Create new user
-    user = User(
-        email=email,
+    # Create new user with profile and email
+    user = User()
+    db.add(user)
+    await db.flush()
+    
+    # Create profile
+    profile = UserProfile(
+        user_id=user.id,
         display_name=display_name,
         avatar_url=avatar_url,
     )
-    db.add(user)
-    await db.flush()
+    db.add(profile)
+    
+    # Create email
+    user_email = UserEmail(
+        user_id=user.id,
+        email=email,
+        is_primary=True,
+    )
+    db.add(user_email)
     
     # Create OAuth account
     oauth_account = OAuthAccount(
@@ -344,6 +416,16 @@ async def _find_or_create_user(
     db.add(oauth_account)
     
     await db.commit()
-    await db.refresh(user)
+    
+    # Reload with relationships
+    result = await db.execute(
+        select(User)
+        .options(
+            selectinload(User.profile),
+            selectinload(User.emails),
+        )
+        .where(User.id == user.id)
+    )
+    user = result.scalar_one()
     
     return user

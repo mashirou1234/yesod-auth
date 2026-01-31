@@ -54,6 +54,16 @@ class OAuthStateStore:
         )
     
     @classmethod
+    async def save_with_data(cls, state: str, data: dict) -> None:
+        """Save OAuth state with custom data."""
+        client = await get_valkey()
+        await client.setex(
+            f"{cls.PREFIX}{state}",
+            settings.OAUTH_STATE_TTL,
+            json.dumps(data),
+        )
+    
+    @classmethod
     async def get_and_delete(cls, state: str) -> Optional[dict]:
         """Get and delete OAuth state (one-time use)."""
         client = await get_valkey()

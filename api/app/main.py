@@ -9,6 +9,9 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import get_settings
 from app.auth import router as auth_router
+from app.accounts import router as accounts_router
+from app.sessions import router as sessions_router
+from app.users import router as users_router
 from app.auth.rate_limit import limiter
 from app.valkey import close_valkey
 
@@ -43,8 +46,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routes
-app.include_router(auth_router)
+# Routes - all under /api/v1
+API_PREFIX = "/api/v1"
+app.include_router(auth_router, prefix=API_PREFIX)
+app.include_router(accounts_router, prefix=API_PREFIX)
+app.include_router(sessions_router, prefix=API_PREFIX)
+app.include_router(users_router, prefix=API_PREFIX)
 
 
 @app.get("/")

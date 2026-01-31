@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
 from app.db.session import get_db
@@ -39,7 +40,12 @@ async def get_current_user(
         )
     
     result = await db.execute(
-        select(User).where(User.id == uuid.UUID(user_id))
+        select(User)
+        .options(
+            selectinload(User.profile),
+            selectinload(User.emails),
+        )
+        .where(User.id == uuid.UUID(user_id))
     )
     user = result.scalar_one_or_none()
     

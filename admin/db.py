@@ -15,16 +15,18 @@ def get_users() -> pd.DataFrame:
         result = session.execute(text("""
             SELECT 
                 u.id,
-                u.email,
-                u.display_name,
+                ue.email,
+                up.display_name,
                 u.created_at,
-                u.updated_at,
+                up.updated_at,
                 COUNT(DISTINCT oa.id) as oauth_accounts,
                 COUNT(DISTINCT rt.id) FILTER (WHERE rt.is_revoked = false AND rt.expires_at > NOW()) as active_sessions
             FROM users u
+            LEFT JOIN user_emails ue ON u.id = ue.user_id AND ue.is_primary = true
+            LEFT JOIN user_profiles up ON u.id = up.user_id
             LEFT JOIN oauth_accounts oa ON u.id = oa.user_id
             LEFT JOIN refresh_tokens rt ON u.id = rt.user_id
-            GROUP BY u.id
+            GROUP BY u.id, ue.email, up.display_name, up.updated_at
             ORDER BY u.created_at DESC
         """))
         rows = result.fetchall()
@@ -51,7 +53,7 @@ def get_sessions(user_id: Optional[str] = None) -> pd.DataFrame:
         query = """
             SELECT 
                 rt.id,
-                u.email,
+                ue.email,
                 rt.device_info,
                 rt.ip_address,
                 rt.is_revoked,
@@ -60,6 +62,7 @@ def get_sessions(user_id: Optional[str] = None) -> pd.DataFrame:
                 rt.last_used_at
             FROM refresh_tokens rt
             JOIN users u ON rt.user_id = u.id
+            LEFT JOIN user_emails ue ON u.id = ue.user_id AND ue.is_primary = true
         """
         params = {}
         if user_id:
@@ -109,3 +112,23 @@ def get_stats() -> dict:
             "total_oauth_accounts": oauth.scalar(),
             "active_sessions": active_sessions.scalar(),
         }
+
+
+def get_deleted_users() -> pd.DataFrame:
+    """Get soft-deleted users pending purge."""
+    with Session() as session:
+        result = session.execute(text("""
+            SELECT 
+                id,
+                email_backup,
+                display_name_backup,
+                deleted_at,
+                purge_at,
+                oauth_providers
+            FROM deleted_users
+            ORDER BY deleted_at DESC
+        """))
+        rows = result.fetchall()
+        return pd.DataFrame(rows, columns=[
+            "ID", "Email", "Display Name", "Deleted At", "Purge At", "OAuth Providers"
+        ])
