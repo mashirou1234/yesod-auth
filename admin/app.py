@@ -1,6 +1,7 @@
 """YESOD Admin Dashboard."""
 import streamlit as st
 import pandas as pd
+import graphviz
 from config import settings
 import db
 import valkey_client
@@ -355,6 +356,138 @@ def show_api_test():
                 st.error(f"Error: {e}")
 
 
+def show_db_schema():
+    st.header("🗄️ Database Schema")
+    
+    try:
+        table_info = db.get_table_info()
+        relationships = db.get_table_relationships()
+        
+        # Tab layout
+        tab1, tab2, tab3 = st.tabs(["📊 ER Diagram", "📋 Tables", "📈 Statistics"])
+        
+        with tab1:
+            st.subheader("Entity Relationship Diagram")
+            
+            # Create ER diagram using Graphviz
+            dot = graphviz.Digraph(comment="YESOD ER Diagram")
+            dot.attr(rankdir="LR", splines="ortho")
+            dot.attr("node", shape="record", fontname="Helvetica", fontsize="10")
+            dot.attr("edge", fontname="Helvetica", fontsize="9")
+            
+            # Add tables as nodes
+            for table_name, info in table_info.items():
+                # Build label with columns
+                pk_cols = set(info["primary_keys"])
+                fk_cols = {fk["column"] for fk in info["foreign_keys"]}
+                
+                cols_str = ""
+                for col in info["columns"]:
+                    prefix = ""
+                    if col["name"] in pk_cols:
+                        prefix = "🔑 "
+                    elif col["name"] in fk_cols:
+                        prefix = "🔗 "
+                    cols_str += f"{prefix}{col['name']}: {col['type']}\\l"
+                
+                label = f"{{{table_name}|{cols_str}}}"
+                
+                # Color based on table type
+                if table_name == "users":
+                    dot.node(table_name, label, fillcolor="#e3f2fd", style="filled")
+                elif table_name.startswith("user_"):
+                    dot.node(table_name, label, fillcolor="#f3e5f5", style="filled")
+                elif table_name == "deleted_users":
+                    dot.node(table_name, label, fillcolor="#ffebee", style="filled")
+                elif table_name == "alembic_version":
+                    dot.node(table_name, label, fillcolor="#f5f5f5", style="filled")
+                else:
+                    dot.node(table_name, label, fillcolor="#e8f5e9", style="filled")
+            
+            # Add relationships as edges
+            for rel in relationships:
+                dot.edge(
+                    rel["from_table"], 
+                    rel["to_table"],
+                    label=f"{rel['from_column']}",
+                    arrowhead="crow",
+                )
+            
+            st.graphviz_chart(dot)
+            
+            # Legend
+            st.markdown("""
+            **Legend:**
+            - 🔑 Primary Key
+            - 🔗 Foreign Key
+            - 🔵 Core (users)
+            - 🟣 User-related tables
+            - 🔴 Deleted users
+            - 🟢 Other tables
+            """)
+        
+        with tab2:
+            st.subheader("Table Details")
+            
+            # Table selector
+            selected_table = st.selectbox(
+                "Select Table",
+                list(table_info.keys()),
+            )
+            
+            if selected_table:
+                info = table_info[selected_table]
+                
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    st.write("**Columns**")
+                    cols_df = pd.DataFrame(info["columns"])
+                    cols_df["PK"] = cols_df["name"].isin(info["primary_keys"])
+                    fk_cols = {fk["column"] for fk in info["foreign_keys"]}
+                    cols_df["FK"] = cols_df["name"].isin(fk_cols)
+                    st.dataframe(cols_df, hide_index=True, use_container_width=True)
+                
+                with col2:
+                    st.write("**Info**")
+                    st.metric("Row Count", info["row_count"])
+                    
+                    if info["foreign_keys"]:
+                        st.write("**Foreign Keys**")
+                        for fk in info["foreign_keys"]:
+                            st.write(f"- `{fk['column']}` → `{fk['references_table']}.{fk['references_column']}`")
+        
+        with tab3:
+            st.subheader("Database Statistics")
+            
+            # Summary metrics
+            total_tables = len(table_info)
+            total_rows = sum(info["row_count"] for info in table_info.values())
+            total_relationships = len(relationships)
+            
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Total Tables", total_tables)
+            col2.metric("Total Rows", total_rows)
+            col3.metric("Relationships", total_relationships)
+            
+            st.divider()
+            
+            # Row counts per table
+            st.write("**Rows per Table**")
+            stats_data = [
+                {"Table": name, "Rows": info["row_count"], "Columns": len(info["columns"])}
+                for name, info in table_info.items()
+            ]
+            stats_df = pd.DataFrame(stats_data).sort_values("Rows", ascending=False)
+            st.dataframe(stats_df, hide_index=True, use_container_width=True)
+            
+            # Bar chart
+            st.bar_chart(stats_df.set_index("Table")["Rows"])
+    
+    except Exception as e:
+        st.error(f"Failed to load schema: {e}")
+
+
 def main():
     if not check_auth():
         return
@@ -364,7 +497,7 @@ def main():
     # Sidebar navigation
     page = st.sidebar.radio(
         "Navigation",
-        ["📊 Overview", "👥 Users", "🔑 Sessions", "⚡ Valkey Status", "🧪 API Test"]
+        ["📊 Overview", "👥 Users", "🔑 Sessions", "⚡ Valkey Status", "🗄️ DB Schema", "🧪 API Test"]
     )
     
     if st.sidebar.button("🔄 Refresh"):
@@ -382,6 +515,8 @@ def main():
         show_sessions()
     elif page == "⚡ Valkey Status":
         show_valkey_status()
+    elif page == "🗄️ DB Schema":
+        show_db_schema()
     elif page == "🧪 API Test":
         show_api_test()
 

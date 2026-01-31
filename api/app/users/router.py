@@ -70,7 +70,18 @@ async def update_profile(
         user.profile.avatar_url = update_data.avatar_url
     
     await db.commit()
-    await db.refresh(user)
+    
+    # Reload with all relationships
+    result = await db.execute(
+        select(User)
+        .options(
+            selectinload(User.profile),
+            selectinload(User.emails),
+            selectinload(User.oauth_accounts),
+        )
+        .where(User.id == current_user.id)
+    )
+    user = result.scalar_one()
     
     return user
 
