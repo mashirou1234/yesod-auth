@@ -5,90 +5,46 @@ on:
     branches: [main]
     paths:
       - 'api/app/**/*.py'
-      - 'api/app/**/schemas.py'
   workflow_dispatch:
 
 jobs:
   generate-types:
     runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_DB: yesod
-          POSTGRES_USER: yesod_user
-          POSTGRES_PASSWORD: yesod_password
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      
-      valkey:
-        image: valkey/valkey:alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "valkey-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Python dependencies
-        run: |
-          cd api
-          pip install -r requirements.txt
-
       - name: Install openapi-typescript
         run: npm install -g openapi-typescript
 
-      - name: Create dummy secrets
+      - name: Create secrets for CI
         run: |
-          mkdir -p secrets
-          echo "dummy-google-id" > secrets/google_client_id.txt
-          echo "dummy-google-secret" > secrets/google_client_secret.txt
-          echo "dummy-discord-id" > secrets/discord_client_id.txt
-          echo "dummy-discord-secret" > secrets/discord_client_secret.txt
-          echo "dummy-jwt-secret-for-ci" > secrets/jwt_secret.txt
+          echo "ci-google-id" > secrets/google_client_id.txt
+          echo "ci-google-secret" > secrets/google_client_secret.txt
+          echo "ci-discord-id" > secrets/discord_client_id.txt
+          echo "ci-discord-secret" > secrets/discord_client_secret.txt
+          echo "ci-jwt-secret-key" > secrets/jwt_secret.txt
+          echo "ci-admin-password" > secrets/admin_password.txt
 
-      - name: Start API server
-        run: |
-          cd api
-          uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
-        env:
-          DATABASE_URL: postgresql+asyncpg://yesod_user:yesod_password@localhost:5432/yesod
-          VALKEY_URL: redis://localhost:6379/0
-          MOCK_OAUTH_ENABLED: "1"
+      - name: Start services with Docker Compose
+        run: docker compose up -d
 
       - name: Wait for API to be ready
         run: |
-          for i in {1..30}; do
+          for i in {1..60}; do
             if curl -s http://localhost:8000/health > /dev/null; then
               echo "API is ready"
               break
             fi
-            echo "Waiting for API... ($i/30)"
-            sleep 2
+            echo "Waiting for API... ($i/60)"
+            sleep 3
           done
 
       - name: Generate TypeScript types
@@ -96,10 +52,14 @@ jobs:
           mkdir -p generated
           npx openapi-typescript http://localhost:8000/openapi.json -o generated/api.d.ts
 
+      - name: Cleanup containers
+        run: docker compose down -v
+
       - name: Check for changes
         id: check_changes
         run: |
-          if git diff --quiet generated/api.d.ts 2>/dev/null; then
+          git add generated/api.d.ts
+          if git diff --staged --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
@@ -110,6 +70,5 @@ jobs:
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          git add generated/api.d.ts
           git commit -m "chore: auto-generate TypeScript types from OpenAPI"
           git push
