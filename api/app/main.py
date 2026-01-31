@@ -1,20 +1,19 @@
 """YESOD Auth - Main application."""
+
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, PlainTextResponse
-from fastapi.openapi.utils import get_openapi
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.config import get_settings
-from app.auth import router as auth_router
 from app.accounts import router as accounts_router
+from app.auth import router as auth_router
+from app.auth.rate_limit import limiter
+from app.config import get_settings
+from app.metrics import router as metrics_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
-from app.metrics import router as metrics_router
-from app.auth.rate_limit import limiter
 from app.valkey import close_valkey
 
 settings = get_settings()

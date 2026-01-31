@@ -1,17 +1,26 @@
 """Refresh token model."""
+
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, func, Boolean
+from typing import TYPE_CHECKING
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class RefreshToken(Base):
     """Refresh token model - stored separately from users for loose coupling."""
-    
+
     __tablename__ = "refresh_tokens"
-    
+
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
@@ -54,6 +63,6 @@ class RefreshToken(Base):
         DateTime(timezone=True),
         nullable=True,
     )
-    
+
     # Relationship (optional, for convenience)
-    user: Mapped["User"] = relationship("User", back_populates="refresh_tokens")
+    user: Mapped[User] = relationship("User", back_populates="refresh_tokens")

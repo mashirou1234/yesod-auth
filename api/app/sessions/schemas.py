@@ -1,28 +1,32 @@
 """Session schemas."""
-from datetime import datetime
-from typing import Optional
-from pydantic import BaseModel
+
 import uuid
+from datetime import datetime
+
+from pydantic import BaseModel
 
 
 class SessionResponse(BaseModel):
     """Session response."""
+
     id: uuid.UUID
-    device_info: Optional[str] = None
-    ip_address: Optional[str] = None
+    device_info: str | None = None
+    ip_address: str | None = None
     created_at: datetime
-    last_used_at: Optional[datetime] = None
+    last_used_at: datetime | None = None
     expires_at: datetime
 
 
 class SessionListResponse(BaseModel):
     """Session list response."""
+
     sessions: list[SessionResponse]
     total: int
 
 
 class RevokeResponse(BaseModel):
     """Revoke response."""
+
     message: str
-    session_id: Optional[uuid.UUID] = None
-    revoked_count: Optional[int] = None
+    session_id: uuid.UUID | None = None
+    revoked_count: int | None = None

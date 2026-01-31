@@ -3,9 +3,9 @@
 Enable by setting MOCK_OAUTH_ENABLED=1 environment variable.
 This allows bypassing real OAuth providers during development.
 """
+
 import os
 import uuid
-from typing import Optional
 from dataclasses import dataclass
 
 
@@ -17,11 +17,12 @@ def is_mock_oauth_enabled() -> bool:
 @dataclass
 class MockOAuthUser:
     """Mock OAuth user data."""
+
     id: str
     email: str
     name: str
-    picture: Optional[str] = None
-    
+    picture: str | None = None
+
     def to_google_format(self) -> dict:
         """Convert to Google userinfo format."""
         return {
@@ -31,7 +32,7 @@ class MockOAuthUser:
             "picture": self.picture,
             "verified_email": True,
         }
-    
+
     def to_discord_format(self) -> dict:
         """Convert to Discord userinfo format."""
         return {
@@ -73,8 +74,8 @@ def get_mock_user(username: str = "alice") -> MockOAuthUser:
 
 def create_custom_mock_user(
     email: str,
-    name: Optional[str] = None,
-    picture: Optional[str] = None,
+    name: str | None = None,
+    picture: str | None = None,
 ) -> MockOAuthUser:
     """Create a custom mock user."""
     return MockOAuthUser(

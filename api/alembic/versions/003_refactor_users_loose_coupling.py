@@ -9,9 +9,11 @@ Revision ID: 003
 Revises: 002
 Create Date: 2026-01-31
 """
-from alembic import op
+
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "003"
 down_revision = "002"
@@ -32,12 +34,10 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("user_id"),
     )
-    
+
     # Create user_emails table
     op.create_table(
         "user_emails",
@@ -57,14 +57,12 @@ def upgrade() -> None:
             server_default=sa.func.now(),
             nullable=False,
         ),
-        sa.ForeignKeyConstraint(
-            ["user_id"], ["users.id"], ondelete="CASCADE"
-        ),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_user_emails_email", "user_emails", ["email"], unique=True)
     op.create_index("ix_user_emails_user_id", "user_emails", ["user_id"])
-    
+
     # Create deleted_users table
     op.create_table(
         "deleted_users",
@@ -82,20 +80,20 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("ix_deleted_users_purge_at", "deleted_users", ["purge_at"])
-    
+
     # Migrate existing data from users to new tables
     op.execute("""
         INSERT INTO user_profiles (user_id, display_name, avatar_url, updated_at)
         SELECT id, display_name, avatar_url, updated_at
         FROM users
     """)
-    
+
     op.execute("""
         INSERT INTO user_emails (user_id, email, is_primary, created_at)
         SELECT id, email, true, created_at
         FROM users
     """)
-    
+
     # Drop old columns from users table
     op.drop_index("ix_users_email", table_name="users")
     op.drop_column("users", "email")
@@ -126,7 +124,7 @@ def downgrade() -> None:
             server_default=sa.func.now(),
         ),
     )
-    
+
     # Migrate data back
     op.execute("""
         UPDATE users u
@@ -138,11 +136,11 @@ def downgrade() -> None:
         WHERE u.id = ue.user_id AND ue.is_primary = true
           AND u.id = up.user_id
     """)
-    
+
     # Make email not nullable and add index
     op.alter_column("users", "email", nullable=False)
     op.create_index("ix_users_email", "users", ["email"], unique=True)
-    
+
     # Drop new tables
     op.drop_index("ix_deleted_users_purge_at", table_name="deleted_users")
     op.drop_table("deleted_users")

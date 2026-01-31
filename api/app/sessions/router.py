@@ -1,14 +1,17 @@
 """Session management router."""
-import uuid
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, and_
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timezone
 
-from app.db.session import get_db
-from app.models import User, RefreshToken
+import uuid
+from datetime import UTC, datetime
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import and_, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.auth.jwt import get_current_user
-from .schemas import SessionResponse, SessionListResponse, RevokeResponse
+from app.db.session import get_db
+from app.models import RefreshToken, User
+
+from .schemas import RevokeResponse, SessionListResponse, SessionResponse
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -20,16 +23,18 @@ async def list_sessions(
 ):
     """List all active sessions for current user."""
     result = await db.execute(
-        select(RefreshToken).where(
+        select(RefreshToken)
+        .where(
             and_(
                 RefreshToken.user_id == current_user.id,
-                RefreshToken.is_revoked == False,
-                RefreshToken.expires_at > datetime.now(timezone.utc),
+                not RefreshToken.is_revoked,
+                RefreshToken.expires_at > datetime.now(UTC),
             )
-        ).order_by(RefreshToken.created_at.desc())
+        )
+        .order_by(RefreshToken.created_at.desc())
     )
     sessions = result.scalars().all()
-    
+
     return SessionListResponse(
         sessions=[
             SessionResponse(
@@ -58,21 +63,18 @@ async def revoke_session(
             and_(
                 RefreshToken.id == session_id,
                 RefreshToken.user_id == current_user.id,
-                RefreshToken.is_revoked == False,
+                not RefreshToken.is_revoked,
             )
         )
     )
     session = result.scalar_one_or_none()
-    
+
     if not session:
-        raise HTTPException(
-            status_code=404,
-            detail="Session not found or already revoked"
-        )
-    
+        raise HTTPException(status_code=404, detail="Session not found or already revoked")
+
     session.is_revoked = True
     await db.commit()
-    
+
     return RevokeResponse(
         message="Session revoked successfully",
         session_id=session_id,
@@ -89,17 +91,17 @@ async def revoke_all_sessions(
         select(RefreshToken).where(
             and_(
                 RefreshToken.user_id == current_user.id,
-                RefreshToken.is_revoked == False,
+                not RefreshToken.is_revoked,
             )
         )
     )
     sessions = result.scalars().all()
-    
+
     for session in sessions:
         session.is_revoked = True
-    
+
     await db.commit()
-    
+
     return RevokeResponse(
         message=f"Revoked {len(sessions)} sessions",
         revoked_count=len(sessions),

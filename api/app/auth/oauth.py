@@ -1,6 +1,7 @@
 """OAuth provider implementations."""
-from typing import Optional
+
 import httpx
+
 from app.config import get_settings
 
 settings = get_settings()
@@ -8,17 +9,17 @@ settings = get_settings()
 
 class GoogleOAuth:
     """Google OAuth implementation with PKCE support."""
-    
+
     AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
     TOKEN_URL = "https://oauth2.googleapis.com/token"
     USERINFO_URL = "https://www.googleapis.com/oauth2/v2/userinfo"
-    
+
     @classmethod
     def get_authorize_url(
         cls,
         redirect_uri: str,
         state: str,
-        code_challenge: Optional[str] = None,
+        code_challenge: str | None = None,
     ) -> str:
         """Get the Google OAuth authorization URL with optional PKCE."""
         params = {
@@ -33,17 +34,17 @@ class GoogleOAuth:
         if code_challenge:
             params["code_challenge"] = code_challenge
             params["code_challenge_method"] = "S256"
-        
+
         query = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{cls.AUTHORIZE_URL}?{query}"
-    
+
     @classmethod
     async def exchange_code(
         cls,
         code: str,
         redirect_uri: str,
-        code_verifier: Optional[str] = None,
-    ) -> Optional[dict]:
+        code_verifier: str | None = None,
+    ) -> dict | None:
         """Exchange authorization code for tokens."""
         data = {
             "client_id": settings.GOOGLE_CLIENT_ID,
@@ -54,15 +55,15 @@ class GoogleOAuth:
         }
         if code_verifier:
             data["code_verifier"] = code_verifier
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.post(cls.TOKEN_URL, data=data)
             if response.status_code == 200:
                 return response.json()
             return None
-    
+
     @classmethod
-    async def get_user_info(cls, access_token: str) -> Optional[dict]:
+    async def get_user_info(cls, access_token: str) -> dict | None:
         """Get user info from Google."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -76,11 +77,11 @@ class GoogleOAuth:
 
 class DiscordOAuth:
     """Discord OAuth implementation."""
-    
+
     AUTHORIZE_URL = "https://discord.com/api/oauth2/authorize"
     TOKEN_URL = "https://discord.com/api/oauth2/token"
     USERINFO_URL = "https://discord.com/api/users/@me"
-    
+
     @classmethod
     def get_authorize_url(cls, redirect_uri: str, state: str) -> str:
         """Get the Discord OAuth authorization URL."""
@@ -93,9 +94,9 @@ class DiscordOAuth:
         }
         query = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{cls.AUTHORIZE_URL}?{query}"
-    
+
     @classmethod
-    async def exchange_code(cls, code: str, redirect_uri: str) -> Optional[dict]:
+    async def exchange_code(cls, code: str, redirect_uri: str) -> dict | None:
         """Exchange authorization code for tokens."""
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -112,9 +113,9 @@ class DiscordOAuth:
             if response.status_code == 200:
                 return response.json()
             return None
-    
+
     @classmethod
-    async def get_user_info(cls, access_token: str) -> Optional[dict]:
+    async def get_user_info(cls, access_token: str) -> dict | None:
         """Get user info from Discord."""
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -126,8 +127,7 @@ class DiscordOAuth:
                 # Add avatar URL
                 if data.get("avatar"):
                     data["avatar_url"] = (
-                        f"https://cdn.discordapp.com/avatars/"
-                        f"{data['id']}/{data['avatar']}.png"
+                        f"https://cdn.discordapp.com/avatars/{data['id']}/{data['avatar']}.png"
                     )
                 return data
             return None

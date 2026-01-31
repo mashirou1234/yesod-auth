@@ -1,13 +1,15 @@
 """Audit logging service."""
+
 import uuid
 from enum import Enum
-from typing import Optional
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class AuthEventType(str, Enum):
     """Authentication event types."""
+
     LOGIN_SUCCESS = "login_success"
     LOGIN_FAILED = "login_failed"
     LOGOUT = "logout"
@@ -24,21 +26,21 @@ class AuthEventType(str, Enum):
 
 class AuditLogger:
     """Audit logging service for authentication events."""
-    
+
     @staticmethod
     async def log_login(
         db: AsyncSession,
-        user_id: Optional[uuid.UUID],
+        user_id: uuid.UUID | None,
         provider: str,
         success: bool,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
-        failure_reason: Optional[str] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
+        failure_reason: str | None = None,
     ) -> None:
         """Log a login attempt."""
         await db.execute(
             text("""
-                INSERT INTO audit.login_history 
+                INSERT INTO audit.login_history
                 (user_id, provider, ip_address, user_agent, success, failure_reason)
                 VALUES (:user_id, :provider, :ip_address, :user_agent, :success, :failure_reason)
             """),
@@ -49,25 +51,25 @@ class AuditLogger:
                 "user_agent": user_agent[:500] if user_agent else None,
                 "success": success,
                 "failure_reason": failure_reason,
-            }
+            },
         )
         await db.commit()
-    
+
     @staticmethod
     async def log_event(
         db: AsyncSession,
         event_type: AuthEventType,
-        user_id: Optional[uuid.UUID] = None,
-        details: Optional[dict] = None,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
+        user_id: uuid.UUID | None = None,
+        details: dict | None = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ) -> None:
         """Log an authentication event."""
         import json
-        
+
         await db.execute(
             text("""
-                INSERT INTO audit.auth_events 
+                INSERT INTO audit.auth_events
                 (user_id, event_type, details, ip_address, user_agent)
                 VALUES (:user_id, :event_type, :details::jsonb, :ip_address, :user_agent)
             """),
@@ -77,6 +79,6 @@ class AuditLogger:
                 "details": json.dumps(details) if details else None,
                 "ip_address": ip_address,
                 "user_agent": user_agent[:500] if user_agent else None,
-            }
+            },
         )
         await db.commit()
