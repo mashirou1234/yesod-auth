@@ -10,7 +10,6 @@ on:
 jobs:
   generate-types:
     runs-on: ubuntu-latest
-    # Prevent concurrent runs
     concurrency:
       group: generate-types
       cancel-in-progress: true
@@ -42,14 +41,24 @@ jobs:
 
       - name: Wait for API to be ready
         run: |
+          echo "Waiting for containers to start..."
+          sleep 10
+          
+          echo "Container status:"
+          docker compose --profile ci ps
+          
           for i in {1..60}; do
-            if curl -s http://localhost:8000/health > /dev/null; then
-              echo "API is ready"
-              break
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "✅ API is ready!"
+              exit 0
             fi
             echo "Waiting for API... ($i/60)"
-            sleep 2
+            sleep 3
           done
+          
+          echo "❌ API failed to start. Container logs:"
+          docker compose --profile ci logs api-ci
+          exit 1
 
       - name: Generate TypeScript types
         run: |
@@ -57,6 +66,7 @@ jobs:
           npx openapi-typescript http://localhost:8000/openapi.json -o generated/api.d.ts
 
       - name: Cleanup containers
+        if: always()
         run: docker compose --profile ci down -v
 
       - name: Check for changes
