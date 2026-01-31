@@ -42,15 +42,13 @@ jobs:
           echo "ci-jwt-secret-key" > secrets/jwt_secret.txt
           echo "ci-admin-password" > secrets/admin_password.txt
 
-      - name: Build and start containers
-        run: |
-          docker compose up -d db valkey
-          docker compose build api
+      - name: Start CI services
+        run: docker compose --profile ci up -d db-ci valkey
 
-      - name: Wait for DB to be ready
+      - name: Wait for services
         run: |
           for i in {1..30}; do
-            if docker compose exec -T db pg_isready -U yesod_user -d yesod; then
+            if docker compose --profile ci exec -T db-ci pg_isready -U yesod_user -d yesod 2>/dev/null; then
               echo "DB is ready"
               break
             fi
@@ -58,10 +56,10 @@ jobs:
             sleep 2
           done
 
-      - name: Run tests in container
+      - name: Run tests
         run: |
-          docker compose run --rm -e TESTING=1 -e MOCK_OAUTH_ENABLED=1 api pytest --tb=short -v
+          docker compose --profile ci run --rm api-ci pytest --tb=short -v
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: docker compose --profile ci down -v

@@ -1,4 +1,7 @@
 services:
+  # =============================================================================
+  # Core Services (always started)
+  # =============================================================================
   db:
     build: ./db
     container_name: yesod-db
@@ -20,6 +23,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # CI用の軽量DB（pg_cronなし）
+  db-ci:
+    image: postgres:16-alpine
+    profiles: ["ci"]
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=yesod
+      - POSTGRES_USER=yesod_user
+      - POSTGRES_PASSWORD=yesod_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U yesod_user -d yesod"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
 
   valkey:
     image: valkey/valkey:alpine
@@ -61,8 +80,37 @@ services:
     command: >
       sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
 
+  # CI用API（軽量DB使用）
+  api-ci:
+    build: ./api
+    profiles: ["ci"]
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://yesod_user:yesod_password@db-ci:5432/yesod
+      - VALKEY_URL=redis://valkey:6379/0
+      - MOCK_OAUTH_ENABLED=1
+      - TESTING=1
+    secrets:
+      - google_client_id
+      - google_client_secret
+      - discord_client_id
+      - discord_client_secret
+      - jwt_secret
+    depends_on:
+      db-ci:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+
+  # =============================================================================
+  # Full Profile (development tools)
+  # =============================================================================
   admin:
     build: ./admin
+    profiles: ["full"]
     container_name: yesod-admin
     ports:
       - "8501:8501"

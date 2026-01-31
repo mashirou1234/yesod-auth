@@ -58,7 +58,14 @@ openssl rand -hex 32 > secrets/jwt_secret.txt
 ### 4. Start the service
 
 ```bash
+# API + DB + Valkey (開発用)
 docker compose up -d
+
+# Admin画面も含めて起動
+docker compose --profile full up -d
+
+# CI用（軽量構成）
+docker compose --profile ci up -d
 ```
 
 ### 5. Access the API
