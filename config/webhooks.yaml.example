@@ -1,0 +1,61 @@
+# Webhook Configuration
+# =====================
+# This file configures webhook endpoints that receive notifications
+# when user events occur in the authentication system.
+#
+# IMPORTANT: Copy this file to config/webhooks.yaml to enable webhooks.
+# The system only reads from config/webhooks.yaml (fixed location).
+#
+# Secret Management:
+# -----------------
+# Secrets can be provided in two ways (Docker Secrets is recommended):
+#
+# 1. Docker Secrets (RECOMMENDED for production):
+#    - Create a secret: echo "your-secret" | docker secret create webhook_secret_analytics -
+#    - Reference in config: secret: "${WEBHOOK_SECRET_ANALYTICS}"
+#    - The system will look for: /run/secrets/webhook_secret_analytics
+#
+# 2. Environment Variables (development only):
+#    - Set env var: export WEBHOOK_SECRET_ANALYTICS="your-secret"
+#    - Reference in config: secret: "${WEBHOOK_SECRET_ANALYTICS}"
+#    - WARNING: A warning will be logged recommending Docker Secrets
+#
+# See: https://docs.docker.com/engine/swarm/secrets/
+
+endpoints:
+  # Example: Analytics service integration
+  - id: "analytics-service"
+    url: "https://analytics.example.com/webhooks/yesod"
+    secret: "${WEBHOOK_SECRET_ANALYTICS}"
+    events:
+      - "user.created"
+      - "user.deleted"
+      - "user.login"
+    enabled: false  # Set to true to enable
+    description: "Analytics service for user metrics"
+
+  # Example: CRM integration
+  - id: "crm-integration"
+    url: "https://crm.example.com/api/webhooks"
+    secret: "${WEBHOOK_SECRET_CRM}"
+    events:
+      - "user.created"
+      - "user.updated"
+      - "user.deleted"
+    enabled: false  # Set to true to enable
+    description: "CRM system integration"
+
+# Available event types:
+# - user.created      : New user registered
+# - user.updated      : User profile updated
+# - user.deleted      : User account deleted
+# - user.login        : User logged in
+# - user.oauth_linked : OAuth provider linked to account
+# - user.oauth_unlinked : OAuth provider unlinked from account
+
+# Global settings
+settings:
+  max_retries: 5                    # Maximum delivery retry attempts
+  retry_base_delay_seconds: 2       # Base delay for exponential backoff
+  delivery_timeout_seconds: 30      # HTTP request timeout
+  log_retention_days: 30            # How long to keep delivery logs
