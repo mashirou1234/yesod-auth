@@ -584,6 +584,22 @@ def main():
     if not check_auth():
         return
     
+    # Environment badge (only show in non-production environments)
+    if settings.ENVIRONMENT:
+        env_colors = {
+            "CI": "#f44336",      # Red
+            "DEV": "#ff9800",     # Orange
+            "STAGING": "#2196f3", # Blue
+        }
+        env_name = settings.ENVIRONMENT.upper()
+        color = env_colors.get(env_name, "#9e9e9e")
+        st.markdown(
+            f'<div style="background: {color}; color: white; padding: 8px 16px; '
+            f'border-radius: 6px; font-weight: bold; font-size: 18px; '
+            f'text-align: center; margin-bottom: 16px;">⚠️ {env_name} ENVIRONMENT</div>',
+            unsafe_allow_html=True,
+        )
+    
     st.title("🔐 YESOD Admin Dashboard")
     
     # Sidebar navigation

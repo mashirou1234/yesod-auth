@@ -125,6 +125,7 @@ services:
       - VALKEY_URL=redis://valkey:6379/0
       - ADMIN_USER=admin
       - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
+      - ENVIRONMENT=DEV
     secrets:
       - admin_password
     depends_on:

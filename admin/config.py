@@ -20,6 +20,9 @@ class Settings:
     VALKEY_URL: str = os.getenv("VALKEY_URL", "redis://localhost:6379/0")
     ADMIN_USER: str = os.getenv("ADMIN_USER", "admin")
     ADMIN_PASSWORD: str = read_secret("admin_password", "admin")
+    
+    # Environment indicator (empty = production, otherwise shows badge)
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "")
 
 
 settings = Settings()
