@@ -44,6 +44,8 @@ services:
     container_name: yesod-api
     ports:
       - "8000:8000"
+    volumes:
+      - ./config:/app/config:ro
     environment:
       - DATABASE_URL=postgresql+asyncpg://yesod_user:yesod_password@db:5432/yesod
       - VALKEY_URL=redis://valkey:6379/0
@@ -51,6 +53,7 @@ services:
       - FRONTEND_URL=http://localhost:3000
       - ACCESS_TOKEN_LIFETIME_SECONDS=900
       - REFRESH_TOKEN_LIFETIME_DAYS=7
+      - MOCK_OAUTH_ENABLED=1
       - RATE_LIMIT_PER_MINUTE=20
     secrets:
       - google_client_id

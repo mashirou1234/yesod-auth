@@ -34,3 +34,6 @@ htmlcov/
 
 # Ruff
 .ruff_cache/
+
+# Config (may contain secrets)
+config/webhooks.yaml
