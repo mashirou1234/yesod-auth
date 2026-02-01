@@ -182,7 +182,11 @@ class TestGitHubOAuthUserInfo:
                 200,
                 json=[
                     {"email": "octocat@github.com", "primary": True, "verified": True},
-                    {"email": "octocat@users.noreply.github.com", "primary": False, "verified": True},
+                    {
+                        "email": "octocat@users.noreply.github.com",
+                        "primary": False,
+                        "verified": True,
+                    },
                 ],
             )
         )
@@ -195,9 +199,7 @@ class TestGitHubOAuthUserInfo:
     @pytest.mark.asyncio
     async def test_get_user_info_failure(self, respx_mock):
         """Test user info retrieval failure."""
-        respx_mock.get("https://api.github.com/user").mock(
-            return_value=httpx.Response(401)
-        )
+        respx_mock.get("https://api.github.com/user").mock(return_value=httpx.Response(401))
 
         result = await GitHubOAuth.get_user_info("invalid-token")
 

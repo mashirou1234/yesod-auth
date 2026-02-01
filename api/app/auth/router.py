@@ -480,7 +480,9 @@ async def mock_login(
         )
 
     if provider not in ["google", "discord", "github"]:
-        raise HTTPException(status_code=400, detail="Provider must be 'google', 'discord', or 'github'")
+        raise HTTPException(
+            status_code=400, detail="Provider must be 'google', 'discord', or 'github'"
+        )
 
     device_info, ip_address = _get_client_info(request)
     mock_user = get_mock_user(user)
