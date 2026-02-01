@@ -43,6 +43,18 @@ class MockOAuthUser:
             "avatar_url": self.picture,
         }
 
+    def to_github_format(self) -> dict:
+        """Convert to GitHub userinfo format."""
+        # Generate a numeric ID from the mock ID
+        numeric_id = int(self.id.split("-")[-1]) if "-" in self.id else 12345
+        return {
+            "id": numeric_id,
+            "login": self.name.lower().replace(" ", ""),
+            "name": self.name,
+            "email": self.email,
+            "avatar_url": self.picture,
+        }
+
 
 # Predefined mock users for testing
 MOCK_USERS = {

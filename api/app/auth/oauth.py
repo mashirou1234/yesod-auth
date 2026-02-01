@@ -75,6 +75,114 @@ class GoogleOAuth:
             return None
 
 
+class GitHubOAuth:
+    """GitHub OAuth implementation with PKCE support."""
+
+    AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+    TOKEN_URL = "https://github.com/login/oauth/access_token"
+    USERINFO_URL = "https://api.github.com/user"
+    EMAILS_URL = "https://api.github.com/user/emails"
+
+    @classmethod
+    def get_authorize_url(
+        cls,
+        redirect_uri: str,
+        state: str,
+        code_challenge: str | None = None,
+    ) -> str:
+        """Get the GitHub OAuth authorization URL with optional PKCE."""
+        params = {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "redirect_uri": redirect_uri,
+            "scope": "read:user user:email",
+            "state": state,
+        }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
+
+        query = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{cls.AUTHORIZE_URL}?{query}"
+
+    @classmethod
+    async def exchange_code(
+        cls,
+        code: str,
+        redirect_uri: str,
+        code_verifier: str | None = None,
+    ) -> dict | None:
+        """Exchange authorization code for tokens."""
+        data = {
+            "client_id": settings.GITHUB_CLIENT_ID,
+            "client_secret": settings.GITHUB_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": redirect_uri,
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                cls.TOKEN_URL,
+                data=data,
+                headers={"Accept": "application/json"},
+            )
+            if response.status_code == 200:
+                return response.json()
+            return None
+
+    @classmethod
+    async def get_user_info(cls, access_token: str) -> dict | None:
+        """Get user info from GitHub."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                cls.USERINFO_URL,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+            )
+            if response.status_code != 200:
+                return None
+
+            user_data = response.json()
+
+            # If email is not public, fetch from emails API
+            if not user_data.get("email"):
+                email = await cls._get_primary_email(access_token)
+                if email:
+                    user_data["email"] = email
+
+            return user_data
+
+    @classmethod
+    async def _get_primary_email(cls, access_token: str) -> str | None:
+        """Get primary email from GitHub emails API."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                cls.EMAILS_URL,
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/vnd.github+json",
+                },
+            )
+            if response.status_code != 200:
+                return None
+
+            emails = response.json()
+            # Find primary verified email
+            for email_data in emails:
+                if email_data.get("primary") and email_data.get("verified"):
+                    return email_data.get("email")
+
+            # Fallback to first verified email
+            for email_data in emails:
+                if email_data.get("verified"):
+                    return email_data.get("email")
+
+            return None
+
+
 class DiscordOAuth:
     """Discord OAuth implementation."""
 

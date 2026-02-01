@@ -16,7 +16,7 @@ from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
 
 from .jwt import get_current_user
-from .oauth import DiscordOAuth, GoogleOAuth
+from .oauth import DiscordOAuth, GitHubOAuth, GoogleOAuth
 from .pkce import generate_code_challenge, generate_code_verifier
 from .rate_limit import limiter
 from .schemas import (
@@ -231,6 +231,101 @@ async def discord_callback(
     return RedirectResponse(url=frontend_url)
 
 
+@router.get("/github")
+@limiter.limit("10/minute")
+async def github_login(request: Request):
+    """Start GitHub OAuth flow with PKCE."""
+    state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
+
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "github", code_verifier)
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    authorize_url = GitHubOAuth.get_authorize_url(redirect_uri, state, code_challenge)
+
+    return RedirectResponse(url=authorize_url)
+
+
+@router.get("/github/callback")
+@limiter.limit("10/minute")
+async def github_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle GitHub OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+
+    # Verify and consume state
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != "github":
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, "Invalid state"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    code_verifier = state_data.get("code_verifier")
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+
+    # Exchange code for tokens
+    token_data = await GitHubOAuth.exchange_code(code, redirect_uri, code_verifier)
+    if not token_data:
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, "Code exchange failed"
+        )
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    # Get user info
+    user_info = await GitHubOAuth.get_user_info(token_data["access_token"])
+    if not user_info:
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, "Failed to get user info"
+        )
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # Find or create user
+    user = await _find_or_create_user(
+        db=db,
+        provider="github",
+        provider_user_id=str(user_info["id"]),
+        email=user_info["email"],
+        display_name=user_info.get("name") or user_info.get("login"),
+        avatar_url=user_info.get("avatar_url"),
+        access_token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+    )
+
+    # Create tokens
+    access_token = create_access_token(str(user.id), user.email)
+    refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "github", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "github"}, ip_address, device_info
+    )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "github"})
+
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+
+    frontend_url = (
+        f"{settings.FRONTEND_URL}/auth/callback"
+        f"?access_token={access_token}&refresh_token={refresh_token}"
+    )
+    return RedirectResponse(url=frontend_url)
+
+
 @router.post("/refresh", response_model=TokenPairResponse)
 @limiter.limit("30/minute")
 async def refresh_tokens(
@@ -375,7 +470,7 @@ async def mock_login(
     Only available when MOCK_OAUTH_ENABLED=1.
 
     Available mock users: alice, bob, charlie
-    Available providers: google, discord
+    Available providers: google, discord, github
     """
     from .mock_oauth import get_mock_user
 
@@ -384,8 +479,8 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in ["google", "discord"]:
-        raise HTTPException(status_code=400, detail="Provider must be 'google' or 'discord'")
+    if provider not in ["google", "discord", "github"]:
+        raise HTTPException(status_code=400, detail="Provider must be 'google', 'discord', or 'github'")
 
     device_info, ip_address = _get_client_info(request)
     mock_user = get_mock_user(user)
@@ -395,6 +490,10 @@ async def mock_login(
         user_info = mock_user.to_google_format()
         display_name = user_info.get("name")
         avatar_url = user_info.get("picture")
+    elif provider == "github":
+        user_info = mock_user.to_github_format()
+        display_name = user_info.get("name") or user_info.get("login")
+        avatar_url = user_info.get("avatar_url")
     else:
         user_info = mock_user.to_discord_format()
         display_name = user_info.get("username")
@@ -404,7 +503,7 @@ async def mock_login(
     db_user = await _find_or_create_user(
         db=db,
         provider=provider,
-        provider_user_id=user_info["id"],
+        provider_user_id=str(user_info["id"]),
         email=user_info["email"],
         display_name=display_name,
         avatar_url=avatar_url,

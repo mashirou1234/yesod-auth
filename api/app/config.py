@@ -48,6 +48,10 @@ class Settings:
     DISCORD_CLIENT_ID: str = read_secret("discord_client_id", "")
     DISCORD_CLIENT_SECRET: str = read_secret("discord_client_secret", "")
 
+    # OAuth - GitHub
+    GITHUB_CLIENT_ID: str = read_secret("github_client_id", "")
+    GITHUB_CLIENT_SECRET: str = read_secret("github_client_secret", "")
+
     # URLs
     API_URL: str = os.getenv("API_URL", "http://localhost:8000")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

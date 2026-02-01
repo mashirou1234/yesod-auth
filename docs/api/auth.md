@@ -6,6 +6,8 @@
 |---------|------|------|
 | GET | `/api/v1/auth/google` | Google OAuth開始 |
 | GET | `/api/v1/auth/google/callback` | Googleコールバック |
+| GET | `/api/v1/auth/github` | GitHub OAuth開始 |
+| GET | `/api/v1/auth/github/callback` | GitHubコールバック |
 | GET | `/api/v1/auth/discord` | Discord OAuth開始 |
 | GET | `/api/v1/auth/discord/callback` | Discordコールバック |
 | POST | `/api/v1/auth/refresh` | トークンリフレッシュ |
@@ -93,6 +95,8 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 ```
 
 **利用可能なユーザー:** `alice`, `bob`, `charlie`
+
+**利用可能なプロバイダー:** `google`, `github`, `discord`
 
 ### ユーザー一覧
 

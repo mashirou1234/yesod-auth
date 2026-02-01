@@ -43,6 +43,20 @@ docker compose --profile full up -d
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+## OAuth認証情報
+
+Docker Secretsまたは環境変数で設定：
+
+| シークレット名 | 説明 |
+|---------------|------|
+| `google_client_id` | Google OAuth Client ID |
+| `google_client_secret` | Google OAuth Client Secret |
+| `github_client_id` | GitHub OAuth Client ID |
+| `github_client_secret` | GitHub OAuth Client Secret |
+| `discord_client_id` | Discord OAuth Client ID |
+| `discord_client_secret` | Discord OAuth Client Secret |
+| `jwt_secret` | JWT署名用シークレット |
+
 ## ポート
 
 | サービス | ポート |
