@@ -4,7 +4,7 @@ services:
   # =============================================================================
   db:
     build: ./db
-    profiles: ["default"]
+    profiles: ["default", "full"]
     container_name: yesod-db
     ports:
       - "5432:5432"
@@ -40,7 +40,7 @@ services:
 
   api:
     build: ./api
-    profiles: ["default"]
+    profiles: ["default", "full"]
     container_name: yesod-api
     ports:
       - "8000:8000"
