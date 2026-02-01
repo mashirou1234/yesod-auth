@@ -12,6 +12,8 @@
 | GET | `/api/v1/auth/discord/callback` | Discordコールバック |
 | GET | `/api/v1/auth/x` | X (Twitter) OAuth開始 |
 | GET | `/api/v1/auth/x/callback` | Xコールバック |
+| GET | `/api/v1/auth/linkedin` | LinkedIn OAuth開始 |
+| GET | `/api/v1/auth/linkedin/callback` | LinkedInコールバック |
 | POST | `/api/v1/auth/refresh` | トークンリフレッシュ |
 | POST | `/api/v1/auth/logout` | ログアウト |
 
@@ -98,7 +100,7 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 
 **利用可能なユーザー:** `alice`, `bob`, `charlie`
 
-**利用可能なプロバイダー:** `google`, `github`, `discord`, `x`
+**利用可能なプロバイダー:** `google`, `github`, `discord`, `x`, `linkedin`
 
 ### ユーザー一覧
 

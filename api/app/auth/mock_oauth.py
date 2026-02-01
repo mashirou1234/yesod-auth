@@ -71,6 +71,16 @@ class MockOAuthUser:
             "email": f"{username}@x.yesod-auth.local",
         }
 
+    def to_linkedin_format(self) -> dict:
+        """Convert to LinkedIn userinfo format (OpenID Connect)."""
+        return {
+            "sub": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": self.picture,
+            "email_verified": True,
+        }
+
 
 # Predefined mock users for testing
 MOCK_USERS = {

@@ -314,3 +314,72 @@ class XOAuth:
                 # X API wraps user data in "data" field
                 return data.get("data")
             return None
+
+
+class LinkedInOAuth:
+    """LinkedIn OAuth 2.0 implementation with OpenID Connect."""
+
+    AUTHORIZE_URL = "https://www.linkedin.com/oauth/v2/authorization"
+    TOKEN_URL = "https://www.linkedin.com/oauth/v2/accessToken"
+    USERINFO_URL = "https://api.linkedin.com/v2/userinfo"
+
+    @classmethod
+    def get_authorize_url(
+        cls,
+        redirect_uri: str,
+        state: str,
+        code_challenge: str | None = None,
+    ) -> str:
+        """Get the LinkedIn OAuth authorization URL with optional PKCE."""
+        params = {
+            "client_id": settings.LINKEDIN_CLIENT_ID,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "openid profile email",
+            "state": state,
+        }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
+        query = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{cls.AUTHORIZE_URL}?{query}"
+
+    @classmethod
+    async def exchange_code(
+        cls,
+        code: str,
+        redirect_uri: str,
+        code_verifier: str | None = None,
+    ) -> dict | None:
+        """Exchange authorization code for tokens."""
+        data = {
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "client_id": settings.LINKEDIN_CLIENT_ID,
+            "client_secret": settings.LINKEDIN_CLIENT_SECRET,
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                cls.TOKEN_URL,
+                data=data,
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            if response.status_code == 200:
+                return response.json()
+            return None
+
+    @classmethod
+    async def get_user_info(cls, access_token: str) -> dict | None:
+        """Get user info from LinkedIn using OpenID Connect userinfo endpoint."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                cls.USERINFO_URL,
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if response.status_code == 200:
+                return response.json()
+            return None

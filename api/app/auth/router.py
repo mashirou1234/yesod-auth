@@ -16,7 +16,7 @@ from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
 
 from .jwt import get_current_user
-from .oauth import DiscordOAuth, GitHubOAuth, GoogleOAuth, XOAuth
+from .oauth import DiscordOAuth, GitHubOAuth, GoogleOAuth, LinkedInOAuth, XOAuth
 from .pkce import generate_code_challenge, generate_code_verifier
 from .rate_limit import limiter
 from .schemas import (
@@ -423,6 +423,101 @@ async def x_callback(
     return RedirectResponse(url=frontend_url)
 
 
+@router.get("/linkedin")
+@limiter.limit("10/minute")
+async def linkedin_login(request: Request):
+    """Start LinkedIn OAuth flow with PKCE."""
+    state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
+
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "linkedin", code_verifier)
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    authorize_url = LinkedInOAuth.get_authorize_url(redirect_uri, state, code_challenge)
+
+    return RedirectResponse(url=authorize_url)
+
+
+@router.get("/linkedin/callback")
+@limiter.limit("10/minute")
+async def linkedin_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle LinkedIn OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+
+    # Verify and consume state
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != "linkedin":
+        await AuditLogger.log_login(
+            db, None, "linkedin", False, ip_address, device_info, "Invalid state"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    code_verifier = state_data.get("code_verifier")
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+
+    # Exchange code for tokens
+    token_data = await LinkedInOAuth.exchange_code(code, redirect_uri, code_verifier)
+    if not token_data:
+        await AuditLogger.log_login(
+            db, None, "linkedin", False, ip_address, device_info, "Code exchange failed"
+        )
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    # Get user info
+    user_info = await LinkedInOAuth.get_user_info(token_data["access_token"])
+    if not user_info:
+        await AuditLogger.log_login(
+            db, None, "linkedin", False, ip_address, device_info, "Failed to get user info"
+        )
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # Find or create user (LinkedIn uses OpenID Connect format)
+    user = await _find_or_create_user(
+        db=db,
+        provider="linkedin",
+        provider_user_id=user_info["sub"],
+        email=user_info["email"],
+        display_name=user_info.get("name"),
+        avatar_url=user_info.get("picture"),
+        access_token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+    )
+
+    # Create tokens
+    access_token = create_access_token(str(user.id), user.email)
+    refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "linkedin", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "linkedin"}, ip_address, device_info
+    )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "linkedin"})
+
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+
+    frontend_url = (
+        f"{settings.FRONTEND_URL}/auth/callback"
+        f"?access_token={access_token}&refresh_token={refresh_token}"
+    )
+    return RedirectResponse(url=frontend_url)
+
+
 @router.post("/refresh", response_model=TokenPairResponse)
 @limiter.limit("30/minute")
 async def refresh_tokens(
@@ -567,7 +662,7 @@ async def mock_login(
     Only available when MOCK_OAUTH_ENABLED=1.
 
     Available mock users: alice, bob, charlie
-    Available providers: google, discord, github, x
+    Available providers: google, discord, github, x, linkedin
     """
     from .mock_oauth import get_mock_user
 
@@ -576,9 +671,10 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in ["google", "discord", "github", "x"]:
+    if provider not in ["google", "discord", "github", "x", "linkedin"]:
         raise HTTPException(
-            status_code=400, detail="Provider must be 'google', 'discord', 'github', or 'x'"
+            status_code=400,
+            detail="Provider must be 'google', 'discord', 'github', 'x', or 'linkedin'",
         )
 
     device_info, ip_address = _get_client_info(request)
@@ -597,16 +693,22 @@ async def mock_login(
         user_info = mock_user.to_x_format()
         display_name = user_info.get("name") or user_info.get("username")
         avatar_url = user_info.get("profile_image_url")
+    elif provider == "linkedin":
+        user_info = mock_user.to_linkedin_format()
+        display_name = user_info.get("name")
+        avatar_url = user_info.get("picture")
     else:
         user_info = mock_user.to_discord_format()
         display_name = user_info.get("username")
         avatar_url = user_info.get("avatar_url")
 
     # Find or create user
+    # LinkedIn uses "sub" instead of "id" (OpenID Connect)
+    provider_user_id = str(user_info.get("sub") or user_info.get("id"))
     db_user = await _find_or_create_user(
         db=db,
         provider=provider,
-        provider_user_id=str(user_info["id"]),
+        provider_user_id=provider_user_id,
         email=user_info["email"],
         display_name=display_name,
         avatar_url=avatar_url,

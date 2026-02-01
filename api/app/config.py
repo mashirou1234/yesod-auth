@@ -56,6 +56,10 @@ class Settings:
     X_CLIENT_ID: str = read_secret("x_client_id", "")
     X_CLIENT_SECRET: str = read_secret("x_client_secret", "")
 
+    # OAuth - LinkedIn
+    LINKEDIN_CLIENT_ID: str = read_secret("linkedin_client_id", "")
+    LINKEDIN_CLIENT_SECRET: str = read_secret("linkedin_client_secret", "")
+
     # URLs
     API_URL: str = os.getenv("API_URL", "http://localhost:8000")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

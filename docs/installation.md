@@ -57,6 +57,8 @@ Docker Secretsまたは環境変数で設定：
 | `discord_client_secret` | Discord OAuth Client Secret |
 | `x_client_id` | X (Twitter) OAuth Client ID |
 | `x_client_secret` | X (Twitter) OAuth Client Secret |
+| `linkedin_client_id` | LinkedIn OAuth Client ID |
+| `linkedin_client_secret` | LinkedIn OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
 ## ポート

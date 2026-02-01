@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | :material-shield-check: **OAuth 2.0対応** | :material-refresh: **トークンローテーション** |
-| Google、GitHub、Discordに対応。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
+| Google、GitHub、Discord、X、LinkedInに対応。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
 | :material-webhook: **Webhook連携** | :material-docker: **Docker対応** |
 | ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
@@ -54,6 +54,7 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 | GitHub | ✅ | 対応済み |
 | Discord | ❌ | 対応済み |
 | X (Twitter) | ✅ | 対応済み |
+| LinkedIn | ✅ | 対応済み |
 
 ## ライセンス
 
