@@ -239,3 +239,78 @@ class DiscordOAuth:
                     )
                 return data
             return None
+
+
+class XOAuth:
+    """X (Twitter) OAuth 2.0 implementation with PKCE (required)."""
+
+    AUTHORIZE_URL = "https://twitter.com/i/oauth2/authorize"
+    TOKEN_URL = "https://api.twitter.com/2/oauth2/token"
+    USERINFO_URL = "https://api.twitter.com/2/users/me"
+
+    @classmethod
+    def get_authorize_url(
+        cls,
+        redirect_uri: str,
+        state: str,
+        code_challenge: str,
+    ) -> str:
+        """Get the X OAuth authorization URL with PKCE (required for X)."""
+        params = {
+            "client_id": settings.X_CLIENT_ID,
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "tweet.read users.read offline.access",
+            "state": state,
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
+        }
+        query = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{cls.AUTHORIZE_URL}?{query}"
+
+    @classmethod
+    async def exchange_code(
+        cls,
+        code: str,
+        redirect_uri: str,
+        code_verifier: str,
+    ) -> dict | None:
+        """Exchange authorization code for tokens using Basic auth."""
+        import base64
+
+        # X requires Basic auth with client_id:client_secret
+        credentials = f"{settings.X_CLIENT_ID}:{settings.X_CLIENT_SECRET}"
+        encoded = base64.b64encode(credentials.encode()).decode()
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                cls.TOKEN_URL,
+                data={
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": redirect_uri,
+                    "code_verifier": code_verifier,
+                },
+                headers={
+                    "Authorization": f"Basic {encoded}",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+            )
+            if response.status_code == 200:
+                return response.json()
+            return None
+
+    @classmethod
+    async def get_user_info(cls, access_token: str) -> dict | None:
+        """Get user info from X."""
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                cls.USERINFO_URL,
+                params={"user.fields": "id,username,name,profile_image_url"},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if response.status_code == 200:
+                data = response.json()
+                # X API wraps user data in "data" field
+                return data.get("data")
+            return None

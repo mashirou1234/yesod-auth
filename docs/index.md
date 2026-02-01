@@ -53,6 +53,7 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 | Google | ✅ | 対応済み |
 | GitHub | ✅ | 対応済み |
 | Discord | ❌ | 対応済み |
+| X (Twitter) | ✅ | 対応済み |
 
 ## ライセンス
 

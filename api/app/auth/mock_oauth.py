@@ -55,6 +55,22 @@ class MockOAuthUser:
             "avatar_url": self.picture,
         }
 
+    def to_x_format(self) -> dict:
+        """Convert to X (Twitter) userinfo format.
+
+        Note: X API does not provide email addresses.
+        A placeholder email is generated using the username.
+        """
+        username = self.name.lower().replace(" ", "_")
+        return {
+            "id": self.id,
+            "username": username,
+            "name": self.name,
+            "profile_image_url": self.picture,
+            # X doesn't provide email, generate placeholder
+            "email": f"{username}@x.yesod-auth.local",
+        }
+
 
 # Predefined mock users for testing
 MOCK_USERS = {
