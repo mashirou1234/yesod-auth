@@ -6,25 +6,12 @@
 
 ## 特徴
 
-<div class="grid cards" markdown>
-
-- :material-shield-check: **OAuth 2.0対応**
-
-    Google、Discordに対応。PKCEによるセキュアな認証フロー
-
-- :material-refresh: **トークンローテーション**
-
-    リフレッシュトークンの自動ローテーションでセキュリティを強化
-
-- :material-webhook: **Webhook連携**
-
-    ユーザーイベントを外部サービスにリアルタイム通知
-
-- :material-docker: **Docker対応**
-
-    Docker Composeで簡単にデプロイ
-
-</div>
+| | |
+|---|---|
+| :material-shield-check: **OAuth 2.0対応** | :material-refresh: **トークンローテーション** |
+| Google、Discordに対応。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
+| :material-webhook: **Webhook連携** | :material-docker: **Docker対応** |
+| ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
 ## クイックスタート
 
