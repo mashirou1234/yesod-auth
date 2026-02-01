@@ -84,6 +84,26 @@ op.execute("""
 ## コード品質
 
 ### Ruff設定
-- `api/pyproject.toml`で設定
-- `ruff check api/` - リント
-- `ruff format api/` - フォーマット
+- 設定ファイル: `api/pyproject.toml`
+- リント: `ruff check api/`
+- フォーマット: `ruff format api/`
+
+### 実装ルール（必須）
+
+Pythonコードを作成・編集する際は、以下を必ず実行すること：
+
+1. **コミット前にruffフォーマットを適用**
+   ```bash
+   python3 -m ruff format api/
+   ```
+
+2. **リントエラーがないことを確認**
+   ```bash
+   python3 -m ruff check api/
+   ```
+
+3. **import文の順序**
+   - 標準ライブラリ → サードパーティ → ローカルの順
+   - ruffが自動で整理するため、`ruff format`を実行すれば解決
+
+CIでは`ruff check`と`ruff format --check`が実行され、違反があるとビルドが失敗する。
