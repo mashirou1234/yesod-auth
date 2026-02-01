@@ -84,6 +84,9 @@ class TestUserLifecycleEvents:
 
         **Validates: Requirements 1.1, 1.2, 1.3, 1.4, 1.5, 1.6**
         """
+        # Reset mock for each hypothesis example
+        mock_valkey.rpush.reset_mock()
+
         with (
             patch("app.webhooks.emitter._is_testing", return_value=False),
             patch("app.webhooks.emitter.get_valkey", return_value=mock_valkey),
