@@ -11,19 +11,38 @@ from app.accounts import router as accounts_router
 from app.auth import router as auth_router
 from app.auth.rate_limit import limiter
 from app.config import get_settings
+from app.db.session import async_session_factory
 from app.metrics import router as metrics_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
 from app.valkey import close_valkey
+from app.webhooks.config import WebhookConfigLoader
+from app.webhooks.router import router as webhooks_router
+from app.webhooks.worker import WebhookWorker
 
 settings = get_settings()
+
+# Global webhook worker instance
+_webhook_worker: WebhookWorker | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
+    global _webhook_worker
+
+    # Load webhook configuration
+    WebhookConfigLoader.load()
+
+    # Start webhook worker
+    _webhook_worker = WebhookWorker(db_session_factory=async_session_factory)
+    await _webhook_worker.start()
+
     yield
+
     # Cleanup on shutdown
+    if _webhook_worker:
+        await _webhook_worker.stop()
     await close_valkey()
 
 
@@ -85,6 +104,7 @@ app.include_router(auth_router, prefix=API_PREFIX)
 app.include_router(accounts_router, prefix=API_PREFIX)
 app.include_router(sessions_router, prefix=API_PREFIX)
 app.include_router(users_router, prefix=API_PREFIX)
+app.include_router(webhooks_router, prefix=f"{API_PREFIX}/admin")
 
 # Metrics at root level (for Prometheus scraping)
 app.include_router(metrics_router)

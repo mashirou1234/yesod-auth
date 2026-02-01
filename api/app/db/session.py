@@ -18,6 +18,9 @@ async_session_maker = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# Alias for webhook worker
+async_session_factory = async_session_maker
+
 
 async def get_db():
     """Dependency for getting database session."""
