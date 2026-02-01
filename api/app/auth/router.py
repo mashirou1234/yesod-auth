@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.db.session import get_db
 from app.models import OAuthAccount, User
 from app.valkey import OAuthStateStore
+from app.webhooks.emitter import WebhookEmitter
 
 from .jwt import get_current_user
 from .oauth import DiscordOAuth, GoogleOAuth
@@ -120,6 +121,9 @@ async def google_callback(
         db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "google"}, ip_address, device_info
     )
 
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "google"})
+
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
     if settings.FRONTEND_URL.startswith("http://localhost"):
@@ -208,6 +212,9 @@ async def discord_callback(
     await AuditLogger.log_event(
         db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "discord"}, ip_address, device_info
     )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "discord"})
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -524,6 +531,10 @@ async def _find_or_create_user(
                 user.profile.avatar_url = avatar_url
 
         await db.commit()
+
+        # Emit webhook for OAuth account linked
+        await WebhookEmitter.emit_user_event("user.oauth_linked", user.id, {"provider": provider})
+
         return user
 
     # Create new user with profile and email
@@ -572,5 +583,10 @@ async def _find_or_create_user(
         .where(User.id == user.id)
     )
     user = result.scalar_one()
+
+    # Emit webhook for new user created
+    await WebhookEmitter.emit_user_event(
+        "user.created", user.id, {"provider": provider, "email": email}
+    )
 
     return user

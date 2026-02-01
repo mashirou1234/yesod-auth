@@ -13,6 +13,7 @@ from app.auth.jwt import get_current_user
 from app.config import get_settings
 from app.db.session import get_db
 from app.models import DeletedUser, OAuthAccount, User, UserProfile
+from app.webhooks.emitter import WebhookEmitter
 
 from .schemas import SyncFromProviderResponse, UserDeleteResponse, UserResponse, UserUpdateRequest
 
@@ -105,6 +106,11 @@ async def update_profile(
             device_info,
         )
 
+        # Emit webhook for profile update
+        await WebhookEmitter.emit_user_event(
+            "user.updated", user.id, {"changes": list(changes.keys())}
+        )
+
     # Reload with all relationships
     result = await db.execute(
         select(User)
@@ -163,6 +169,11 @@ async def delete_account(
         {"email": email, "oauth_providers": oauth_providers},
         ip_address,
         device_info,
+    )
+
+    # Emit webhook for account deletion (before actual deletion)
+    await WebhookEmitter.emit_user_event(
+        "user.deleted", user_id, {"email": email, "oauth_providers": oauth_providers}
     )
 
     # Create soft delete record
