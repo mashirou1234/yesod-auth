@@ -395,6 +395,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/webhooks/reload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reload Webhooks
+         * @description Reload webhook configuration from file.
+         *
+         *     Reloads config/webhooks.yaml and validates all endpoints.
+         *     If validation fails, the existing configuration is kept.
+         */
+        post: operations["reload_webhooks_api_v1_admin_webhooks_reload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/webhooks/endpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Endpoints
+         * @description List all configured webhook endpoints.
+         *
+         *     Returns endpoint configurations (secrets are masked).
+         */
+        get: operations["list_endpoints_api_v1_admin_webhooks_endpoints_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/webhooks/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Deliveries
+         * @description List recent webhook deliveries.
+         *
+         *     Returns delivery history with status, latency, and error details.
+         */
+        get: operations["list_deliveries_api_v1_admin_webhooks_deliveries_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/metrics": {
         parameters: {
             query?: never;
@@ -736,6 +803,128 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /**
+         * WebhookDeliveryResponse
+         * @description Webhook delivery log entry response.
+         */
+        WebhookDeliveryResponse: {
+            /**
+             * Id
+             * Format: uuid
+             * @description Delivery record ID
+             */
+            id: string;
+            /**
+             * Event Id
+             * Format: uuid
+             * @description Event ID
+             */
+            event_id: string;
+            /**
+             * Event Type
+             * @description Event type (e.g., user.created)
+             */
+            event_type: string;
+            /**
+             * Endpoint Id
+             * @description Target endpoint ID
+             */
+            endpoint_id: string;
+            /**
+             * Endpoint Url
+             * @description Target URL at delivery time
+             */
+            endpoint_url: string;
+            /**
+             * Status
+             * @description Delivery status: pending, success, failed
+             */
+            status: string;
+            /**
+             * Http Status
+             * @description HTTP response status code
+             */
+            http_status?: number | null;
+            /**
+             * Error Message
+             * @description Error message if failed
+             */
+            error_message?: string | null;
+            /**
+             * Attempt Count
+             * @description Number of delivery attempts
+             */
+            attempt_count: number;
+            /**
+             * Latency Ms
+             * @description Delivery latency in milliseconds
+             */
+            latency_ms?: number | null;
+            /**
+             * Created At
+             * Format: date-time
+             * @description When delivery was created
+             */
+            created_at: string;
+            /**
+             * Completed At
+             * @description When delivery completed
+             */
+            completed_at?: string | null;
+        };
+        /**
+         * WebhookEndpointResponse
+         * @description Webhook endpoint configuration response (secret masked).
+         */
+        WebhookEndpointResponse: {
+            /**
+             * Id
+             * @description Unique endpoint identifier
+             */
+            id: string;
+            /**
+             * Url
+             * @description Webhook URL (HTTPS)
+             */
+            url: string;
+            /**
+             * Events
+             * @description Subscribed event types
+             */
+            events: string[];
+            /**
+             * Enabled
+             * @description Whether endpoint is active
+             */
+            enabled: boolean;
+            /**
+             * Description
+             * @description Endpoint description
+             * @default
+             */
+            description: string;
+        };
+        /**
+         * WebhookReloadResponse
+         * @description Response for webhook configuration reload.
+         */
+        WebhookReloadResponse: {
+            /**
+             * Success
+             * @description Whether reload succeeded
+             */
+            success: boolean;
+            /**
+             * Message
+             * @description Status message
+             */
+            message: string;
+            /**
+             * Endpoint Count
+             * @description Number of loaded endpoints
+             */
+            endpoint_count: number;
         };
     };
     responses: never;
@@ -1308,6 +1497,82 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SyncFromProviderResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reload_webhooks_api_v1_admin_webhooks_reload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookReloadResponse"];
+                };
+            };
+        };
+    };
+    list_endpoints_api_v1_admin_webhooks_endpoints_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointResponse"][];
+                };
+            };
+        };
+    };
+    list_deliveries_api_v1_admin_webhooks_deliveries_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by event type */
+                event_type?: string | null;
+                /** @description Filter by endpoint ID */
+                endpoint_id?: string | null;
+                /** @description Maximum results */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryResponse"][];
                 };
             };
             /** @description Validation Error */
