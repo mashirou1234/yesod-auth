@@ -84,6 +84,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Github Login
+         * @description Start GitHub OAuth flow with PKCE.
+         */
+        get: operations["github_login_api_v1_auth_github_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/github/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Github Callback
+         * @description Handle GitHub OAuth callback.
+         */
+        get: operations["github_callback_api_v1_auth_github_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/refresh": {
         parameters: {
             query?: never;
@@ -161,7 +201,7 @@ export interface paths {
          *     Only available when MOCK_OAUTH_ENABLED=1.
          *
          *     Available mock users: alice, bob, charlie
-         *     Available providers: google, discord
+         *     Available providers: google, discord, github
          */
         get: operations["mock_login_api_v1_auth_mock_login_get"];
         put?: never;
@@ -1008,6 +1048,58 @@ export interface operations {
         };
     };
     discord_callback_api_v1_auth_discord_callback_get: {
+        parameters: {
+            query: {
+                code: string;
+                state: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    github_login_api_v1_auth_github_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    github_callback_api_v1_auth_github_callback_get: {
         parameters: {
             query: {
                 code: string;
