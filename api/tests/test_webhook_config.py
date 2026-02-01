@@ -9,6 +9,7 @@ import yaml
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+import app.webhooks.config as config_module
 from app.webhooks.config import WebhookConfigLoader
 
 # Strategies for generating test data
@@ -90,7 +91,7 @@ class TestWebhookConfigValidation:
             config_path = Path(f.name)
 
         try:
-            with patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path):
+            with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 result = WebhookConfigLoader.load()
 
@@ -138,7 +139,7 @@ class TestWebhookConfigValidation:
             config_path = Path(f.name)
 
         try:
-            with patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path):
+            with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 result = WebhookConfigLoader.load()
 
@@ -171,7 +172,7 @@ class TestWebhookConfigValidation:
             config_path = Path(f.name)
 
         try:
-            with patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path):
+            with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 result = WebhookConfigLoader.load()
 
@@ -203,7 +204,7 @@ class TestWebhookConfigValidation:
             config_path = Path(f.name)
 
         try:
-            with patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path):
+            with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 result = WebhookConfigLoader.load()
 
@@ -230,7 +231,7 @@ class TestWebhookConfigValidation:
 
         try:
             with (
-                patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path),
+                patch.object(config_module, "CONFIG_PATH", config_path),
                 patch.dict(os.environ, {"TEST_WEBHOOK_SECRET": "resolved-secret"}),
             ):
                 WebhookConfigLoader._config = None
@@ -243,7 +244,7 @@ class TestWebhookConfigValidation:
 
     def test_missing_config_file_disables_webhooks(self):
         """Test that missing config file results in empty config."""
-        with patch.object(WebhookConfigLoader, "CONFIG_PATH", Path("/nonexistent/webhooks.yaml")):
+        with patch.object(config_module, "CONFIG_PATH", Path("/nonexistent/webhooks.yaml")):
             WebhookConfigLoader._config = None
             result = WebhookConfigLoader.load()
 
@@ -282,7 +283,7 @@ class TestWebhookConfigValidation:
             config_path = Path(f.name)
 
         try:
-            with patch.object(WebhookConfigLoader, "CONFIG_PATH", config_path):
+            with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 WebhookConfigLoader.load()
 

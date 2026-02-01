@@ -4,7 +4,7 @@ import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from app.webhooks.config import WebhookConfig, WebhookEndpoint, WebhookSettings
@@ -50,7 +50,10 @@ def mock_valkey():
 class TestUserLifecycleEvents:
     """Tests for user lifecycle event emission."""
 
-    @settings(max_examples=20)
+    @settings(
+        max_examples=20,
+        suppress_health_check=[HealthCheck.function_scoped_fixture],
+    )
     @given(
         event_type=st.sampled_from(
             [
