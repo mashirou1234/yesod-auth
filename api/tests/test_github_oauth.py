@@ -1,12 +1,13 @@
 """Tests for GitHub OAuth implementation."""
 
+from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
+
 import httpx
 import pytest
-from unittest.mock import patch
-from urllib.parse import urlparse, parse_qs
 
-from app.auth.oauth import GitHubOAuth
 from app.auth.mock_oauth import MockOAuthUser, get_mock_user
+from app.auth.oauth import GitHubOAuth
 
 
 class TestGitHubOAuthAuthorizeUrl:
