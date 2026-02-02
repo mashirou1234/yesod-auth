@@ -60,6 +60,18 @@ class Settings:
     LINKEDIN_CLIENT_ID: str = read_secret("linkedin_client_id", "")
     LINKEDIN_CLIENT_SECRET: str = read_secret("linkedin_client_secret", "")
 
+    # OAuth - Facebook
+    FACEBOOK_CLIENT_ID: str = read_secret("facebook_client_id", "")
+    FACEBOOK_CLIENT_SECRET: str = read_secret("facebook_client_secret", "")
+
+    # OAuth - Slack
+    SLACK_CLIENT_ID: str = read_secret("slack_client_id", "")
+    SLACK_CLIENT_SECRET: str = read_secret("slack_client_secret", "")
+
+    # OAuth - Twitch
+    TWITCH_CLIENT_ID: str = read_secret("twitch_client_id", "")
+    TWITCH_CLIENT_SECRET: str = read_secret("twitch_client_secret", "")
+
     # URLs
     API_URL: str = os.getenv("API_URL", "http://localhost:8000")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")

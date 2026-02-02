@@ -16,7 +16,16 @@ from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
 
 from .jwt import get_current_user
-from .oauth import DiscordOAuth, GitHubOAuth, GoogleOAuth, LinkedInOAuth, XOAuth
+from .oauth import (
+    DiscordOAuth,
+    FacebookOAuth,
+    GitHubOAuth,
+    GoogleOAuth,
+    LinkedInOAuth,
+    SlackOAuth,
+    TwitchOAuth,
+    XOAuth,
+)
 from .pkce import generate_code_challenge, generate_code_verifier
 from .rate_limit import limiter
 from .schemas import (
@@ -518,6 +527,287 @@ async def linkedin_callback(
     return RedirectResponse(url=frontend_url)
 
 
+@router.get("/facebook")
+@limiter.limit("10/minute")
+async def facebook_login(request: Request):
+    """Start Facebook OAuth flow with PKCE."""
+    state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
+
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "facebook", code_verifier)
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    authorize_url = FacebookOAuth.get_authorize_url(redirect_uri, state, code_challenge)
+
+    return RedirectResponse(url=authorize_url)
+
+
+@router.get("/facebook/callback")
+@limiter.limit("10/minute")
+async def facebook_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Facebook OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+
+    # Verify and consume state
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != "facebook":
+        await AuditLogger.log_login(
+            db, None, "facebook", False, ip_address, device_info, "Invalid state"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    code_verifier = state_data.get("code_verifier")
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+
+    # Exchange code for tokens
+    token_data = await FacebookOAuth.exchange_code(code, redirect_uri, code_verifier)
+    if not token_data:
+        await AuditLogger.log_login(
+            db, None, "facebook", False, ip_address, device_info, "Code exchange failed"
+        )
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    # Get user info
+    user_info = await FacebookOAuth.get_user_info(token_data["access_token"])
+    if not user_info:
+        await AuditLogger.log_login(
+            db, None, "facebook", False, ip_address, device_info, "Failed to get user info"
+        )
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # Find or create user
+    user = await _find_or_create_user(
+        db=db,
+        provider="facebook",
+        provider_user_id=user_info["id"],
+        email=user_info["email"],
+        display_name=user_info.get("name"),
+        avatar_url=user_info.get("picture", {}).get("data", {}).get("url"),
+        access_token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+    )
+
+    # Create tokens
+    access_token = create_access_token(str(user.id), user.email)
+    refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "facebook", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "facebook"}, ip_address, device_info
+    )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "facebook"})
+
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+
+    frontend_url = (
+        f"{settings.FRONTEND_URL}/auth/callback"
+        f"?access_token={access_token}&refresh_token={refresh_token}"
+    )
+    return RedirectResponse(url=frontend_url)
+
+
+@router.get("/slack")
+@limiter.limit("10/minute")
+async def slack_login(request: Request):
+    """Start Slack OAuth flow."""
+    state = secrets.token_urlsafe(32)
+    nonce = secrets.token_urlsafe(16)
+
+    # Store state with nonce in Valkey
+    await OAuthStateStore.save(state, "slack", nonce)
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, nonce)
+
+    return RedirectResponse(url=authorize_url)
+
+
+@router.get("/slack/callback")
+@limiter.limit("10/minute")
+async def slack_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Slack OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+
+    # Verify and consume state
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != "slack":
+        await AuditLogger.log_login(
+            db, None, "slack", False, ip_address, device_info, "Invalid state"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+
+    # Exchange code for tokens
+    token_data = await SlackOAuth.exchange_code(code, redirect_uri)
+    if not token_data:
+        await AuditLogger.log_login(
+            db, None, "slack", False, ip_address, device_info, "Code exchange failed"
+        )
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    # Get user info
+    user_info = await SlackOAuth.get_user_info(token_data["access_token"])
+    if not user_info:
+        await AuditLogger.log_login(
+            db, None, "slack", False, ip_address, device_info, "Failed to get user info"
+        )
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # Find or create user (Slack uses OpenID Connect format with "sub")
+    user = await _find_or_create_user(
+        db=db,
+        provider="slack",
+        provider_user_id=user_info["sub"],
+        email=user_info["email"],
+        display_name=user_info.get("name"),
+        avatar_url=user_info.get("picture"),
+        access_token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+    )
+
+    # Create tokens
+    access_token = create_access_token(str(user.id), user.email)
+    refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "slack", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "slack"}, ip_address, device_info
+    )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "slack"})
+
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+
+    frontend_url = (
+        f"{settings.FRONTEND_URL}/auth/callback"
+        f"?access_token={access_token}&refresh_token={refresh_token}"
+    )
+    return RedirectResponse(url=frontend_url)
+
+
+@router.get("/twitch")
+@limiter.limit("10/minute")
+async def twitch_login(request: Request):
+    """Start Twitch OAuth flow."""
+    state = secrets.token_urlsafe(32)
+    nonce = secrets.token_urlsafe(16)
+
+    # Store state with nonce in Valkey
+    await OAuthStateStore.save(state, "twitch", nonce)
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, nonce)
+
+    return RedirectResponse(url=authorize_url)
+
+
+@router.get("/twitch/callback")
+@limiter.limit("10/minute")
+async def twitch_callback(
+    request: Request,
+    code: str,
+    state: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Handle Twitch OAuth callback."""
+    device_info, ip_address = _get_client_info(request)
+
+    # Verify and consume state
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != "twitch":
+        await AuditLogger.log_login(
+            db, None, "twitch", False, ip_address, device_info, "Invalid state"
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+
+    # Exchange code for tokens
+    token_data = await TwitchOAuth.exchange_code(code, redirect_uri)
+    if not token_data:
+        await AuditLogger.log_login(
+            db, None, "twitch", False, ip_address, device_info, "Code exchange failed"
+        )
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    # Get user info
+    user_info = await TwitchOAuth.get_user_info(token_data["access_token"])
+    if not user_info:
+        await AuditLogger.log_login(
+            db, None, "twitch", False, ip_address, device_info, "Failed to get user info"
+        )
+        raise HTTPException(status_code=400, detail="Failed to get user info")
+
+    # Find or create user
+    user = await _find_or_create_user(
+        db=db,
+        provider="twitch",
+        provider_user_id=user_info["id"],
+        email=user_info["email"],
+        display_name=user_info.get("display_name") or user_info.get("login"),
+        avatar_url=user_info.get("profile_image_url"),
+        access_token=token_data["access_token"],
+        refresh_token=token_data.get("refresh_token"),
+    )
+
+    # Create tokens
+    access_token = create_access_token(str(user.id), user.email)
+    refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Log successful login
+    await AuditLogger.log_login(db, user.id, "twitch", True, ip_address, device_info)
+    await AuditLogger.log_event(
+        db, AuthEventType.LOGIN_SUCCESS, user.id, {"provider": "twitch"}, ip_address, device_info
+    )
+
+    # Emit webhook event
+    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "twitch"})
+
+    # In development, redirect to debug page to show tokens
+    # In production, redirect to frontend
+    if settings.FRONTEND_URL.startswith("http://localhost"):
+        return RedirectResponse(
+            url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
+            f"?access_token={access_token}&refresh_token={refresh_token}"
+        )
+
+    frontend_url = (
+        f"{settings.FRONTEND_URL}/auth/callback"
+        f"?access_token={access_token}&refresh_token={refresh_token}"
+    )
+    return RedirectResponse(url=frontend_url)
+
+
 @router.post("/refresh", response_model=TokenPairResponse)
 @limiter.limit("30/minute")
 async def refresh_tokens(
@@ -662,7 +952,7 @@ async def mock_login(
     Only available when MOCK_OAUTH_ENABLED=1.
 
     Available mock users: alice, bob, charlie
-    Available providers: google, discord, github, x, linkedin
+    Available providers: google, discord, github, x, linkedin, facebook, slack, twitch
     """
     from .mock_oauth import get_mock_user
 
@@ -671,10 +961,19 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in ["google", "discord", "github", "x", "linkedin"]:
+    if provider not in [
+        "google",
+        "discord",
+        "github",
+        "x",
+        "linkedin",
+        "facebook",
+        "slack",
+        "twitch",
+    ]:
         raise HTTPException(
             status_code=400,
-            detail="Provider must be 'google', 'discord', 'github', 'x', or 'linkedin'",
+            detail="Provider must be 'google', 'discord', 'github', 'x', 'linkedin', 'facebook', 'slack', or 'twitch'",
         )
 
     device_info, ip_address = _get_client_info(request)
@@ -697,6 +996,18 @@ async def mock_login(
         user_info = mock_user.to_linkedin_format()
         display_name = user_info.get("name")
         avatar_url = user_info.get("picture")
+    elif provider == "facebook":
+        user_info = mock_user.to_facebook_format()
+        display_name = user_info.get("name")
+        avatar_url = user_info.get("picture", {}).get("data", {}).get("url")
+    elif provider == "slack":
+        user_info = mock_user.to_slack_format()
+        display_name = user_info.get("name")
+        avatar_url = user_info.get("picture")
+    elif provider == "twitch":
+        user_info = mock_user.to_twitch_format()
+        display_name = user_info.get("display_name") or user_info.get("login")
+        avatar_url = user_info.get("profile_image_url")
     else:
         user_info = mock_user.to_discord_format()
         display_name = user_info.get("username")

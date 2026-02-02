@@ -183,6 +183,128 @@ echo "your-client-secret" > secrets/linkedin_client_secret.txt
 
 ---
 
+## Facebook OAuth
+
+### 1. Facebook Developer Portalでアプリ作成
+
+1. [Facebook for Developers](https://developers.facebook.com/)にアクセス
+2. 「マイアプリ」→「アプリを作成」をクリック
+3. アプリタイプ：「消費者」を選択
+4. アプリ名を入力して作成
+
+### 2. Facebookログインの設定
+
+1. 作成したアプリのダッシュボードを開く
+2. 「製品を追加」→「Facebookログイン」→「設定」をクリック
+3. 「ウェブ」を選択
+4. サイトURL: `http://localhost:8000`を入力
+
+### 3. OAuth設定
+
+1. 左メニューの「Facebookログイン」→「設定」を開く
+2. 「有効なOAuthリダイレクトURI」に以下を追加：
+    ```
+    http://localhost:8000/api/v1/auth/facebook/callback
+    ```
+3. 「変更を保存」をクリック
+
+### 4. クライアント認証情報の取得
+
+1. 左メニューの「設定」→「ベーシック」を開く
+2. 「アプリID」と「app secret」をコピー（「表示」をクリックして表示）
+
+### 5. シークレットファイルの設定
+
+```bash
+echo "your-app-id" > secrets/facebook_client_id.txt
+echo "your-app-secret" > secrets/facebook_client_secret.txt
+```
+
+!!! info "Graph API v18.0"
+    YESOD AuthはFacebook Graph API v18.0を使用します。
+    `email`と`public_profile`スコープを要求し、ユーザー情報を取得します。
+
+!!! tip "PKCE対応"
+    Facebook OAuth 2.0はPKCEに対応しています。
+    YESOD Authは自動的にPKCEを使用してセキュリティを強化します。
+
+---
+
+## Slack OAuth
+
+### 1. Slack APIでアプリ作成
+
+1. [Slack API](https://api.slack.com/apps)にアクセス
+2. 「Create New App」→「From scratch」をクリック
+3. アプリ名とワークスペースを選択して作成
+
+### 2. OAuth & Permissions設定
+
+1. 左メニューの「OAuth & Permissions」を開く
+2. 「Redirect URLs」に以下を追加：
+    ```
+    http://localhost:8000/api/v1/auth/slack/callback
+    ```
+3. 「Save URLs」をクリック
+
+### 3. OpenID Connect設定
+
+1. 左メニューの「OpenID Connect」を開く
+2. 「Enable OpenID Connect」をオンにする
+
+### 4. クライアント認証情報の取得
+
+1. 左メニューの「Basic Information」を開く
+2. 「App Credentials」セクションから以下をコピー：
+    - Client ID
+    - Client Secret
+
+### 5. シークレットファイルの設定
+
+```bash
+echo "your-client-id" > secrets/slack_client_id.txt
+echo "your-client-secret" > secrets/slack_client_secret.txt
+```
+
+!!! info "OpenID Connect"
+    SlackはOpenID Connectを使用します。
+    YESOD Authは`openid`、`email`、`profile`スコープを要求し、
+    ユーザー情報は`/api/openid.connect.userInfo`エンドポイントから取得します。
+
+---
+
+## Twitch OAuth
+
+### 1. Twitch Developer Consoleでアプリ作成
+
+1. [Twitch Developer Console](https://dev.twitch.tv/console/apps)にアクセス
+2. 「Register Your Application」をクリック
+3. 必要な情報を入力：
+    - Name: アプリ名
+    - OAuth Redirect URLs: `http://localhost:8000/api/v1/auth/twitch/callback`
+    - Category: 適切なカテゴリを選択
+4. 「Create」をクリック
+
+### 2. クライアント認証情報の取得
+
+1. 作成したアプリの「Manage」をクリック
+2. 「Client ID」をコピー
+3. 「New Secret」をクリックしてClient Secretを生成・コピー
+
+### 3. シークレットファイルの設定
+
+```bash
+echo "your-client-id" > secrets/twitch_client_id.txt
+echo "your-client-secret" > secrets/twitch_client_secret.txt
+```
+
+!!! info "Helix API"
+    YESOD AuthはTwitch Helix APIを使用します。
+    `openid`と`user:read:email`スコープを要求し、
+    ユーザー情報は`/helix/users`エンドポイントから取得します。
+
+---
+
 ## 本番環境での注意点
 
 !!! warning "リダイレクトURIの更新"
@@ -193,8 +315,11 @@ echo "your-client-secret" > secrets/linkedin_client_secret.txt
     https://your-domain.com/api/v1/auth/discord/callback
     https://your-domain.com/api/v1/auth/x/callback
     https://your-domain.com/api/v1/auth/linkedin/callback
+    https://your-domain.com/api/v1/auth/facebook/callback
+    https://your-domain.com/api/v1/auth/slack/callback
+    https://your-domain.com/api/v1/auth/twitch/callback
     ```
 
 !!! tip "PKCE"
-    Google OAuth、GitHub OAuth、X OAuth、LinkedIn OAuthはPKCE（Proof Key for Code Exchange）に対応しています。
+    Google OAuth、GitHub OAuth、X OAuth、LinkedIn OAuth、Facebook OAuthはPKCE（Proof Key for Code Exchange）に対応しています。
     YESOD Authは自動的にPKCEを使用してセキュリティを強化します。

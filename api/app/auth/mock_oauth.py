@@ -81,6 +81,45 @@ class MockOAuthUser:
             "email_verified": True,
         }
 
+    def to_facebook_format(self) -> dict:
+        """Convert to Facebook Graph API userinfo format."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": {
+                "data": {
+                    "url": self.picture,
+                    "is_silhouette": False,
+                }
+            },
+        }
+
+    def to_slack_format(self) -> dict:
+        """Convert to Slack OpenID Connect userinfo format."""
+        return {
+            "ok": True,
+            "sub": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": self.picture,
+            "email_verified": True,
+        }
+
+    def to_twitch_format(self) -> dict:
+        """Convert to Twitch Helix API userinfo format."""
+        login = self.name.lower().replace(" ", "_")
+        return {
+            "id": self.id,
+            "login": login,
+            "display_name": self.name,
+            "email": self.email,
+            "profile_image_url": self.picture,
+            "broadcaster_type": "",
+            "description": "",
+            "type": "",
+        }
+
 
 # Predefined mock users for testing
 MOCK_USERS = {
