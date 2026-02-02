@@ -241,22 +241,53 @@ def show_api_test():
     """)
     
     st.markdown(f"""
-    <div style="display: flex; gap: 20px; margin: 20px 0;">
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0;">
         <a href="{API_BASE}/auth/google" target="_blank" 
-           style="background: #4285f4; color: white; padding: 12px 24px; 
+           style="background: #4285f4; color: white; padding: 10px 20px; 
                   border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🔵 Login with Google
+            🔵 Google
+        </a>
+        <a href="{API_BASE}/auth/github" target="_blank"
+           style="background: #333; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            ⚫ GitHub
         </a>
         <a href="{API_BASE}/auth/discord" target="_blank"
-           style="background: #5865f2; color: white; padding: 12px 24px;
+           style="background: #5865f2; color: white; padding: 10px 20px;
                   border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🟣 Login with Discord
+            🟣 Discord
+        </a>
+        <a href="{API_BASE}/auth/x" target="_blank"
+           style="background: #000; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            ✖️ X
+        </a>
+        <a href="{API_BASE}/auth/linkedin" target="_blank"
+           style="background: #0077b5; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            🔷 LinkedIn
+        </a>
+        <a href="{API_BASE}/auth/facebook" target="_blank"
+           style="background: #1877f2; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            🔵 Facebook
+        </a>
+        <a href="{API_BASE}/auth/slack" target="_blank"
+           style="background: #4a154b; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            💬 Slack
+        </a>
+        <a href="{API_BASE}/auth/twitch" target="_blank"
+           style="background: #9146ff; color: white; padding: 10px 20px;
+                  border-radius: 8px; text-decoration: none; font-weight: bold;">
+            🎮 Twitch
         </a>
     </div>
     """, unsafe_allow_html=True)
     
     st.info(f"💡 If buttons don't work, open these URLs directly:\n\n"
             f"Google: {API_BASE}/auth/google\n\n"
+            f"GitHub: {API_BASE}/auth/github\n\n"
             f"Discord: {API_BASE}/auth/discord")
     
     st.divider()
@@ -337,7 +368,11 @@ def show_api_test():
         
         st.write("**Sync from OAuth Provider**")
         st.caption("Restore display name and avatar from your linked OAuth account")
-        sync_provider = st.selectbox("Provider", ["google", "discord"], key="sync_prov")
+        sync_provider = st.selectbox(
+            "Provider",
+            ["google", "github", "discord", "x", "linkedin", "facebook", "slack", "twitch"],
+            key="sync_prov",
+        )
         
         if st.button(f"POST /users/me/sync-from-provider?provider={sync_provider}", key="sync_profile"):
             try:
@@ -369,16 +404,46 @@ def show_api_test():
         st.caption("Add another OAuth provider to your account")
         
         st.markdown(f"""
-        <div style="display: flex; gap: 20px; margin: 20px 0;">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0;">
             <a href="{API_BASE}/accounts/link/google" target="_blank" 
-               style="background: #4285f4; color: white; padding: 12px 24px; 
+               style="background: #4285f4; color: white; padding: 10px 20px; 
                       border-radius: 8px; text-decoration: none; font-weight: bold;">
                 🔵 Link Google
             </a>
+            <a href="{API_BASE}/accounts/link/github" target="_blank"
+               style="background: #333; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                ⚫ Link GitHub
+            </a>
             <a href="{API_BASE}/accounts/link/discord" target="_blank"
-               style="background: #5865f2; color: white; padding: 12px 24px;
+               style="background: #5865f2; color: white; padding: 10px 20px;
                       border-radius: 8px; text-decoration: none; font-weight: bold;">
                 🟣 Link Discord
+            </a>
+            <a href="{API_BASE}/accounts/link/x" target="_blank"
+               style="background: #000; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                ✖️ Link X
+            </a>
+            <a href="{API_BASE}/accounts/link/linkedin" target="_blank"
+               style="background: #0077b5; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                🔷 Link LinkedIn
+            </a>
+            <a href="{API_BASE}/accounts/link/facebook" target="_blank"
+               style="background: #1877f2; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                🔵 Link Facebook
+            </a>
+            <a href="{API_BASE}/accounts/link/slack" target="_blank"
+               style="background: #4a154b; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                💬 Link Slack
+            </a>
+            <a href="{API_BASE}/accounts/link/twitch" target="_blank"
+               style="background: #9146ff; color: white; padding: 10px 20px;
+                      border-radius: 8px; text-decoration: none; font-weight: bold;">
+                🎮 Link Twitch
             </a>
         </div>
         """, unsafe_allow_html=True)
@@ -386,7 +451,11 @@ def show_api_test():
         st.divider()
         
         st.write("**Unlink Provider**")
-        unlink_provider = st.selectbox("Provider to Unlink", ["google", "discord"], key="unlink_prov")
+        unlink_provider = st.selectbox(
+            "Provider to Unlink",
+            ["google", "github", "discord", "x", "linkedin", "facebook", "slack", "twitch"],
+            key="unlink_prov",
+        )
         
         if st.button(f"DELETE /accounts/{unlink_provider}", key="unlink"):
             try:
