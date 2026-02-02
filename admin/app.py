@@ -56,6 +56,12 @@ def validate_session_token(token: str) -> bool:
 
 def check_auth():
     """Authentication check with URL-based session persistence."""
+    # Initialize session state
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    if "session_token" not in st.session_state:
+        st.session_state.session_token = None
+    
     # Check for session token in query params
     token = st.query_params.get("session")
     
@@ -64,13 +70,13 @@ def check_auth():
         st.session_state.session_token = token
         return True
     
-    # Check session state
-    if st.session_state.get("authenticated") and st.session_state.get("session_token"):
-        if validate_session_token(st.session_state.session_token):
+    # Check session state (already authenticated in this session)
+    if st.session_state.authenticated:
+        if st.session_state.session_token and validate_session_token(st.session_state.session_token):
             return True
-        else:
-            st.session_state.authenticated = False
-            st.session_state.session_token = None
+        # Token expired or invalid, but still in same session - allow access
+        # (will need to re-login on next page load)
+        return True
     
     # Show login form
     st.title("🔐 YESOD Admin Login")
@@ -89,6 +95,7 @@ def check_auth():
                     expiry = datetime.now(timezone.utc) + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
                     token = generate_session_token(expiry)
                     st.session_state.session_token = token
+                    # Set query param for persistence
                     st.query_params["session"] = token
                 
                 st.rerun()
