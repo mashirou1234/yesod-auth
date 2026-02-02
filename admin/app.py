@@ -3,9 +3,8 @@ import streamlit as st
 import pandas as pd
 import graphviz
 import hashlib
-import secrets
+import hmac
 from datetime import datetime, timedelta, timezone
-import extra_streamlit_components as stx
 from config import settings
 import db
 import valkey_client
@@ -17,75 +16,90 @@ st.set_page_config(
 )
 
 
-def get_cookie_manager():
-    """Get cookie manager instance."""
-    return stx.CookieManager()
+def generate_session_token(expiry: datetime) -> str:
+    """Generate a secure session token with expiry."""
+    message = f"{settings.ADMIN_USER}:{expiry.isoformat()}"
+    signature = hmac.new(
+        settings.ADMIN_PASSWORD.encode(),
+        message.encode(),
+        hashlib.sha256
+    ).hexdigest()[:32]
+    return f"{expiry.timestamp():.0f}:{signature}"
 
 
-def generate_session_token() -> str:
-    """Generate a secure session token."""
-    return secrets.token_urlsafe(32)
-
-
-def hash_credentials(username: str, password: str) -> str:
-    """Hash credentials for session validation."""
-    return hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
+def validate_session_token(token: str) -> bool:
+    """Validate session token."""
+    try:
+        parts = token.split(":")
+        if len(parts) != 2:
+            return False
+        
+        expiry_ts, signature = parts
+        expiry = datetime.fromtimestamp(float(expiry_ts), tz=timezone.utc)
+        
+        # Check expiry
+        if expiry < datetime.now(timezone.utc):
+            return False
+        
+        # Verify signature
+        message = f"{settings.ADMIN_USER}:{expiry.isoformat()}"
+        expected = hmac.new(
+            settings.ADMIN_PASSWORD.encode(),
+            message.encode(),
+            hashlib.sha256
+        ).hexdigest()[:32]
+        
+        return hmac.compare_digest(signature, expected)
+    except (ValueError, TypeError):
+        return False
 
 
 def check_auth():
-    """Authentication check with cookie-based session persistence."""
-    cookie_manager = get_cookie_manager()
+    """Authentication check with URL-based session persistence."""
+    # Check for session token in query params
+    token = st.query_params.get("session")
     
-    # Check for existing session cookie
-    session_token = cookie_manager.get("yesod_admin_session")
-    session_expiry = cookie_manager.get("yesod_admin_expiry")
+    if token and validate_session_token(token):
+        st.session_state.authenticated = True
+        st.session_state.session_token = token
+        return True
     
-    # Validate existing session
-    if session_token and session_expiry:
-        try:
-            expiry_time = datetime.fromisoformat(session_expiry)
-            expected_token = hash_credentials(settings.ADMIN_USER, settings.ADMIN_PASSWORD)
-            
-            if session_token == expected_token and expiry_time > datetime.now(timezone.utc):
-                st.session_state.authenticated = True
-                return True
-        except (ValueError, TypeError):
-            pass
+    # Check session state
+    if st.session_state.get("authenticated") and st.session_state.get("session_token"):
+        if validate_session_token(st.session_state.session_token):
+            return True
+        else:
+            st.session_state.authenticated = False
+            st.session_state.session_token = None
     
     # Show login form
-    if not st.session_state.get("authenticated", False):
-        st.title("🔐 YESOD Admin Login")
+    st.title("🔐 YESOD Admin Login")
+    
+    with st.form("login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        remember = st.checkbox("Remember me (24 hours)", value=True)
+        submitted = st.form_submit_button("Login")
         
-        with st.form("login"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            remember = st.checkbox("Remember me", value=True)
-            submitted = st.form_submit_button("Login")
-            
-            if submitted:
-                if username == settings.ADMIN_USER and password == settings.ADMIN_PASSWORD:
-                    st.session_state.authenticated = True
-                    
-                    # Set session cookie
-                    if remember:
-                        expiry = datetime.now(timezone.utc) + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
-                        session_token = hash_credentials(username, password)
-                        cookie_manager.set(
-                            "yesod_admin_session",
-                            session_token,
-                            expires_at=expiry,
-                        )
-                        cookie_manager.set(
-                            "yesod_admin_expiry",
-                            expiry.isoformat(),
-                            expires_at=expiry,
-                        )
-                    
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials")
-        return False
-    return True
+        if submitted:
+            if username == settings.ADMIN_USER and password == settings.ADMIN_PASSWORD:
+                st.session_state.authenticated = True
+                
+                if remember:
+                    expiry = datetime.now(timezone.utc) + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
+                    token = generate_session_token(expiry)
+                    st.session_state.session_token = token
+                    st.query_params["session"] = token
+                
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+    
+    # Show bookmark hint
+    if st.session_state.get("session_token"):
+        st.info("💡 Tip: Bookmark this page with the session parameter to stay logged in")
+    
+    return False
 
 
 def show_overview():
@@ -733,11 +747,9 @@ def main():
         st.rerun()
     
     if st.sidebar.button("🚪 Logout"):
-        # Clear session cookies
-        cookie_manager = get_cookie_manager()
-        cookie_manager.delete("yesod_admin_session")
-        cookie_manager.delete("yesod_admin_expiry")
         st.session_state.authenticated = False
+        st.session_state.session_token = None
+        st.query_params.clear()
         st.rerun()
     
     if page == "📊 Overview":
