@@ -78,8 +78,23 @@ op.execute("""
 3. **generate-types** - OpenAPIからTypeScript型生成
 
 ### CI用サービス
-- `db-ci`: 軽量PostgreSQL（pg_cron等の拡張なし）
-- `api-ci`: テスト用APIコンテナ
+- `db-ci`: 軽量PostgreSQL（pg_cron等の拡張なし）、ポート5433
+- `api-ci`: テスト用APIコンテナ、ポート8001
+
+### CIテスト実行ルール（必須）
+
+**CIテスト実行後は必ずコンテナを停止すること。**
+
+```bash
+# テスト実行
+docker compose --profile ci build api-ci
+docker compose --profile ci run --rm api-ci pytest
+
+# テスト完了後、必ず実行
+docker compose --profile ci down
+```
+
+CI環境は開発環境と異なるポートを使用するため同時起動可能だが、テスト完了後は必ず停止してリソースを解放すること。
 
 ## コード品質
 
