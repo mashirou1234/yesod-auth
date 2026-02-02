@@ -76,7 +76,7 @@ services:
     image: postgres:16-alpine
     profiles: ["ci"]
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_DB=yesod
       - POSTGRES_USER=yesod_user
@@ -91,7 +91,7 @@ services:
     build: ./api
     profiles: ["ci"]
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://yesod_user:yesod_password@db-ci:5432/yesod
       - VALKEY_URL=redis://valkey:6379/0
