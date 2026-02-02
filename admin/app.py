@@ -2,6 +2,10 @@
 import streamlit as st
 import pandas as pd
 import graphviz
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
+import extra_streamlit_components as stx
 from config import settings
 import db
 import valkey_client
@@ -13,22 +17,70 @@ st.set_page_config(
 )
 
 
+def get_cookie_manager():
+    """Get cookie manager instance."""
+    return stx.CookieManager()
+
+
+def generate_session_token() -> str:
+    """Generate a secure session token."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_credentials(username: str, password: str) -> str:
+    """Hash credentials for session validation."""
+    return hashlib.sha256(f"{username}:{password}".encode()).hexdigest()
+
+
 def check_auth():
-    """Simple authentication check."""
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
+    """Authentication check with cookie-based session persistence."""
+    cookie_manager = get_cookie_manager()
     
-    if not st.session_state.authenticated:
+    # Check for existing session cookie
+    session_token = cookie_manager.get("yesod_admin_session")
+    session_expiry = cookie_manager.get("yesod_admin_expiry")
+    
+    # Validate existing session
+    if session_token and session_expiry:
+        try:
+            expiry_time = datetime.fromisoformat(session_expiry)
+            expected_token = hash_credentials(settings.ADMIN_USER, settings.ADMIN_PASSWORD)
+            
+            if session_token == expected_token and expiry_time > datetime.now(timezone.utc):
+                st.session_state.authenticated = True
+                return True
+        except (ValueError, TypeError):
+            pass
+    
+    # Show login form
+    if not st.session_state.get("authenticated", False):
         st.title("🔐 YESOD Admin Login")
         
         with st.form("login"):
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
+            remember = st.checkbox("Remember me", value=True)
             submitted = st.form_submit_button("Login")
             
             if submitted:
                 if username == settings.ADMIN_USER and password == settings.ADMIN_PASSWORD:
                     st.session_state.authenticated = True
+                    
+                    # Set session cookie
+                    if remember:
+                        expiry = datetime.now(timezone.utc) + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
+                        session_token = hash_credentials(username, password)
+                        cookie_manager.set(
+                            "yesod_admin_session",
+                            session_token,
+                            expires_at=expiry,
+                        )
+                        cookie_manager.set(
+                            "yesod_admin_expiry",
+                            expiry.isoformat(),
+                            expires_at=expiry,
+                        )
+                    
                     st.rerun()
                 else:
                     st.error("Invalid credentials")
@@ -681,6 +733,10 @@ def main():
         st.rerun()
     
     if st.sidebar.button("🚪 Logout"):
+        # Clear session cookies
+        cookie_manager = get_cookie_manager()
+        cookie_manager.delete("yesod_admin_session")
+        cookie_manager.delete("yesod_admin_expiry")
         st.session_state.authenticated = False
         st.rerun()
     

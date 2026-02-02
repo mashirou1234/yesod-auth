@@ -23,6 +23,9 @@ class Settings:
     
     # Environment indicator (empty = production, otherwise shows badge)
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "")
+    
+    # Session persistence (hours)
+    SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
 
 
 settings = Settings()
