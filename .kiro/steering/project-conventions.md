@@ -7,8 +7,8 @@
 ### Docker Compose Profiles
 | Profile | 用途 | 起動サービス |
 |---------|------|-------------|
-| `default` | ローカル開発 | db, valkey, api |
-| `full` | 管理画面含む | db, valkey, api, admin |
+| `default` | ローカル開発 | db, valkey, api, docs |
+| `full` | 管理画面含む | db, valkey, api, admin, docs |
 | `ci` | CI/CD用軽量構成 | db-ci, valkey, api-ci |
 
 ### 環境変数
