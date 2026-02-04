@@ -18,31 +18,33 @@ st.set_page_config(
 
 def generate_session_token(expiry: datetime) -> str:
     """Generate a secure session token with expiry."""
-    message = f"{settings.ADMIN_USER}:{expiry.isoformat()}"
+    expiry_ts = int(expiry.timestamp())
+    message = f"{settings.ADMIN_USER}:{expiry_ts}"
     signature = hmac.new(
         settings.ADMIN_PASSWORD.encode(),
         message.encode(),
         hashlib.sha256
     ).hexdigest()[:32]
-    return f"{expiry.timestamp():.0f}:{signature}"
+    return f"{expiry_ts}.{signature}"
 
 
 def validate_session_token(token: str) -> bool:
     """Validate session token."""
     try:
-        parts = token.split(":")
+        parts = token.split(".")
         if len(parts) != 2:
             return False
         
         expiry_ts, signature = parts
-        expiry = datetime.fromtimestamp(float(expiry_ts), tz=timezone.utc)
+        expiry_ts = int(expiry_ts)
+        expiry = datetime.fromtimestamp(expiry_ts, tz=timezone.utc)
         
         # Check expiry
         if expiry < datetime.now(timezone.utc):
             return False
         
         # Verify signature
-        message = f"{settings.ADMIN_USER}:{expiry.isoformat()}"
+        message = f"{settings.ADMIN_USER}:{expiry_ts}"
         expected = hmac.new(
             settings.ADMIN_PASSWORD.encode(),
             message.encode(),
