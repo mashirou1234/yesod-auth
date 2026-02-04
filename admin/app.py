@@ -4,6 +4,8 @@ import pandas as pd
 import graphviz
 import hashlib
 import hmac
+import base64
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from config import settings
 from i18n import (
@@ -13,6 +15,19 @@ from i18n import (
 )
 import db
 import valkey_client
+
+# Path to static icons directory
+ICONS_DIR = Path(__file__).parent / "static" / "icons"
+
+
+def load_svg_icon(name: str) -> str:
+    """Load SVG icon from static directory and return as base64 data URI."""
+    icon_path = ICONS_DIR / f"{name}.svg"
+    if icon_path.exists():
+        svg_content = icon_path.read_text()
+        b64 = base64.b64encode(svg_content.encode()).decode()
+        return f"data:image/svg+xml;base64,{b64}"
+    return ""
 
 st.set_page_config(
     page_title="YESOD Admin",
@@ -334,48 +349,86 @@ def show_api_test():
 
     {t("api_test.step3")}
     """)
-    
+
+    # OAuth provider buttons with official brand icons from static files
+    # Icons are loaded from admin/static/icons/ directory
+    # Following each provider's brand guidelines
+    google_icon = load_svg_icon("google")
+    github_icon = load_svg_icon("github")
+    discord_icon = load_svg_icon("discord")
+    x_icon = load_svg_icon("x")
+    linkedin_icon = load_svg_icon("linkedin")
+    facebook_icon = load_svg_icon("facebook")
+    slack_icon = load_svg_icon("slack")
+    twitch_icon = load_svg_icon("twitch")
+
     st.markdown(f"""
-    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0;">
-        <a href="{API_BASE}/auth/google" target="_blank" 
-           style="background: #4285f4; color: white; padding: 10px 20px; 
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🔵 Google
+    <style>
+        .oauth-btn {{
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 6px;
+            transition: opacity 0.2s;
+        }}
+        .oauth-btn:hover {{ opacity: 0.9; }}
+        .oauth-btn img {{ flex-shrink: 0; }}
+        .oauth-btn img.icon-white {{ filter: brightness(0) invert(1); }}
+    </style>
+    <div style="display: flex; flex-wrap: wrap; margin: 20px 0;">
+        <!-- Google: Official branding - white bg, colored G logo -->
+        <a href="{API_BASE}/auth/google" target="_blank" class="oauth-btn"
+           style="background: #fff; color: #757575; border: 1px solid #ddd;">
+            <img src="{google_icon}" width="18" height="18" alt="Google">
+            Sign in with Google
         </a>
-        <a href="{API_BASE}/auth/github" target="_blank"
-           style="background: #333; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            ⚫ GitHub
+        <!-- GitHub: Official Invertocat - white on dark -->
+        <a href="{API_BASE}/auth/github" target="_blank" class="oauth-btn"
+           style="background: #24292f; color: white;">
+            <img src="{github_icon}" width="20" height="20" alt="GitHub" class="icon-white">
+            Sign in with GitHub
         </a>
-        <a href="{API_BASE}/auth/discord" target="_blank"
-           style="background: #5865f2; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🟣 Discord
+        <!-- Discord: Official Clyde logo - white on blurple -->
+        <a href="{API_BASE}/auth/discord" target="_blank" class="oauth-btn"
+           style="background: #5865F2; color: white;">
+            <img src="{discord_icon}" width="20" height="20" alt="Discord" class="icon-white">
+            Login with Discord
         </a>
-        <a href="{API_BASE}/auth/x" target="_blank"
-           style="background: #000; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            ✖️ X
+        <!-- X: Official X logo - white on black -->
+        <a href="{API_BASE}/auth/x" target="_blank" class="oauth-btn"
+           style="background: #000; color: white;">
+            <img src="{x_icon}" width="18" height="18" alt="X" class="icon-white">
+            Sign in with X
         </a>
-        <a href="{API_BASE}/auth/linkedin" target="_blank"
-           style="background: #0077b5; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🔷 LinkedIn
+        <!-- LinkedIn: Official [in] logo - white on LinkedIn blue -->
+        <a href="{API_BASE}/auth/linkedin" target="_blank" class="oauth-btn"
+           style="background: #0A66C2; color: white;">
+            <img src="{linkedin_icon}" width="18" height="18" alt="LinkedIn" class="icon-white">
+            Sign in with LinkedIn
         </a>
-        <a href="{API_BASE}/auth/facebook" target="_blank"
-           style="background: #1877f2; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🔵 Facebook
+        <!-- Facebook: Official f logo - white on Facebook blue -->
+        <a href="{API_BASE}/auth/facebook" target="_blank" class="oauth-btn"
+           style="background: #1877F2; color: white;">
+            <img src="{facebook_icon}" width="18" height="18" alt="Facebook" class="icon-white">
+            Continue with Facebook
         </a>
-        <a href="{API_BASE}/auth/slack" target="_blank"
-           style="background: #4a154b; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            💬 Slack
+        <!-- Slack: Official logo - multicolor on white -->
+        <a href="{API_BASE}/auth/slack" target="_blank" class="oauth-btn"
+           style="background: #fff; color: #1d1c1d; border: 1px solid #ddd;">
+            <img src="{slack_icon}" width="18" height="18" alt="Slack">
+            Sign in with Slack
         </a>
-        <a href="{API_BASE}/auth/twitch" target="_blank"
-           style="background: #9146ff; color: white; padding: 10px 20px;
-                  border-radius: 8px; text-decoration: none; font-weight: bold;">
-            🎮 Twitch
+        <!-- Twitch: Official Glitch logo - white on Twitch purple -->
+        <a href="{API_BASE}/auth/twitch" target="_blank" class="oauth-btn"
+           style="background: #9146FF; color: white;">
+            <img src="{twitch_icon}" width="18" height="18" alt="Twitch" class="icon-white">
+            Login with Twitch
         </a>
     </div>
     """, unsafe_allow_html=True)
@@ -499,46 +552,54 @@ def show_api_test():
         st.caption(t("api_test.link_caption"))
         
         st.markdown(f"""
-        <div style="display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0;">
-            <a href="{API_BASE}/accounts/link/google" target="_blank" 
-               style="background: #4285f4; color: white; padding: 10px 20px; 
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                🔵 Link Google
+        <div style="display: flex; flex-wrap: wrap; margin: 20px 0;">
+            <!-- Google -->
+            <a href="{API_BASE}/accounts/link/google" target="_blank" class="oauth-btn"
+               style="background: #fff; color: #757575; border: 1px solid #ddd;">
+                <img src="{google_icon}" width="18" height="18" alt="Google">
+                Link Google
             </a>
-            <a href="{API_BASE}/accounts/link/github" target="_blank"
-               style="background: #333; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                ⚫ Link GitHub
+            <!-- GitHub -->
+            <a href="{API_BASE}/accounts/link/github" target="_blank" class="oauth-btn"
+               style="background: #24292f; color: white;">
+                <img src="{github_icon}" width="20" height="20" alt="GitHub" class="icon-white">
+                Link GitHub
             </a>
-            <a href="{API_BASE}/accounts/link/discord" target="_blank"
-               style="background: #5865f2; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                🟣 Link Discord
+            <!-- Discord -->
+            <a href="{API_BASE}/accounts/link/discord" target="_blank" class="oauth-btn"
+               style="background: #5865F2; color: white;">
+                <img src="{discord_icon}" width="20" height="20" alt="Discord" class="icon-white">
+                Link Discord
             </a>
-            <a href="{API_BASE}/accounts/link/x" target="_blank"
-               style="background: #000; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                ✖️ Link X
+            <!-- X -->
+            <a href="{API_BASE}/accounts/link/x" target="_blank" class="oauth-btn"
+               style="background: #000; color: white;">
+                <img src="{x_icon}" width="18" height="18" alt="X" class="icon-white">
+                Link X
             </a>
-            <a href="{API_BASE}/accounts/link/linkedin" target="_blank"
-               style="background: #0077b5; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                🔷 Link LinkedIn
+            <!-- LinkedIn -->
+            <a href="{API_BASE}/accounts/link/linkedin" target="_blank" class="oauth-btn"
+               style="background: #0A66C2; color: white;">
+                <img src="{linkedin_icon}" width="18" height="18" alt="LinkedIn" class="icon-white">
+                Link LinkedIn
             </a>
-            <a href="{API_BASE}/accounts/link/facebook" target="_blank"
-               style="background: #1877f2; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                🔵 Link Facebook
+            <!-- Facebook -->
+            <a href="{API_BASE}/accounts/link/facebook" target="_blank" class="oauth-btn"
+               style="background: #1877F2; color: white;">
+                <img src="{facebook_icon}" width="18" height="18" alt="Facebook" class="icon-white">
+                Link Facebook
             </a>
-            <a href="{API_BASE}/accounts/link/slack" target="_blank"
-               style="background: #4a154b; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                💬 Link Slack
+            <!-- Slack -->
+            <a href="{API_BASE}/accounts/link/slack" target="_blank" class="oauth-btn"
+               style="background: #fff; color: #1d1c1d; border: 1px solid #ddd;">
+                <img src="{slack_icon}" width="18" height="18" alt="Slack">
+                Link Slack
             </a>
-            <a href="{API_BASE}/accounts/link/twitch" target="_blank"
-               style="background: #9146ff; color: white; padding: 10px 20px;
-                      border-radius: 8px; text-decoration: none; font-weight: bold;">
-                🎮 Link Twitch
+            <!-- Twitch -->
+            <a href="{API_BASE}/accounts/link/twitch" target="_blank" class="oauth-btn"
+               style="background: #9146FF; color: white;">
+                <img src="{twitch_icon}" width="18" height="18" alt="Twitch" class="icon-white">
+                Link Twitch
             </a>
         </div>
         """, unsafe_allow_html=True)
