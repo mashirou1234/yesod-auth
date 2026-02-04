@@ -60,7 +60,16 @@ nav:
     - クイックスタート: getting-started.md
     - インストール: installation.md
   - ガイド:
-    - OAuth設定: guides/oauth.md
+    - OAuth設定:
+      - 概要: guides/oauth/index.md
+      - Google: guides/oauth/google.md
+      - GitHub: guides/oauth/github.md
+      - Discord: guides/oauth/discord.md
+      - X (Twitter): guides/oauth/x.md
+      - LinkedIn: guides/oauth/linkedin.md
+      - Facebook: guides/oauth/facebook.md
+      - Slack: guides/oauth/slack.md
+      - Twitch: guides/oauth/twitch.md
     - Webhook設定: guides/webhooks.md
     - デプロイ: guides/deployment.md
   - APIリファレンス:

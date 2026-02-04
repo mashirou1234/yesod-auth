@@ -12,7 +12,16 @@ docs/
 ├── getting-started.md    # クイックスタート
 ├── installation.md       # インストール
 ├── guides/               # 設定ガイド
-│   ├── oauth.md
+│   ├── oauth/            # OAuthプロバイダー設定
+│   │   ├── index.md      # 概要・一覧
+│   │   ├── google.md
+│   │   ├── github.md
+│   │   ├── discord.md
+│   │   ├── x.md
+│   │   ├── linkedin.md
+│   │   ├── facebook.md
+│   │   ├── slack.md
+│   │   └── twitch.md
 │   ├── webhooks.md
 │   └── deployment.md
 ├── api/                  # APIリファレンス
