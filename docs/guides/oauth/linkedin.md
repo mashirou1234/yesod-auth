@@ -2,7 +2,7 @@
 
 ## 1. LinkedIn Developer Portalでアプリ作成
 
-1. [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps)にアクセス
+1. [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps){:target="_blank"}にアクセス
 2. 「Create app」をクリック
 3. 必要な情報を入力：
     - App name: アプリ名

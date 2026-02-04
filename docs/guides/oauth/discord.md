@@ -2,7 +2,7 @@
 
 ## 1. Discord Developer Portalでアプリ作成
 
-1. [Discord Developer Portal](https://discord.com/developers/applications)にアクセス
+1. [Discord Developer Portal](https://discord.com/developers/applications){:target="_blank"}にアクセス
 2. 「New Application」をクリック
 3. アプリ名を入力して作成
 

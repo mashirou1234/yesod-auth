@@ -2,7 +2,7 @@
 
 ## 1. Twitter Developer Portalでアプリ作成
 
-1. [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard)にアクセス
+1. [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard){:target="_blank"}にアクセス
 2. 「Projects & Apps」→「+ Add App」をクリック
 3. アプリ名を入力して作成
 

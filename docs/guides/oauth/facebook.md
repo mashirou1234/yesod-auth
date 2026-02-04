@@ -2,7 +2,7 @@
 
 ## 1. Facebook Developer Portalでアプリ作成
 
-1. [Facebook for Developers](https://developers.facebook.com/)にアクセス
+1. [Facebook for Developers](https://developers.facebook.com/){:target="_blank"}にアクセス
 2. 「マイアプリ」→「アプリを作成」をクリック
 3. アプリタイプ：「消費者」を選択
 4. アプリ名を入力して作成

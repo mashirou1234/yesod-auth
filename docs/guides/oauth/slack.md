@@ -2,7 +2,7 @@
 
 ## 1. Slack APIでアプリ作成
 
-1. [Slack API](https://api.slack.com/apps)にアクセス
+1. [Slack API](https://api.slack.com/apps){:target="_blank"}にアクセス
 2. 「Create New App」→「From scratch」をクリック
 3. アプリ名とワークスペースを選択して作成
 

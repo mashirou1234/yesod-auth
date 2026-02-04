@@ -2,7 +2,7 @@
 
 ## 1. GitHub OAuth Appの作成
 
-1. [GitHub Developer Settings](https://github.com/settings/developers)にアクセス
+1. [GitHub Developer Settings](https://github.com/settings/developers){:target="_blank"}にアクセス
 2. 「OAuth Apps」→「New OAuth App」をクリック
 3. 必要な情報を入力：
     - Application name: アプリ名

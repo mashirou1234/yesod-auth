@@ -2,7 +2,7 @@
 
 ## 1. Twitch Developer Consoleでアプリ作成
 
-1. [Twitch Developer Console](https://dev.twitch.tv/console/apps)にアクセス
+1. [Twitch Developer Console](https://dev.twitch.tv/console/apps){:target="_blank"}にアクセス
 2. 「Register Your Application」をクリック
 3. 必要な情報を入力：
     - Name: アプリ名

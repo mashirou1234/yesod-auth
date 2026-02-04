@@ -2,7 +2,7 @@
 
 ## 1. Google Cloud Consoleでプロジェクト作成
 
-1. [Google Cloud Console](https://console.cloud.google.com/)にアクセス
+1. [Google Cloud Console](https://console.cloud.google.com/){:target="_blank"}にアクセス
 2. 新しいプロジェクトを作成
 3. 「APIとサービス」→「認証情報」を開く
 
