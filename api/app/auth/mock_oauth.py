@@ -55,6 +55,71 @@ class MockOAuthUser:
             "avatar_url": self.picture,
         }
 
+    def to_x_format(self) -> dict:
+        """Convert to X (Twitter) userinfo format.
+
+        Note: X API does not provide email addresses.
+        A placeholder email is generated using the username.
+        """
+        username = self.name.lower().replace(" ", "_")
+        return {
+            "id": self.id,
+            "username": username,
+            "name": self.name,
+            "profile_image_url": self.picture,
+            # X doesn't provide email, generate placeholder
+            "email": f"{username}@x.yesod-auth.local",
+        }
+
+    def to_linkedin_format(self) -> dict:
+        """Convert to LinkedIn userinfo format (OpenID Connect)."""
+        return {
+            "sub": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": self.picture,
+            "email_verified": True,
+        }
+
+    def to_facebook_format(self) -> dict:
+        """Convert to Facebook Graph API userinfo format."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": {
+                "data": {
+                    "url": self.picture,
+                    "is_silhouette": False,
+                }
+            },
+        }
+
+    def to_slack_format(self) -> dict:
+        """Convert to Slack OpenID Connect userinfo format."""
+        return {
+            "ok": True,
+            "sub": self.id,
+            "name": self.name,
+            "email": self.email,
+            "picture": self.picture,
+            "email_verified": True,
+        }
+
+    def to_twitch_format(self) -> dict:
+        """Convert to Twitch Helix API userinfo format."""
+        login = self.name.lower().replace(" ", "_")
+        return {
+            "id": self.id,
+            "login": login,
+            "display_name": self.name,
+            "email": self.email,
+            "profile_image_url": self.picture,
+            "broadcaster_type": "",
+            "description": "",
+            "type": "",
+        }
+
 
 # Predefined mock users for testing
 MOCK_USERS = {

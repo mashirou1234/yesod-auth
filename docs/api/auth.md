@@ -10,6 +10,16 @@
 | GET | `/api/v1/auth/github/callback` | GitHubコールバック |
 | GET | `/api/v1/auth/discord` | Discord OAuth開始 |
 | GET | `/api/v1/auth/discord/callback` | Discordコールバック |
+| GET | `/api/v1/auth/x` | X (Twitter) OAuth開始 |
+| GET | `/api/v1/auth/x/callback` | Xコールバック |
+| GET | `/api/v1/auth/linkedin` | LinkedIn OAuth開始 |
+| GET | `/api/v1/auth/linkedin/callback` | LinkedInコールバック |
+| GET | `/api/v1/auth/facebook` | Facebook OAuth開始 |
+| GET | `/api/v1/auth/facebook/callback` | Facebookコールバック |
+| GET | `/api/v1/auth/slack` | Slack OAuth開始 |
+| GET | `/api/v1/auth/slack/callback` | Slackコールバック |
+| GET | `/api/v1/auth/twitch` | Twitch OAuth開始 |
+| GET | `/api/v1/auth/twitch/callback` | Twitchコールバック |
 | POST | `/api/v1/auth/refresh` | トークンリフレッシュ |
 | POST | `/api/v1/auth/logout` | ログアウト |
 
@@ -96,7 +106,7 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 
 **利用可能なユーザー:** `alice`, `bob`, `charlie`
 
-**利用可能なプロバイダー:** `google`, `github`, `discord`
+**利用可能なプロバイダー:** `google`, `github`, `discord`, `x`, `linkedin`, `facebook`, `slack`, `twitch`
 
 ### ユーザー一覧
 

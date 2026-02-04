@@ -4,7 +4,7 @@ services:
   # =============================================================================
   db:
     build: ./db
-    profiles: ["default"]
+    profiles: ["default", "full"]
     container_name: yesod-db
     ports:
       - "5432:5432"
@@ -40,7 +40,7 @@ services:
 
   api:
     build: ./api
-    profiles: ["default"]
+    profiles: ["default", "full"]
     container_name: yesod-api
     ports:
       - "8000:8000"
@@ -76,7 +76,7 @@ services:
     image: postgres:16-alpine
     profiles: ["ci"]
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_DB=yesod
       - POSTGRES_USER=yesod_user
@@ -91,7 +91,7 @@ services:
     build: ./api
     profiles: ["ci"]
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://yesod_user:yesod_password@db-ci:5432/yesod
       - VALKEY_URL=redis://valkey:6379/0
@@ -125,6 +125,7 @@ services:
       - VALKEY_URL=redis://valkey:6379/0
       - ADMIN_USER=admin
       - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
+      - ENVIRONMENT=DEV
     secrets:
       - admin_password
     depends_on:
@@ -132,6 +133,21 @@ services:
         condition: service_healthy
       valkey:
         condition: service_healthy
+
+  # =============================================================================
+  # Documentation Preview (local development only)
+  # =============================================================================
+  docs:
+    image: squidfunk/mkdocs-material:latest
+    profiles: ["default", "full"]
+    container_name: yesod-docs
+    ports:
+      - "8080:8000"
+    volumes:
+      - ./docs:/docs/docs:ro
+      - ./mkdocs.yml:/docs/mkdocs.yml:ro
+    working_dir: /docs
+    command: serve -a 0.0.0.0:8000
 
 secrets:
   google_client_id:

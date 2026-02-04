@@ -43,6 +43,14 @@ docker compose --profile full up -d
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+### 管理画面用環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|-----------|
+| `ADMIN_USER` | 管理者ユーザー名 | `admin` |
+| `SESSION_EXPIRY_HOURS` | セッション有効期限（時間） | `24` |
+| `DEFAULT_LANGUAGE` | デフォルト言語（en, ja, fr, ko, de） | `en` |
+
 ## OAuth認証情報
 
 Docker Secretsまたは環境変数で設定：
@@ -55,6 +63,16 @@ Docker Secretsまたは環境変数で設定：
 | `github_client_secret` | GitHub OAuth Client Secret |
 | `discord_client_id` | Discord OAuth Client ID |
 | `discord_client_secret` | Discord OAuth Client Secret |
+| `x_client_id` | X (Twitter) OAuth Client ID |
+| `x_client_secret` | X (Twitter) OAuth Client Secret |
+| `linkedin_client_id` | LinkedIn OAuth Client ID |
+| `linkedin_client_secret` | LinkedIn OAuth Client Secret |
+| `facebook_client_id` | Facebook OAuth Client ID (App ID) |
+| `facebook_client_secret` | Facebook OAuth Client Secret (App Secret) |
+| `slack_client_id` | Slack OAuth Client ID |
+| `slack_client_secret` | Slack OAuth Client Secret |
+| `twitch_client_id` | Twitch OAuth Client ID |
+| `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
 ## ポート
