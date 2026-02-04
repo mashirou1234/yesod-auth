@@ -769,22 +769,6 @@ def main():
 
     st.title(f"🔐 {t('app.title')}")
 
-    # Sidebar - Language selector
-    st.sidebar.markdown(f"### {t('nav.language')}")
-    lang_options = get_language_selector_options()
-    current_lang_display = SUPPORTED_LANGUAGES.get(st.session_state.language, "English")
-    selected_lang_display = st.sidebar.selectbox(
-        t("nav.language"),
-        list(lang_options.keys()),
-        index=list(lang_options.keys()).index(current_lang_display),
-        label_visibility="collapsed",
-    )
-    if lang_options[selected_lang_display] != st.session_state.language:
-        st.session_state.language = lang_options[selected_lang_display]
-        st.rerun()
-
-    st.sidebar.divider()
-
     # Sidebar navigation
     page = st.sidebar.radio(
         t("nav.navigation"),
@@ -798,6 +782,20 @@ def main():
         st.session_state.authenticated = False
         st.session_state.session_token = None
         st.query_params.clear()
+        st.rerun()
+
+    # Sidebar footer - Language selector
+    st.sidebar.divider()
+    lang_options = get_language_selector_options()
+    current_lang_display = SUPPORTED_LANGUAGES.get(st.session_state.language, "English")
+    selected_lang_display = st.sidebar.selectbox(
+        t("nav.language"),
+        list(lang_options.keys()),
+        index=list(lang_options.keys()).index(current_lang_display),
+        label_visibility="visible",
+    )
+    if lang_options[selected_lang_display] != st.session_state.language:
+        st.session_state.language = lang_options[selected_lang_display]
         st.rerun()
 
     if page == t("nav.overview"):
