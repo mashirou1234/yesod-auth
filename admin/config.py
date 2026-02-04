@@ -27,5 +27,8 @@ class Settings:
     # Session persistence (hours)
     SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
 
+    # Default language (en, ja, fr, ko, de)
+    DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "en")
+
 
 settings = Settings()

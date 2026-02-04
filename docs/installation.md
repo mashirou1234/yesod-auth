@@ -43,6 +43,14 @@ docker compose --profile full up -d
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+### 管理画面用環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|-----------|
+| `ADMIN_USER` | 管理者ユーザー名 | `admin` |
+| `SESSION_EXPIRY_HOURS` | セッション有効期限（時間） | `24` |
+| `DEFAULT_LANGUAGE` | デフォルト言語（en, ja, fr, ko, de） | `en` |
+
 ## OAuth認証情報
 
 Docker Secretsまたは環境変数で設定：
