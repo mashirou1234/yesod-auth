@@ -24,7 +24,7 @@ echo "your-client-secret" > secrets/twitch_client_secret.txt
 ```
 
 !!! info "Helix API"
-    YESOD Authは[Twitch Helix API](https://dev.twitch.tv/docs/api/)を使用します。
+    YESOD Authは[Twitch Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"}を使用します。
     `openid`と`user:read:email`スコープを要求し、
     ユーザー情報は`/helix/users`エンドポイントから取得します。
 

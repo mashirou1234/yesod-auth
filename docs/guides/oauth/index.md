@@ -11,9 +11,9 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 | [Discord](discord.md) | ❌ | ❌ | |
 | [X (Twitter)](x.md) | ✅ (必須) | ❌ | メールアドレス取得不可 |
 | [LinkedIn](linkedin.md) | ✅ | ✅ | |
-| [Facebook](facebook.md) | ✅ | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/) |
+| [Facebook](facebook.md) | ✅ | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
 | [Slack](slack.md) | ❌ | ✅ | |
-| [Twitch](twitch.md) | ❌ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/) |
+| [Twitch](twitch.md) | ❌ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
 
 ## 共通設定
 
