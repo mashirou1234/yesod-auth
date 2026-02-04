@@ -36,7 +36,7 @@ echo "your-app-secret" > secrets/facebook_client_secret.txt
 ```
 
 !!! info "Graph API v18.0"
-    YESOD AuthはFacebook Graph API v18.0を使用します。
+    YESOD Authは[Facebook Graph API v18.0](https://developers.facebook.com/docs/graph-api/)を使用します。
     `email`と`public_profile`スコープを要求し、ユーザー情報を取得します。
 
 ## 技術仕様
