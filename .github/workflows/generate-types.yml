@@ -48,7 +48,7 @@ jobs:
           docker compose --profile ci ps
           
           for i in {1..60}; do
-            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+            if curl -sf http://localhost:8001/health > /dev/null 2>&1; then
               echo "✅ API is ready!"
               exit 0
             fi
@@ -63,7 +63,7 @@ jobs:
       - name: Generate TypeScript types
         run: |
           mkdir -p generated
-          npx openapi-typescript http://localhost:8000/openapi.json -o generated/api.d.ts
+          npx openapi-typescript http://localhost:8001/openapi.json -o generated/api.d.ts
 
       - name: Cleanup containers
         if: always()
