@@ -2,7 +2,7 @@
 
 import os
 import uuid
-from enum import Enum
+from enum import StrEnum
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ def _is_testing() -> bool:
     return os.environ.get("TESTING") == "1"
 
 
-class AuthEventType(str, Enum):
+class AuthEventType(StrEnum):
     """Authentication event types."""
 
     LOGIN_SUCCESS = "login_success"
