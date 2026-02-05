@@ -9,6 +9,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.accounts import router as accounts_router
 from app.auth import router as auth_router
+from app.auth.oidc_router import router as oidc_router
 from app.auth.rate_limit import limiter
 from app.config import get_settings
 from app.db.session import async_session_factory
@@ -108,6 +109,9 @@ app.include_router(webhooks_router, prefix=f"{API_PREFIX}/admin")
 
 # Metrics at root level (for Prometheus scraping)
 app.include_router(metrics_router)
+
+# OIDC Discovery endpoints at root level
+app.include_router(oidc_router)
 
 
 @app.get("/")

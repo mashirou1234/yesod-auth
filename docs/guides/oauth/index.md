@@ -4,16 +4,26 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 
 ## 対応プロバイダー
 
-| プロバイダー | 公式PKCE | 独自PKCE | OpenID Connect | 備考 |
-|-------------|----------|----------|----------------|------|
-| [Google](google.md) | ✅ | - | ✅ | 推奨 |
-| [GitHub](github.md) | ✅ | - | ❌ | |
-| [X (Twitter)](x.md) | ✅ | - | ❌ | メールアドレス取得不可 |
-| [LinkedIn](linkedin.md) | ✅ | - | ✅ | |
-| [Facebook](facebook.md) | ✅ | - | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
-| [Discord](discord.md) | - | ✅ | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
-| [Slack](slack.md) | - | ✅ | ✅ | プロバイダー未サポート |
-| [Twitch](twitch.md) | - | ✅ | ❌ | プロバイダー未サポート、[Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+| プロバイダー | 公式PKCE | 独自PKCE | OpenID Connect | ID Token生成 | 備考 |
+|-------------|----------|----------|----------------|--------------|------|
+| [Google](google.md) | ✅ | - | ✅ | - | 推奨 |
+| [GitHub](github.md) | ✅ | - | ❌ | ✅ | |
+| [X (Twitter)](x.md) | ✅ | - | ❌ | ✅ | メールアドレス取得不可 |
+| [LinkedIn](linkedin.md) | ✅ | - | ✅ | - | |
+| [Facebook](facebook.md) | ✅ | - | ❌ | ✅ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
+| [Discord](discord.md) | - | ✅ | ❌ | ✅ | プロバイダーは対応しているが公式ドキュメントなし |
+| [Slack](slack.md) | - | ✅ | ✅ | - | プロバイダー未サポート |
+| [Twitch](twitch.md) | - | ✅ | ❌ | ✅ | プロバイダー未サポート、[Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+
+### ID Token生成について
+
+OpenID Connect非対応のプロバイダー（GitHub, Discord, X, Facebook, Twitch）では、YESOD Authが独自にID Tokenを生成します。これにより、すべてのプロバイダーで統一的なOIDC互換の認証フローを実現できます。
+
+- **JWKSエンドポイント**: `/.well-known/jwks.json` で公開鍵を取得可能
+- **OpenID設定**: `/.well-known/openid-configuration` で設定情報を取得可能
+- **署名アルゴリズム**: RS256（RSA + SHA-256）
+
+詳細は[認証API - OIDC互換エンドポイント](../api/auth.md#oidc互換エンドポイント)を参照してください。
 
 ### PKCEについて
 

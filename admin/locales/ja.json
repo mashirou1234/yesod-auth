@@ -11,6 +11,7 @@
     "valkey_status": "⚡ Valkey状態",
     "db_schema": "🗄️ DBスキーマ",
     "api_test": "🧪 APIテスト",
+    "oidc_test": "🔐 OIDCテスト",
     "navigation": "ナビゲーション",
     "refresh": "🔄 更新",
     "logout": "🚪 ログアウト",
@@ -140,5 +141,29 @@
   "common": {
     "status": "ステータス",
     "environment_warning": "⚠️ {env} 環境"
+  },
+  "oidc_test": {
+    "header": "🔐 OIDC / JWKSテスト",
+    "description": "OpenID Connect互換性とJWKSエンドポイントをテスト",
+    "jwks_section": "JWKS（JSON Web Key Set）",
+    "jwks_description": "ID Tokenの署名を検証するための公開鍵",
+    "fetch_jwks": "JWKSを取得",
+    "openid_config_section": "OpenID設定",
+    "openid_config_description": "OpenIDプロバイダー設定情報",
+    "fetch_config": "設定を取得",
+    "verify_token_section": "ID Tokenを検証",
+    "verify_description": "ID Tokenを貼り付けて署名を検証し、クレームを表示",
+    "id_token_input": "ID Token（JWT）",
+    "verify_button": "トークンを検証",
+    "verification_success": "✅ トークンは有効です！",
+    "verification_failed": "❌ トークン検証に失敗しました",
+    "decoded_claims": "デコードされたクレーム",
+    "token_info": "トークン情報",
+    "issuer": "発行者",
+    "subject": "サブジェクト",
+    "provider": "プロバイダー",
+    "email": "メール",
+    "expires": "有効期限",
+    "error": "エラー"
   }
 }

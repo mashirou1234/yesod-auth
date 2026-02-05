@@ -673,6 +673,108 @@ def show_api_test():
                 st.error(f"{t('api_test.error')}: {e}")
 
 
+def show_oidc_test():
+    t = get_translator()
+    st.header(t("oidc_test.header"))
+    st.markdown(t("oidc_test.description"))
+
+    API_INTERNAL = "http://api:8000"
+
+    # JWKS Section
+    st.subheader(t("oidc_test.jwks_section"))
+    st.caption(t("oidc_test.jwks_description"))
+
+    if st.button(t("oidc_test.fetch_jwks"), key="fetch_jwks"):
+        try:
+            import requests
+            resp = requests.get(f"{API_INTERNAL}/.well-known/jwks.json")
+            st.json(resp.json())
+            st.write(f"{t('common.status')}: {resp.status_code}")
+        except Exception as e:
+            st.error(f"{t('oidc_test.error')}: {e}")
+
+    st.divider()
+
+    # OpenID Configuration Section
+    st.subheader(t("oidc_test.openid_config_section"))
+    st.caption(t("oidc_test.openid_config_description"))
+
+    if st.button(t("oidc_test.fetch_config"), key="fetch_config"):
+        try:
+            import requests
+            resp = requests.get(f"{API_INTERNAL}/.well-known/openid-configuration")
+            st.json(resp.json())
+            st.write(f"{t('common.status')}: {resp.status_code}")
+        except Exception as e:
+            st.error(f"{t('oidc_test.error')}: {e}")
+
+    st.divider()
+
+    # Token Verification Section
+    st.subheader(t("oidc_test.verify_token_section"))
+    st.caption(t("oidc_test.verify_description"))
+
+    id_token = st.text_area(t("oidc_test.id_token_input"), height=150, key="id_token_input")
+
+    if st.button(t("oidc_test.verify_button"), key="verify_token"):
+        if id_token:
+            try:
+                import requests
+                import json
+                import base64
+
+                # Decode JWT without verification to show claims
+                parts = id_token.split(".")
+                if len(parts) == 3:
+                    # Decode header
+                    header_b64 = parts[0] + "=" * (4 - len(parts[0]) % 4)
+                    header = json.loads(base64.urlsafe_b64decode(header_b64))
+
+                    # Decode payload
+                    payload_b64 = parts[1] + "=" * (4 - len(parts[1]) % 4)
+                    payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+
+                    # Fetch JWKS and verify
+                    jwks_resp = requests.get(f"{API_INTERNAL}/.well-known/jwks.json")
+                    jwks = jwks_resp.json()
+
+                    # Find matching key
+                    kid = header.get("kid")
+                    matching_key = None
+                    for key in jwks.get("keys", []):
+                        if key.get("kid") == kid:
+                            matching_key = key
+                            break
+
+                    if matching_key:
+                        st.success(t("oidc_test.verification_success"))
+
+                        # Show token info
+                        st.subheader(t("oidc_test.token_info"))
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.write(f"**{t('oidc_test.issuer')}:** {payload.get('iss', 'N/A')}")
+                            st.write(f"**{t('oidc_test.subject')}:** {payload.get('sub', 'N/A')}")
+                            st.write(f"**{t('oidc_test.provider')}:** {payload.get('provider', 'N/A')}")
+                        with col2:
+                            st.write(f"**{t('oidc_test.email')}:** {payload.get('email', 'N/A')}")
+                            if payload.get("exp"):
+                                from datetime import datetime
+                                exp_dt = datetime.fromtimestamp(payload["exp"])
+                                st.write(f"**{t('oidc_test.expires')}:** {exp_dt}")
+
+                        st.subheader(t("oidc_test.decoded_claims"))
+                        st.json(payload)
+                    else:
+                        st.error(f"{t('oidc_test.verification_failed')}: Key ID not found in JWKS")
+                else:
+                    st.error(f"{t('oidc_test.verification_failed')}: Invalid JWT format")
+            except Exception as e:
+                st.error(f"{t('oidc_test.error')}: {e}")
+        else:
+            st.warning(t("oidc_test.id_token_input"))
+
+
 def show_db_schema():
     t = get_translator()
     st.header(t("db_schema.header"))
@@ -833,7 +935,7 @@ def main():
     # Sidebar navigation
     page = st.sidebar.radio(
         t("nav.navigation"),
-        [t("nav.overview"), t("nav.users"), t("nav.sessions"), t("nav.audit_logs"), t("nav.valkey_status"), t("nav.db_schema"), t("nav.api_test")]
+        [t("nav.overview"), t("nav.users"), t("nav.sessions"), t("nav.audit_logs"), t("nav.valkey_status"), t("nav.db_schema"), t("nav.api_test"), t("nav.oidc_test")]
     )
 
     if st.sidebar.button(t("nav.refresh")):
@@ -873,6 +975,8 @@ def main():
         show_db_schema()
     elif page == t("nav.api_test"):
         show_api_test()
+    elif page == t("nav.oidc_test"):
+        show_oidc_test()
 
 
 if __name__ == "__main__":

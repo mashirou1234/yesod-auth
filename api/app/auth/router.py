@@ -26,6 +26,14 @@ from .oauth import (
     TwitchOAuth,
     XOAuth,
 )
+from .oidc import (
+    create_id_token,
+    map_discord_to_oidc,
+    map_facebook_to_oidc,
+    map_github_to_oidc,
+    map_twitch_to_oidc,
+    map_x_to_oidc,
+)
 from .pkce import generate_code_challenge, generate_code_verifier
 from .rate_limit import limiter
 from .schemas import (
@@ -203,14 +211,17 @@ async def discord_callback(
         )
         raise HTTPException(status_code=400, detail="Failed to get user info")
 
+    display_name = user_info.get("username")
+    avatar_url = user_info.get("avatar_url")
+
     # Find or create user
     user = await _find_or_create_user(
         db=db,
         provider="discord",
         provider_user_id=user_info["id"],
         email=user_info["email"],
-        display_name=user_info.get("username"),
-        avatar_url=user_info.get("avatar_url"),
+        display_name=display_name,
+        avatar_url=avatar_url,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
     )
@@ -218,6 +229,17 @@ async def discord_callback(
     # Create tokens
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Generate OIDC-compatible ID Token for non-OIDC provider
+    id_token = create_id_token(
+        user_id=str(user.id),
+        email=user_info["email"],
+        provider="discord",
+        provider_user_id=user_info["id"],
+        display_name=display_name,
+        avatar_url=avatar_url,
+        extra_claims=map_discord_to_oidc(user_info),
+    )
 
     # Log successful login
     await AuditLogger.log_login(db, user.id, "discord", True, ip_address, device_info)
@@ -233,12 +255,12 @@ async def discord_callback(
     if settings.FRONTEND_URL.startswith("http://localhost"):
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
-            f"?access_token={access_token}&refresh_token={refresh_token}"
+            f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
         )
 
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={access_token}&refresh_token={refresh_token}"
+        f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
     )
     return RedirectResponse(url=frontend_url)
 
@@ -298,14 +320,17 @@ async def github_callback(
         )
         raise HTTPException(status_code=400, detail="Failed to get user info")
 
+    display_name = user_info.get("name") or user_info.get("login")
+    avatar_url = user_info.get("avatar_url")
+
     # Find or create user
     user = await _find_or_create_user(
         db=db,
         provider="github",
         provider_user_id=str(user_info["id"]),
         email=user_info["email"],
-        display_name=user_info.get("name") or user_info.get("login"),
-        avatar_url=user_info.get("avatar_url"),
+        display_name=display_name,
+        avatar_url=avatar_url,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
     )
@@ -313,6 +338,17 @@ async def github_callback(
     # Create tokens
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Generate OIDC-compatible ID Token for non-OIDC provider
+    id_token = create_id_token(
+        user_id=str(user.id),
+        email=user_info["email"],
+        provider="github",
+        provider_user_id=str(user_info["id"]),
+        display_name=display_name,
+        avatar_url=avatar_url,
+        extra_claims=map_github_to_oidc(user_info),
+    )
 
     # Log successful login
     await AuditLogger.log_login(db, user.id, "github", True, ip_address, device_info)
@@ -328,12 +364,12 @@ async def github_callback(
     if settings.FRONTEND_URL.startswith("http://localhost"):
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
-            f"?access_token={access_token}&refresh_token={refresh_token}"
+            f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
         )
 
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={access_token}&refresh_token={refresh_token}"
+        f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
     )
     return RedirectResponse(url=frontend_url)
 
@@ -394,6 +430,8 @@ async def x_callback(
     # X doesn't provide email, generate placeholder
     username = user_info.get("username", "unknown")
     email = f"{username}@x.yesod-auth.local"
+    display_name = user_info.get("name") or username
+    avatar_url = user_info.get("profile_image_url")
 
     # Find or create user
     user = await _find_or_create_user(
@@ -401,8 +439,8 @@ async def x_callback(
         provider="x",
         provider_user_id=user_info["id"],
         email=email,
-        display_name=user_info.get("name") or username,
-        avatar_url=user_info.get("profile_image_url"),
+        display_name=display_name,
+        avatar_url=avatar_url,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
     )
@@ -410,6 +448,17 @@ async def x_callback(
     # Create tokens
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Generate OIDC-compatible ID Token for non-OIDC provider
+    id_token = create_id_token(
+        user_id=str(user.id),
+        email=email,
+        provider="x",
+        provider_user_id=user_info["id"],
+        display_name=display_name,
+        avatar_url=avatar_url,
+        extra_claims=map_x_to_oidc(user_info),
+    )
 
     # Log successful login
     await AuditLogger.log_login(db, user.id, "x", True, ip_address, device_info)
@@ -425,12 +474,12 @@ async def x_callback(
     if settings.FRONTEND_URL.startswith("http://localhost"):
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
-            f"?access_token={access_token}&refresh_token={refresh_token}"
+            f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
         )
 
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={access_token}&refresh_token={refresh_token}"
+        f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
     )
     return RedirectResponse(url=frontend_url)
 
@@ -585,14 +634,17 @@ async def facebook_callback(
         )
         raise HTTPException(status_code=400, detail="Failed to get user info")
 
+    display_name = user_info.get("name")
+    avatar_url = user_info.get("picture", {}).get("data", {}).get("url")
+
     # Find or create user
     user = await _find_or_create_user(
         db=db,
         provider="facebook",
         provider_user_id=user_info["id"],
         email=user_info["email"],
-        display_name=user_info.get("name"),
-        avatar_url=user_info.get("picture", {}).get("data", {}).get("url"),
+        display_name=display_name,
+        avatar_url=avatar_url,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
     )
@@ -600,6 +652,17 @@ async def facebook_callback(
     # Create tokens
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Generate OIDC-compatible ID Token for non-OIDC provider
+    id_token = create_id_token(
+        user_id=str(user.id),
+        email=user_info["email"],
+        provider="facebook",
+        provider_user_id=user_info["id"],
+        display_name=display_name,
+        avatar_url=avatar_url,
+        extra_claims=map_facebook_to_oidc(user_info),
+    )
 
     # Log successful login
     await AuditLogger.log_login(db, user.id, "facebook", True, ip_address, device_info)
@@ -615,12 +678,12 @@ async def facebook_callback(
     if settings.FRONTEND_URL.startswith("http://localhost"):
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
-            f"?access_token={access_token}&refresh_token={refresh_token}"
+            f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
         )
 
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={access_token}&refresh_token={refresh_token}"
+        f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
     )
     return RedirectResponse(url=frontend_url)
 
@@ -777,14 +840,17 @@ async def twitch_callback(
         )
         raise HTTPException(status_code=400, detail="Failed to get user info")
 
+    display_name = user_info.get("display_name") or user_info.get("login")
+    avatar_url = user_info.get("profile_image_url")
+
     # Find or create user
     user = await _find_or_create_user(
         db=db,
         provider="twitch",
         provider_user_id=user_info["id"],
         email=user_info["email"],
-        display_name=user_info.get("display_name") or user_info.get("login"),
-        avatar_url=user_info.get("profile_image_url"),
+        display_name=display_name,
+        avatar_url=avatar_url,
         access_token=token_data["access_token"],
         refresh_token=token_data.get("refresh_token"),
     )
@@ -792,6 +858,17 @@ async def twitch_callback(
     # Create tokens
     access_token = create_access_token(str(user.id), user.email)
     refresh_token = await create_refresh_token(db, user.id, device_info, ip_address)
+
+    # Generate OIDC-compatible ID Token for non-OIDC provider
+    id_token = create_id_token(
+        user_id=str(user.id),
+        email=user_info["email"],
+        provider="twitch",
+        provider_user_id=user_info["id"],
+        display_name=display_name,
+        avatar_url=avatar_url,
+        extra_claims=map_twitch_to_oidc(user_info),
+    )
 
     # Log successful login
     await AuditLogger.log_login(db, user.id, "twitch", True, ip_address, device_info)
@@ -807,12 +884,12 @@ async def twitch_callback(
     if settings.FRONTEND_URL.startswith("http://localhost"):
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
-            f"?access_token={access_token}&refresh_token={refresh_token}"
+            f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
         )
 
     frontend_url = (
         f"{settings.FRONTEND_URL}/auth/callback"
-        f"?access_token={access_token}&refresh_token={refresh_token}"
+        f"?access_token={access_token}&refresh_token={refresh_token}&id_token={id_token}"
     )
     return RedirectResponse(url=frontend_url)
 
@@ -889,12 +966,25 @@ async def logout(
 
 
 @router.get("/debug-tokens")
-async def debug_tokens(access_token: str, refresh_token: str):
+async def debug_tokens(access_token: str, refresh_token: str, id_token: str | None = None):
     """Debug endpoint to display tokens after OAuth login.
 
     Only use in development!
     """
     from fastapi.responses import HTMLResponse
+
+    id_token_section = ""
+    if id_token:
+        id_token_section = f"""
+        <div class="label" style="margin-top: 20px;">ID Token (OIDC):</div>
+        <div class="token-box" id="id_token">{id_token}</div>
+        <button onclick="copyToken('id_token')">📋 Copy ID Token</button>
+        <button onclick="decodeToken()">🔍 Decode ID Token</button>
+        <div id="decoded" style="display: none; margin-top: 10px;">
+            <div class="label">Decoded Claims:</div>
+            <pre class="token-box" id="decoded-content" style="white-space: pre-wrap;"></pre>
+        </div>
+        """
 
     html = f"""
     <!DOCTYPE html>
@@ -926,6 +1016,8 @@ async def debug_tokens(access_token: str, refresh_token: str):
         <div class="token-box" id="refresh">{refresh_token}</div>
         <button onclick="copyToken('refresh')">📋 Copy Refresh Token</button>
 
+        {id_token_section}
+
         <p style="margin-top: 30px;">
             <a href="http://localhost:8501">← Back to Admin Dashboard</a>
         </p>
@@ -935,6 +1027,20 @@ async def debug_tokens(access_token: str, refresh_token: str):
                 const text = document.getElementById(id).innerText;
                 navigator.clipboard.writeText(text);
                 alert('Copied to clipboard!');
+            }}
+
+            function decodeToken() {{
+                const token = document.getElementById('id_token').innerText;
+                try {{
+                    const parts = token.split('.');
+                    if (parts.length !== 3) throw new Error('Invalid JWT');
+                    const payload = JSON.parse(atob(parts[1]));
+                    document.getElementById('decoded-content').textContent =
+                        JSON.stringify(payload, null, 2);
+                    document.getElementById('decoded').style.display = 'block';
+                }} catch (e) {{
+                    alert('Failed to decode token: ' + e.message);
+                }}
             }}
         </script>
     </body>

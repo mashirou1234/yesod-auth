@@ -11,6 +11,7 @@
     "valkey_status": "⚡ Valkey-Status",
     "db_schema": "🗄️ DB-Schema",
     "api_test": "🧪 API-Test",
+    "oidc_test": "🔐 OIDC-Test",
     "navigation": "Navigation",
     "refresh": "🔄 Aktualisieren",
     "logout": "🚪 Abmelden",
@@ -140,5 +141,29 @@
   "common": {
     "status": "Status",
     "environment_warning": "⚠️ {env}-UMGEBUNG"
+  },
+  "oidc_test": {
+    "header": "🔐 OIDC / JWKS-Test",
+    "description": "OpenID Connect-Kompatibilität und JWKS-Endpunkt testen",
+    "jwks_section": "JWKS (JSON Web Key Set)",
+    "jwks_description": "Öffentliche Schlüssel zur Überprüfung von ID-Token-Signaturen",
+    "fetch_jwks": "JWKS abrufen",
+    "openid_config_section": "OpenID-Konfiguration",
+    "openid_config_description": "OpenID-Provider-Konfigurationsinformationen",
+    "fetch_config": "Konfiguration abrufen",
+    "verify_token_section": "ID-Token überprüfen",
+    "verify_description": "Fügen Sie ein ID-Token ein, um die Signatur zu überprüfen und Claims anzuzeigen",
+    "id_token_input": "ID-Token (JWT)",
+    "verify_button": "Token überprüfen",
+    "verification_success": "✅ Token ist gültig!",
+    "verification_failed": "❌ Token-Überprüfung fehlgeschlagen",
+    "decoded_claims": "Dekodierte Claims",
+    "token_info": "Token-Informationen",
+    "issuer": "Aussteller",
+    "subject": "Betreff",
+    "provider": "Anbieter",
+    "email": "E-Mail",
+    "expires": "Läuft ab",
+    "error": "Fehler"
   }
 }

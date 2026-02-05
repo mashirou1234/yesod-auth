@@ -11,6 +11,7 @@
     "valkey_status": "⚡ Valkey 상태",
     "db_schema": "🗄️ DB 스키마",
     "api_test": "🧪 API 테스트",
+    "oidc_test": "🔐 OIDC 테스트",
     "navigation": "탐색",
     "refresh": "🔄 새로고침",
     "logout": "🚪 로그아웃",
@@ -140,6 +141,30 @@
   "common": {
     "status": "상태",
     "environment_warning": "⚠️ {env} 환경"
+  },
+  "oidc_test": {
+    "header": "🔐 OIDC / JWKS 테스트",
+    "description": "OpenID Connect 호환성 및 JWKS 엔드포인트 테스트",
+    "jwks_section": "JWKS (JSON Web Key Set)",
+    "jwks_description": "ID Token 서명을 검증하는 데 사용되는 공개 키",
+    "fetch_jwks": "JWKS 가져오기",
+    "openid_config_section": "OpenID 구성",
+    "openid_config_description": "OpenID 제공자 구성 정보",
+    "fetch_config": "구성 가져오기",
+    "verify_token_section": "ID Token 검증",
+    "verify_description": "ID Token을 붙여넣어 서명을 검증하고 클레임을 확인",
+    "id_token_input": "ID Token (JWT)",
+    "verify_button": "토큰 검증",
+    "verification_success": "✅ 토큰이 유효합니다!",
+    "verification_failed": "❌ 토큰 검증 실패",
+    "decoded_claims": "디코딩된 클레임",
+    "token_info": "토큰 정보",
+    "issuer": "발급자",
+    "subject": "주체",
+    "provider": "제공자",
+    "email": "이메일",
+    "expires": "만료",
+    "error": "오류"
   }
 }
 

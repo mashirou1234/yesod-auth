@@ -48,6 +48,18 @@ class TokenPairResponse(BaseModel):
     token_type: str = Field(default="bearer", description="Token type (always 'bearer')")
 
 
+class TokenWithIdTokenResponse(TokenPairResponse):
+    """Token response including OIDC-compatible ID Token.
+
+    The ID Token contains user identity claims in OIDC format,
+    signed with RS256 for verification via JWKS endpoint.
+    """
+
+    id_token: str | None = Field(
+        None, description="OIDC-compatible ID Token (JWT signed with RS256)"
+    )
+
+
 class RefreshTokenRequest(BaseModel):
     """Request body for refresh token operations."""
 

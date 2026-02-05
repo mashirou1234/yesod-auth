@@ -22,6 +22,8 @@
 | GET | `/api/v1/auth/twitch/callback` | Twitchコールバック |
 | POST | `/api/v1/auth/refresh` | トークンリフレッシュ |
 | POST | `/api/v1/auth/logout` | ログアウト |
+| GET | `/.well-known/jwks.json` | JWKS（公開鍵セット） |
+| GET | `/.well-known/openid-configuration` | OpenID設定 |
 
 ---
 
@@ -113,3 +115,80 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 ```bash
 GET /api/v1/auth/mock/users
 ```
+
+---
+
+## OIDC互換エンドポイント
+
+YESOD AuthはOpenID Connect非対応プロバイダー（GitHub, Discord, X, Facebook, Twitch）でもID Tokenを生成し、OIDC互換のエンドポイントを提供します。
+
+### JWKS（JSON Web Key Set）
+
+```bash
+GET /.well-known/jwks.json
+```
+
+**レスポンス:**
+
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "use": "sig",
+      "alg": "RS256",
+      "kid": "yesod-auth-key-1",
+      "n": "...",
+      "e": "AQAB"
+    }
+  ]
+}
+```
+
+### OpenID設定
+
+```bash
+GET /.well-known/openid-configuration
+```
+
+**レスポンス:**
+
+```json
+{
+  "issuer": "http://localhost:8000",
+  "jwks_uri": "http://localhost:8000/.well-known/jwks.json",
+  "id_token_signing_alg_values_supported": ["RS256"],
+  "subject_types_supported": ["public"],
+  "response_types_supported": ["code", "token", "id_token"]
+}
+```
+
+### ID Token
+
+OIDC非対応プロバイダーでログイン時、レスポンスに`id_token`が含まれます：
+
+```json
+{
+  "access_token": "...",
+  "refresh_token": "...",
+  "id_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6Inllc29kLWF1dGgta2V5LTEifQ..."
+}
+```
+
+**ID Tokenのクレーム:**
+
+| クレーム | 説明 |
+|---------|------|
+| `iss` | 発行者（YESOD AuthのURL） |
+| `sub` | ユーザーID |
+| `aud` | オーディエンス（クライアントID） |
+| `exp` | 有効期限 |
+| `iat` | 発行日時 |
+| `provider` | OAuthプロバイダー名 |
+| `email` | メールアドレス（取得可能な場合） |
+| `name` | 表示名（取得可能な場合） |
+| `picture` | アバターURL（取得可能な場合） |
+
+!!! info "ID Token生成対象プロバイダー"
+    GitHub, Discord, X, Facebook, TwitchでログインするとID Tokenが生成されます。
+    Google, LinkedIn, SlackはネイティブでOIDCをサポートしているため、プロバイダーからのID Tokenがそのまま使用されます。

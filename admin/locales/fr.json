@@ -11,6 +11,7 @@
     "valkey_status": "⚡ État Valkey",
     "db_schema": "🗄️ Schéma BD",
     "api_test": "🧪 Test API",
+    "oidc_test": "🔐 Test OIDC",
     "navigation": "Navigation",
     "refresh": "🔄 Actualiser",
     "logout": "🚪 Déconnexion",
@@ -140,5 +141,29 @@
   "common": {
     "status": "Statut",
     "environment_warning": "⚠️ ENVIRONNEMENT {env}"
+  },
+  "oidc_test": {
+    "header": "🔐 Test OIDC / JWKS",
+    "description": "Tester la compatibilité OpenID Connect et le point de terminaison JWKS",
+    "jwks_section": "JWKS (JSON Web Key Set)",
+    "jwks_description": "Clés publiques utilisées pour vérifier les signatures des ID Tokens",
+    "fetch_jwks": "Récupérer JWKS",
+    "openid_config_section": "Configuration OpenID",
+    "openid_config_description": "Informations de configuration du fournisseur OpenID",
+    "fetch_config": "Récupérer la configuration",
+    "verify_token_section": "Vérifier l'ID Token",
+    "verify_description": "Collez un ID Token pour vérifier sa signature et afficher les claims",
+    "id_token_input": "ID Token (JWT)",
+    "verify_button": "Vérifier le token",
+    "verification_success": "✅ Le token est valide !",
+    "verification_failed": "❌ Échec de la vérification du token",
+    "decoded_claims": "Claims décodés",
+    "token_info": "Informations du token",
+    "issuer": "Émetteur",
+    "subject": "Sujet",
+    "provider": "Fournisseur",
+    "email": "Email",
+    "expires": "Expire",
+    "error": "Erreur"
   }
 }
