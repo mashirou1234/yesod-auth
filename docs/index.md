@@ -48,16 +48,34 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 ## 対応プロバイダー
 
-| プロバイダー | PKCE | 状態 |
-|-------------|------|------|
-| Google | ✅ | 対応済み |
-| GitHub | ✅ | 対応済み |
-| Discord | ❌ | 対応済み |
-| X (Twitter) | ✅ | 対応済み |
-| LinkedIn | ✅ | 対応済み |
-| Facebook | ✅ | 対応済み |
-| Slack | ❌ | 対応済み |
-| Twitch | ❌ | 対応済み |
+<div class="provider-icons">
+  <a href="guides/oauth/google.md" title="Google">
+    <img src="assets/icons/google.svg" alt="Google" width="48" height="48">
+  </a>
+  <a href="guides/oauth/github.md" title="GitHub">
+    <img src="assets/icons/github.svg" alt="GitHub" width="48" height="48">
+  </a>
+  <a href="guides/oauth/discord.md" title="Discord">
+    <img src="assets/icons/discord.svg" alt="Discord" width="48" height="48">
+  </a>
+  <a href="guides/oauth/x.md" title="X">
+    <img src="assets/icons/x.svg" alt="X" width="48" height="48">
+  </a>
+  <a href="guides/oauth/linkedin.md" title="LinkedIn">
+    <img src="assets/icons/linkedin.svg" alt="LinkedIn" width="48" height="48">
+  </a>
+  <a href="guides/oauth/facebook.md" title="Facebook">
+    <img src="assets/icons/facebook.svg" alt="Facebook" width="48" height="48">
+  </a>
+  <a href="guides/oauth/slack.md" title="Slack">
+    <img src="assets/icons/slack.svg" alt="Slack" width="48" height="48">
+  </a>
+  <a href="guides/oauth/twitch.md" title="Twitch">
+    <img src="assets/icons/twitch.svg" alt="Twitch" width="48" height="48">
+  </a>
+</div>
+
+詳細は[OAuth設定ガイド](guides/oauth/index.md)を参照してください。
 
 ## ライセンス
 
