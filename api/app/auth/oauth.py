@@ -184,15 +184,24 @@ class GitHubOAuth:
 
 
 class DiscordOAuth:
-    """Discord OAuth implementation."""
+    """Discord OAuth implementation with PKCE support.
+
+    Note: Discord supports PKCE but doesn't officially document it.
+    YESOD Auth implements PKCE for enhanced security.
+    """
 
     AUTHORIZE_URL = "https://discord.com/api/oauth2/authorize"
     TOKEN_URL = "https://discord.com/api/oauth2/token"
     USERINFO_URL = "https://discord.com/api/users/@me"
 
     @classmethod
-    def get_authorize_url(cls, redirect_uri: str, state: str) -> str:
-        """Get the Discord OAuth authorization URL."""
+    def get_authorize_url(
+        cls,
+        redirect_uri: str,
+        state: str,
+        code_challenge: str | None = None,
+    ) -> str:
+        """Get the Discord OAuth authorization URL with optional PKCE."""
         params = {
             "client_id": settings.DISCORD_CLIENT_ID,
             "redirect_uri": redirect_uri,
@@ -200,22 +209,33 @@ class DiscordOAuth:
             "scope": "identify email",
             "state": state,
         }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
         query = "&".join(f"{k}={v}" for k, v in params.items())
         return f"{cls.AUTHORIZE_URL}?{query}"
 
     @classmethod
-    async def exchange_code(cls, code: str, redirect_uri: str) -> dict | None:
-        """Exchange authorization code for tokens."""
+    async def exchange_code(
+        cls,
+        code: str,
+        redirect_uri: str,
+        code_verifier: str | None = None,
+    ) -> dict | None:
+        """Exchange authorization code for tokens with optional PKCE verifier."""
+        data = {
+            "client_id": settings.DISCORD_CLIENT_ID,
+            "client_secret": settings.DISCORD_CLIENT_SECRET,
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 cls.TOKEN_URL,
-                data={
-                    "client_id": settings.DISCORD_CLIENT_ID,
-                    "client_secret": settings.DISCORD_CLIENT_SECRET,
-                    "code": code,
-                    "grant_type": "authorization_code",
-                    "redirect_uri": redirect_uri,
-                },
+                data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             if response.status_code == 200:
@@ -457,7 +477,11 @@ class FacebookOAuth:
 
 
 class SlackOAuth:
-    """Slack OAuth 2.0 implementation with OpenID Connect."""
+    """Slack OAuth 2.0 implementation with OpenID Connect and PKCE support.
+
+    Note: Slack does not officially document PKCE support.
+    YESOD Auth implements PKCE for enhanced security (yesod-auth custom implementation).
+    """
 
     AUTHORIZE_URL = "https://slack.com/openid/connect/authorize"
     TOKEN_URL = "https://slack.com/api/openid.connect.token"
@@ -468,9 +492,10 @@ class SlackOAuth:
         cls,
         redirect_uri: str,
         state: str,
+        code_challenge: str | None = None,
         nonce: str | None = None,
     ) -> str:
-        """Get the Slack OAuth authorization URL."""
+        """Get the Slack OAuth authorization URL with optional PKCE."""
         params = {
             "client_id": settings.SLACK_CLIENT_ID,
             "redirect_uri": redirect_uri,
@@ -478,6 +503,9 @@ class SlackOAuth:
             "scope": "openid email profile",
             "state": state,
         }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
         if nonce:
             params["nonce"] = nonce
         query = "&".join(f"{k}={v}" for k, v in params.items())
@@ -488,24 +516,28 @@ class SlackOAuth:
         cls,
         code: str,
         redirect_uri: str,
+        code_verifier: str | None = None,
     ) -> dict | None:
-        """Exchange authorization code for tokens."""
+        """Exchange authorization code for tokens with optional PKCE verifier."""
+        data = {
+            "client_id": settings.SLACK_CLIENT_ID,
+            "client_secret": settings.SLACK_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 cls.TOKEN_URL,
-                data={
-                    "client_id": settings.SLACK_CLIENT_ID,
-                    "client_secret": settings.SLACK_CLIENT_SECRET,
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                    "grant_type": "authorization_code",
-                },
+                data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             if response.status_code == 200:
-                data = response.json()
-                if data.get("ok"):
-                    return data
+                resp_data = response.json()
+                if resp_data.get("ok"):
+                    return resp_data
             return None
 
     @classmethod
@@ -524,7 +556,11 @@ class SlackOAuth:
 
 
 class TwitchOAuth:
-    """Twitch OAuth 2.0 implementation with OpenID Connect."""
+    """Twitch OAuth 2.0 implementation with OpenID Connect and PKCE support.
+
+    Note: Twitch does not officially document PKCE support.
+    YESOD Auth implements PKCE for enhanced security (yesod-auth custom implementation).
+    """
 
     AUTHORIZE_URL = "https://id.twitch.tv/oauth2/authorize"
     TOKEN_URL = "https://id.twitch.tv/oauth2/token"
@@ -535,9 +571,10 @@ class TwitchOAuth:
         cls,
         redirect_uri: str,
         state: str,
+        code_challenge: str | None = None,
         nonce: str | None = None,
     ) -> str:
-        """Get the Twitch OAuth authorization URL."""
+        """Get the Twitch OAuth authorization URL with optional PKCE."""
         params = {
             "client_id": settings.TWITCH_CLIENT_ID,
             "redirect_uri": redirect_uri,
@@ -545,6 +582,9 @@ class TwitchOAuth:
             "scope": "openid user:read:email",
             "state": state,
         }
+        if code_challenge:
+            params["code_challenge"] = code_challenge
+            params["code_challenge_method"] = "S256"
         if nonce:
             params["nonce"] = nonce
         query = "&".join(f"{k}={v}" for k, v in params.items())
@@ -555,18 +595,22 @@ class TwitchOAuth:
         cls,
         code: str,
         redirect_uri: str,
+        code_verifier: str | None = None,
     ) -> dict | None:
-        """Exchange authorization code for tokens."""
+        """Exchange authorization code for tokens with optional PKCE verifier."""
+        data = {
+            "client_id": settings.TWITCH_CLIENT_ID,
+            "client_secret": settings.TWITCH_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+        }
+        if code_verifier:
+            data["code_verifier"] = code_verifier
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 cls.TOKEN_URL,
-                data={
-                    "client_id": settings.TWITCH_CLIENT_ID,
-                    "client_secret": settings.TWITCH_CLIENT_SECRET,
-                    "code": code,
-                    "redirect_uri": redirect_uri,
-                    "grant_type": "authorization_code",
-                },
+                data=data,
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             if response.status_code == 200:

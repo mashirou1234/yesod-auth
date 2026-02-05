@@ -30,5 +30,9 @@ echo "your-client-secret" > secrets/discord_client_secret.txt
 | トークンエンドポイント | `https://discord.com/api/oauth2/token` |
 | ユーザー情報エンドポイント | `https://discord.com/api/users/@me` |
 | スコープ | `identify email` |
-| PKCE | ❌ 非対応 |
+| PKCE | ✅ 独自実装 |
 | OpenID Connect | ❌ 非対応 |
+
+!!! info "PKCE対応について"
+    DiscordはPKCEパラメータを受け入れますが、公式ドキュメントには記載されていません。
+    YESOD Authはセキュリティ強化のため、独自にPKCE（S256）を実装しています。

@@ -47,5 +47,10 @@ echo "your-client-secret" > secrets/slack_client_secret.txt
 | トークンエンドポイント | `https://slack.com/api/openid.connect.token` |
 | ユーザー情報エンドポイント | `https://slack.com/api/openid.connect.userInfo` |
 | スコープ | `openid email profile` |
-| PKCE | ❌ 非対応 |
+| PKCE | ✅ 独自実装 |
 | OpenID Connect | ✅ 対応 |
+
+!!! info "PKCE対応について"
+    SlackはPKCEを公式にはサポートしていません。
+    YESOD Authはセキュリティ強化のため、独自にPKCE（S256）パラメータを送信しています。
+    プロバイダー側でパラメータが無視される場合でも、セキュリティ上の問題はありません。

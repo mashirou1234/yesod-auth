@@ -151,14 +151,16 @@ async def google_callback(
 @router.get("/discord")
 @limiter.limit("10/minute")
 async def discord_login(request: Request):
-    """Start Discord OAuth flow."""
+    """Start Discord OAuth flow with PKCE."""
     state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
 
-    # Store state in Valkey (Discord doesn't support PKCE)
-    await OAuthStateStore.save(state, "discord")
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "discord", code_verifier)
 
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
-    authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state)
+    authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
 
@@ -182,10 +184,11 @@ async def discord_callback(
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
+    code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
 
-    # Exchange code for tokens
-    token_data = await DiscordOAuth.exchange_code(code, redirect_uri)
+    # Exchange code for tokens with PKCE verifier
+    token_data = await DiscordOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
         await AuditLogger.log_login(
             db, None, "discord", False, ip_address, device_info, "Code exchange failed"
@@ -625,15 +628,17 @@ async def facebook_callback(
 @router.get("/slack")
 @limiter.limit("10/minute")
 async def slack_login(request: Request):
-    """Start Slack OAuth flow."""
+    """Start Slack OAuth flow with PKCE."""
     state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
     nonce = secrets.token_urlsafe(16)
 
-    # Store state with nonce in Valkey
-    await OAuthStateStore.save(state, "slack", nonce)
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "slack", code_verifier)
 
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
-    authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, nonce)
+    authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
 
@@ -657,10 +662,11 @@ async def slack_callback(
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
+    code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
 
-    # Exchange code for tokens
-    token_data = await SlackOAuth.exchange_code(code, redirect_uri)
+    # Exchange code for tokens with PKCE verifier
+    token_data = await SlackOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
         await AuditLogger.log_login(
             db, None, "slack", False, ip_address, device_info, "Code exchange failed"
@@ -718,15 +724,17 @@ async def slack_callback(
 @router.get("/twitch")
 @limiter.limit("10/minute")
 async def twitch_login(request: Request):
-    """Start Twitch OAuth flow."""
+    """Start Twitch OAuth flow with PKCE."""
     state = secrets.token_urlsafe(32)
+    code_verifier = generate_code_verifier()
+    code_challenge = generate_code_challenge(code_verifier)
     nonce = secrets.token_urlsafe(16)
 
-    # Store state with nonce in Valkey
-    await OAuthStateStore.save(state, "twitch", nonce)
+    # Store state with code_verifier in Valkey
+    await OAuthStateStore.save(state, "twitch", code_verifier)
 
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
-    authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, nonce)
+    authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
 
@@ -750,10 +758,11 @@ async def twitch_callback(
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
+    code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
 
-    # Exchange code for tokens
-    token_data = await TwitchOAuth.exchange_code(code, redirect_uri)
+    # Exchange code for tokens with PKCE verifier
+    token_data = await TwitchOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
         await AuditLogger.log_login(
             db, None, "twitch", False, ip_address, device_info, "Code exchange failed"

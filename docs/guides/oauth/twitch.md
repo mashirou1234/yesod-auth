@@ -36,5 +36,10 @@ echo "your-client-secret" > secrets/twitch_client_secret.txt
 | トークンエンドポイント | `https://id.twitch.tv/oauth2/token` |
 | ユーザー情報エンドポイント | `https://api.twitch.tv/helix/users` |
 | スコープ | `openid user:read:email` |
-| PKCE | ❌ 非対応 |
+| PKCE | ✅ 独自実装 |
 | OpenID Connect | ❌ 非対応 |
+
+!!! info "PKCE対応について"
+    TwitchはPKCEを公式にはサポートしていません。
+    YESOD Authはセキュリティ強化のため、独自にPKCE（S256）パラメータを送信しています。
+    プロバイダー側でパラメータが無視される場合でも、セキュリティ上の問題はありません。

@@ -67,6 +67,39 @@ class TestTwitchOAuthAuthorizeUrl:
 
             assert "nonce" not in params
 
+    def test_authorize_url_with_pkce(self):
+        """Test that PKCE parameters are included when provided."""
+        with patch("app.auth.oauth.settings") as mock_settings:
+            mock_settings.TWITCH_CLIENT_ID = "test-client-id"
+
+            url = TwitchOAuth.get_authorize_url(
+                redirect_uri="http://localhost:8000/callback",
+                state="test-state-123",
+                code_challenge="test-code-challenge",
+            )
+
+            parsed = urlparse(url)
+            params = parse_qs(parsed.query)
+
+            assert params["code_challenge"] == ["test-code-challenge"]
+            assert params["code_challenge_method"] == ["S256"]
+
+    def test_authorize_url_without_pkce(self):
+        """Test that PKCE parameters are not included when not provided."""
+        with patch("app.auth.oauth.settings") as mock_settings:
+            mock_settings.TWITCH_CLIENT_ID = "test-client-id"
+
+            url = TwitchOAuth.get_authorize_url(
+                redirect_uri="http://localhost:8000/callback",
+                state="test-state-123",
+            )
+
+            parsed = urlparse(url)
+            params = parse_qs(parsed.query)
+
+            assert "code_challenge" not in params
+            assert "code_challenge_method" not in params
+
 
 class TestTwitchOAuthExchangeCode:
     """Tests for Twitch OAuth code exchange."""
@@ -114,6 +147,35 @@ class TestTwitchOAuthExchangeCode:
             )
 
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_exchange_code_with_pkce(self, respx_mock):
+        """Test code exchange with PKCE verifier."""
+        respx_mock.post("https://id.twitch.tv/oauth2/token").mock(
+            return_value=httpx.Response(
+                200,
+                json={
+                    "access_token": "test_access_token",
+                    "token_type": "bearer",
+                    "expires_in": 14400,
+                    "refresh_token": "test_refresh_token",
+                    "scope": ["openid", "user:read:email"],
+                },
+            )
+        )
+
+        with patch("app.auth.oauth.settings") as mock_settings:
+            mock_settings.TWITCH_CLIENT_ID = "test-client-id"
+            mock_settings.TWITCH_CLIENT_SECRET = "test-client-secret"
+
+            result = await TwitchOAuth.exchange_code(
+                code="test-code",
+                redirect_uri="http://localhost:8000/callback",
+                code_verifier="test-code-verifier",
+            )
+
+            assert result is not None
+            assert result["access_token"] == "test_access_token"
 
 
 class TestTwitchOAuthUserInfo:

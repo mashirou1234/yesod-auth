@@ -6,14 +6,22 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 
 | プロバイダー | PKCE | OpenID Connect | 備考 |
 |-------------|------|----------------|------|
-| [Google](google.md) | ✅ | ✅ | 推奨 |
-| [GitHub](github.md) | ✅ | ❌ | |
-| [Discord](discord.md) | ❌ | ❌ | |
-| [X (Twitter)](x.md) | ✅ (必須) | ❌ | メールアドレス取得不可 |
-| [LinkedIn](linkedin.md) | ✅ | ✅ | |
-| [Facebook](facebook.md) | ✅ | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
-| [Slack](slack.md) | ❌ | ✅ | |
-| [Twitch](twitch.md) | ❌ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+| [Google](google.md) | ✅ 公式 | ✅ | 推奨 |
+| [GitHub](github.md) | ✅ 公式 | ❌ | |
+| [Discord](discord.md) | ✅ 独自実装 | ❌ | プロバイダーは対応、公式ドキュメントなし |
+| [X (Twitter)](x.md) | ✅ 公式（必須） | ❌ | メールアドレス取得不可 |
+| [LinkedIn](linkedin.md) | ✅ 公式 | ✅ | |
+| [Facebook](facebook.md) | ✅ 公式 | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
+| [Slack](slack.md) | ✅ 独自実装 | ✅ | プロバイダー未サポート |
+| [Twitch](twitch.md) | ✅ 独自実装 | ❌ | プロバイダー未サポート、[Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+
+### PKCE対応について
+
+PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防ぐためのセキュリティ拡張です。
+
+- **公式**: プロバイダーが公式にPKCEをサポートしており、ドキュメントに記載されています
+- **公式（必須）**: PKCEが必須で、使用しないと認証が失敗します
+- **独自実装**: プロバイダーが公式にはPKCEをサポートしていない（またはドキュメントに記載がない）ため、YESOD Authが独自にPKCEパラメータを送信しています。プロバイダー側でPKCEパラメータが無視される場合でも、セキュリティ上の問題はありません
 
 ## 共通設定
 
