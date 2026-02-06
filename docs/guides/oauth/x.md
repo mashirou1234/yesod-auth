@@ -22,6 +22,15 @@
 1. 「Keys and tokens」タブを開く
 2. 「OAuth 2.0 Client ID and Client Secret」セクションから認証情報をコピー
 
+!!! note "必要な認証情報"
+    YESOD Authで必要なのは「OAuth 2.0 Client ID」と「Client Secret」のみです。
+    
+    以下のトークンは**不要**です：
+    
+    - API Key / API Key Secret（OAuth 1.0a用）
+    - Bearer Token（App-only認証用）
+    - Access Token / Access Token Secret（OAuth 1.0a用）
+
 ## 4. シークレットファイルの設定
 
 ```bash
