@@ -17,7 +17,6 @@
 |--------|------|
 | `TESTING=1` | テスト環境フラグ。監査ログなどDB依存処理をスキップ |
 | `MOCK_OAUTH_ENABLED=1` | モックOAuth有効化。開発/テスト時にOAuthをスキップ |
-| `NGROK_AUTHTOKEN` | ngrok認証トークン（X OAuth等HTTPS必須プロバイダー用） |
 
 ## テスト作成ガイドライン
 

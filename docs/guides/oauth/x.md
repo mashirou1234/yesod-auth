@@ -13,11 +13,15 @@
     ローカル開発では[ngrok](https://ngrok.com/)などのトンネリングサービスを使用してください。
     
     ```bash
-    # ngrokでローカルのポート8000をHTTPSで公開
-    docker compose up ngrok
+    # 1. ngrokのAuthtokenを取得してsecretsに保存
+    echo "your-ngrok-authtoken" > secrets/ngrok_authtoken.txt
+    
+    # 2. ngrokを起動
+    docker compose --profile default --profile ngrok up
     ```
     
     ngrokが発行するURL（例: `https://abc123.ngrok-free.app`）を使用します。
+    `http://localhost:4040`でngrokダッシュボードを開いてURLを確認できます。
 
 1. 作成したアプリの「Settings」を開く
 2. 「User authentication settings」→「Set up」をクリック

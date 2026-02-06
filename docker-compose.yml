@@ -158,9 +158,9 @@ services:
     container_name: yesod-ngrok
     ports:
       - "4040:4040"
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
-    command: http api:8000 --log stdout
+    secrets:
+      - ngrok_authtoken
+    command: http api:8000 --log stdout --authtoken-file /run/secrets/ngrok_authtoken
     depends_on:
       - api
 
@@ -177,6 +177,8 @@ secrets:
     file: ./secrets/jwt_secret.txt
   admin_password:
     file: ./secrets/admin_password.txt
+  ngrok_authtoken:
+    file: ./secrets/ngrok_authtoken.txt
 
 volumes:
   postgres_data:
