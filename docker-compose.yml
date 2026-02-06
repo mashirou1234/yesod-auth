@@ -160,9 +160,36 @@ services:
       - "4040:4040"
     secrets:
       - ngrok_authtoken
-    command: http api:8000 --log stdout --authtoken-file /run/secrets/ngrok_authtoken
+    entrypoint: ["sh", "-c"]
+    command: ["ngrok http api:8000 --log stdout --authtoken $(cat /run/secrets/ngrok_authtoken)"]
     depends_on:
       - api
+
+  # Sync ngrok URL to Valkey (runs once after ngrok starts)
+  ngrok-sync:
+    image: alpine:latest
+    profiles: ["ngrok"]
+    container_name: yesod-ngrok-sync
+    depends_on:
+      - ngrok
+      - valkey
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        apk add --no-cache curl redis > /dev/null 2>&1
+        echo "Waiting for ngrok tunnel..."
+        for i in $$(seq 1 30); do
+          URL=$$(curl -s http://ngrok:4040/api/tunnels 2>/dev/null | sed -n 's/.*"public_url":"\(https[^"]*\)".*/\1/p' | head -1)
+          if [ -n "$$URL" ]; then
+            echo "Found ngrok URL: $$URL"
+            redis-cli -h valkey SET ngrok:public_url "$$URL" > /dev/null
+            echo "Saved to Valkey"
+            exit 0
+          fi
+          sleep 2
+        done
+        echo "Failed to get ngrok URL"
+        exit 1
 
 secrets:
   google_client_id:

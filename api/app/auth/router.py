@@ -12,7 +12,7 @@ from app.audit import AuditLogger, AuthEventType
 from app.config import get_settings
 from app.db.session import get_db
 from app.models import OAuthAccount, User
-from app.valkey import OAuthStateStore
+from app.valkey import OAuthStateStore, get_api_base_url
 from app.webhooks.emitter import WebhookEmitter
 
 from .jwt import get_current_user
@@ -72,7 +72,8 @@ async def google_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "google", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/google/callback"
     authorize_url = GoogleOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -98,7 +99,8 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/google/callback"
 
     # Exchange code for tokens
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -167,7 +169,8 @@ async def discord_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "discord", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/discord/callback"
     authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -193,7 +196,8 @@ async def discord_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/discord/callback"
 
     # Exchange code for tokens with PKCE verifier
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -276,7 +280,8 @@ async def github_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "github", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/github/callback"
     authorize_url = GitHubOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -302,7 +307,8 @@ async def github_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/github/callback"
 
     # Exchange code for tokens
     token_data = await GitHubOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -385,7 +391,8 @@ async def x_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "x", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/x/callback"
     authorize_url = XOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -409,7 +416,8 @@ async def x_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/x/callback"
 
     # Exchange code for tokens
     token_data = await XOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -495,7 +503,8 @@ async def linkedin_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "linkedin", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/linkedin/callback"
     authorize_url = LinkedInOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -521,7 +530,8 @@ async def linkedin_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/linkedin/callback"
 
     # Exchange code for tokens
     token_data = await LinkedInOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -590,7 +600,8 @@ async def facebook_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "facebook", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/facebook/callback"
     authorize_url = FacebookOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -616,7 +627,8 @@ async def facebook_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/facebook/callback"
 
     # Exchange code for tokens
     token_data = await FacebookOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -700,7 +712,8 @@ async def slack_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "slack", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/slack/callback"
     authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -726,7 +739,8 @@ async def slack_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/slack/callback"
 
     # Exchange code for tokens with PKCE verifier
     token_data = await SlackOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -796,7 +810,8 @@ async def twitch_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "twitch", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/twitch/callback"
     authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -822,7 +837,8 @@ async def twitch_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/auth/twitch/callback"
 
     # Exchange code for tokens with PKCE verifier
     token_data = await TwitchOAuth.exchange_code(code, redirect_uri, code_verifier)

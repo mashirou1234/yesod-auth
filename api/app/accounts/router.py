@@ -13,7 +13,7 @@ from app.auth.pkce import generate_code_challenge, generate_code_verifier
 from app.config import get_settings
 from app.db.session import get_db
 from app.models import OAuthAccount, User
-from app.valkey import OAuthStateStore
+from app.valkey import OAuthStateStore, get_api_base_url
 
 from .schemas import OAuthAccountResponse, UnlinkResponse
 
@@ -54,6 +54,8 @@ async def start_link_account(
         "user_id": str(current_user.id),
     }
 
+    api_base_url = await get_api_base_url()
+
     if provider == "google":
         code_verifier = generate_code_verifier()
         code_challenge = generate_code_challenge(code_verifier)
@@ -61,12 +63,12 @@ async def start_link_account(
 
         await OAuthStateStore.save_with_data(state, state_data)
 
-        redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/google/callback"
+        redirect_uri = f"{api_base_url}{API_V1_PREFIX}/accounts/link/google/callback"
         authorize_url = GoogleOAuth.get_authorize_url(redirect_uri, state, code_challenge)
     else:
         await OAuthStateStore.save_with_data(state, state_data)
 
-        redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/discord/callback"
+        redirect_uri = f"{api_base_url}{API_V1_PREFIX}/accounts/link/discord/callback"
         authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state)
 
     return RedirectResponse(url=authorize_url)
@@ -86,7 +88,8 @@ async def google_link_callback(
     user_id = state_data.get("user_id")
     code_verifier = state_data.get("code_verifier")
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/google/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/accounts/link/google/callback"
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
         raise HTTPException(status_code=400, detail="Failed to exchange code")
@@ -142,7 +145,8 @@ async def discord_link_callback(
 
     user_id = state_data.get("user_id")
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/discord/callback"
+    api_base_url = await get_api_base_url()
+    redirect_uri = f"{api_base_url}{API_V1_PREFIX}/accounts/link/discord/callback"
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri)
     if not token_data:
         raise HTTPException(status_code=400, detail="Failed to exchange code")

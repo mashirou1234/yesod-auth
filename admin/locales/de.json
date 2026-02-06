@@ -86,6 +86,7 @@
     "step2": "**Schritt 2:** Nach der Anmeldung sehen Sie eine Seite mit Ihren Token",
     "step3": "**Schritt 3:** Kopieren Sie die Token und fügen Sie sie unten ein",
     "buttons_hint": "💡 Wenn die Schaltflächen nicht funktionieren, öffnen Sie diese URLs direkt:",
+    "ngrok_hint": "X (Twitter) und andere HTTPS-erforderliche Anbieter verwenden diese URL.",
     "enter_tokens": "2. Token eingeben",
     "access_token": "Zugriffstoken",
     "refresh_token": "Refresh-Token",

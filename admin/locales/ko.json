@@ -86,6 +86,7 @@
     "step2": "**2단계:** 로그인 후 토큰이 표시된 페이지가 나타납니다",
     "step3": "**3단계:** 토큰을 복사하여 아래에 붙여넣으세요",
     "buttons_hint": "💡 버튼이 작동하지 않으면 다음 URL을 직접 여세요:",
+    "ngrok_hint": "X (Twitter) 및 기타 HTTPS 필수 제공자는 이 URL을 사용합니다.",
     "enter_tokens": "2. 토큰 입력",
     "access_token": "액세스 토큰",
     "refresh_token": "리프레시 토큰",

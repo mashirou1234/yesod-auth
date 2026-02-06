@@ -38,6 +38,21 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
 docker compose --profile default up -d
 ```
 
+### HTTPS必須プロバイダー（X等）を使用する場合
+
+X (Twitter)などHTTPSが必須のプロバイダーを使用する場合は、ngrokプロファイルも起動します：
+
+```bash
+# ngrok authtokenを設定
+echo "your-ngrok-authtoken" > secrets/ngrok_authtoken.txt
+
+# ngrokプロファイルを含めて起動
+docker compose --profile default --profile ngrok up -d
+```
+
+ngrokが発行するHTTPS URLは自動的にValkeyに保存され、OAuth認証時に使用されます。
+管理画面（`http://localhost:8501`）のAPIテストページでngrok URLを確認できます。
+
 ## 4. 動作確認
 
 ### ヘルスチェック

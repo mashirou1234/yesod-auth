@@ -51,9 +51,23 @@ async def _get_rate_limit_info() -> list[dict]:
         await client.close()
 
 
+async def _get_ngrok_url() -> str | None:
+    """Get ngrok public URL from Valkey."""
+    client = redis.from_url(settings.VALKEY_URL, decode_responses=True)
+    try:
+        return await client.get("ngrok:public_url")
+    finally:
+        await client.close()
+
+
 def get_oauth_states() -> list[dict]:
     return run_async(_get_oauth_states())
 
 
 def get_rate_limit_info() -> list[dict]:
     return run_async(_get_rate_limit_info())
+
+
+def get_ngrok_url() -> str | None:
+    """Get ngrok public URL from Valkey (sync wrapper)."""
+    return run_async(_get_ngrok_url())

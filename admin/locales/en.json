@@ -86,6 +86,7 @@
     "step2": "**Step 2:** After login, you'll see a page with your tokens",
     "step3": "**Step 3:** Copy the tokens and paste them below",
     "buttons_hint": "💡 If buttons don't work, open these URLs directly:",
+    "ngrok_hint": "X (Twitter) and other HTTPS-required providers will use this URL.",
     "enter_tokens": "2. Enter Tokens",
     "access_token": "Access Token",
     "refresh_token": "Refresh Token",

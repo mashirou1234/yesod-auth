@@ -86,6 +86,7 @@
     "step2": "**Étape 2 :** Après connexion, vous verrez une page avec vos jetons",
     "step3": "**Étape 3 :** Copiez les jetons et collez-les ci-dessous",
     "buttons_hint": "💡 Si les boutons ne fonctionnent pas, ouvrez ces URLs directement :",
+    "ngrok_hint": "X (Twitter) et autres fournisseurs nécessitant HTTPS utiliseront cette URL.",
     "enter_tokens": "2. Entrer les jetons",
     "access_token": "Jeton d'accès",
     "refresh_token": "Jeton de rafraîchissement",

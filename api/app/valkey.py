@@ -87,3 +87,38 @@ class OAuthStateStore:
         """Check if state exists."""
         client = await get_valkey()
         return await client.exists(f"{cls.PREFIX}{state}") > 0
+
+
+class NgrokUrlStore:
+    """Ngrok public URL management using Valkey."""
+
+    KEY = "ngrok:public_url"
+
+    @classmethod
+    async def set(cls, url: str) -> None:
+        """Save ngrok public URL."""
+        client = await get_valkey()
+        await client.set(cls.KEY, url)
+
+    @classmethod
+    async def get(cls) -> str | None:
+        """Get ngrok public URL."""
+        client = await get_valkey()
+        return await client.get(cls.KEY)
+
+    @classmethod
+    async def delete(cls) -> None:
+        """Delete ngrok public URL."""
+        client = await get_valkey()
+        await client.delete(cls.KEY)
+
+
+async def get_api_base_url() -> str:
+    """Get API base URL with priority: ngrok > env > default."""
+    # Check ngrok URL first (for development with HTTPS-required providers)
+    ngrok_url = await NgrokUrlStore.get()
+    if ngrok_url:
+        return ngrok_url
+
+    # Fall back to configured API_URL
+    return settings.API_URL

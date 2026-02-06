@@ -337,7 +337,14 @@ def show_api_test():
     t = get_translator()
     st.header(t("api_test.header"))
 
-    API_BASE = "http://localhost:8000/api/v1"  # Use localhost for browser access
+    # Check for ngrok URL (for HTTPS-required providers like X)
+    ngrok_url = valkey_client.get_ngrok_url()
+    if ngrok_url:
+        API_BASE = f"{ngrok_url}/api/v1"
+        st.success(f"🔗 ngrok tunnel active: {ngrok_url}")
+        st.caption(t("api_test.ngrok_hint"))
+    else:
+        API_BASE = "http://localhost:8000/api/v1"  # Use localhost for browser access
 
     # Token management
     st.subheader(t("api_test.get_token"))
