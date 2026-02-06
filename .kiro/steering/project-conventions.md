@@ -10,12 +10,14 @@
 | `default` | ローカル開発 | db, valkey, api, docs |
 | `full` | 管理画面含む | db, valkey, api, admin, docs |
 | `ci` | CI/CD用軽量構成 | db-ci, valkey, api-ci |
+| `ngrok` | HTTPS必須プロバイダー用 | ngrok（apiに依存） |
 
 ### 環境変数
 | 変数名 | 説明 |
 |--------|------|
 | `TESTING=1` | テスト環境フラグ。監査ログなどDB依存処理をスキップ |
 | `MOCK_OAUTH_ENABLED=1` | モックOAuth有効化。開発/テスト時にOAuthをスキップ |
+| `NGROK_AUTHTOKEN` | ngrok認証トークン（X OAuth等HTTPS必須プロバイダー用） |
 
 ## テスト作成ガイドライン
 

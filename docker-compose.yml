@@ -149,6 +149,21 @@ services:
     working_dir: /docs
     command: serve -a 0.0.0.0:8000
 
+  # =============================================================================
+  # ngrok Tunnel (for X OAuth and other HTTPS-required providers)
+  # =============================================================================
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles: ["ngrok"]
+    container_name: yesod-ngrok
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN:-}
+    command: http api:8000 --log stdout
+    depends_on:
+      - api
+
 secrets:
   google_client_id:
     file: ./secrets/google_client_id.txt

@@ -8,13 +8,24 @@
 
 ## 2. OAuth 2.0設定
 
+!!! warning "HTTPS必須"
+    X OAuth 2.0ではCallback URIとWebsite URLにHTTPSが必須です。
+    ローカル開発では[ngrok](https://ngrok.com/)などのトンネリングサービスを使用してください。
+    
+    ```bash
+    # ngrokでローカルのポート8000をHTTPSで公開
+    docker compose up ngrok
+    ```
+    
+    ngrokが発行するURL（例: `https://abc123.ngrok-free.app`）を使用します。
+
 1. 作成したアプリの「Settings」を開く
 2. 「User authentication settings」→「Set up」をクリック
 3. 以下を設定：
     - App permissions: 「Read」を選択
     - Type of App: 「Web App, Automated App or Bot」を選択
-    - Callback URI: `http://localhost:8000/api/v1/auth/x/callback`
-    - Website URL: `http://localhost:8000`
+    - Callback URI: `https://<ngrok-url>/api/v1/auth/x/callback`
+    - Website URL: `https://<ngrok-url>`
 4. 「Save」をクリック
 
 ## 3. クライアント認証情報の取得
