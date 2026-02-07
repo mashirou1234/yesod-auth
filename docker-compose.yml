@@ -7,7 +7,7 @@ services:
     profiles: ["default", "full"]
     container_name: yesod-db
     ports:
-      - "5432:5432"
+      - "5434:5432"  # ホスト側は5434（他プロジェクトとの競合回避）
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
