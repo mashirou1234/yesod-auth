@@ -5,7 +5,8 @@
 ### YESOD Authとは？
 
 YESOD Authは、OAuth 2.0認証を簡単に実装するためのオープンソース認証基盤です。
-Google、Discordに対応し、Webhook連携機能も備えています。
+Google、GitHub、Discord、X (Twitter)、LinkedIn、Facebook、Slack、Twitchの8プロバイダーに対応し、
+Webhook連携機能やOIDC互換ID Token発行機能も備えています。
 
 ### ライセンスは？
 
@@ -14,6 +15,21 @@ MIT Licenseです。商用利用も可能です。
 ---
 
 ## 認証
+
+### 対応しているOAuthプロバイダーは？
+
+以下の8プロバイダーに対応しています：
+
+- Google
+- GitHub
+- Discord
+- X (Twitter)
+- LinkedIn
+- Facebook
+- Slack
+- Twitch
+
+各プロバイダーの設定方法は[OAuth設定ガイド](../guides/oauth/index.md)を参照してください。
 
 ### アクセストークンの有効期限は？
 
@@ -31,7 +47,45 @@ MIT Licenseです。商用利用も可能です。
 ### PKCEとは？
 
 Proof Key for Code Exchangeの略で、OAuth 2.0の認可コードフローをより安全にする拡張機能です。
-YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
+YESOD Authは全プロバイダーでPKCEを使用しています。
+
+### ID Tokenとは？
+
+OpenID Connect (OIDC) で定義されたJWTトークンで、ユーザーの認証情報を含みます。
+YESOD Authでは、OIDCをネイティブサポートしないプロバイダー（GitHub、Discord、X、Facebook、Twitch）に対しても
+自己発行のID Tokenを生成し、統一的なOIDCインターフェースを提供します。
+
+---
+
+## ngrok
+
+### ngrokとは？
+
+ngrokは、ローカルサーバーにHTTPSのパブリックURLを提供するトンネリングサービスです。
+X (Twitter)など、OAuthリダイレクトURIにHTTPSが必須のプロバイダーを開発環境で使用する際に必要です。
+
+### ngrokの設定方法は？
+
+1. [ngrok](https://ngrok.com/)でアカウントを作成
+2. 認証トークンを取得
+3. `secrets/ngrok_authtoken.txt`にトークンを保存
+4. ngrokプロファイル付きで起動：
+   ```bash
+   docker compose --profile default --profile ngrok up -d
+   ```
+
+詳細は[Getting Started](../getting-started.md)のngrokセクションを参照してください。
+
+### ngrok URLはどのように管理される？
+
+ngrok起動時に`ngrok-sync`コンテナがngrok APIからパブリックURLを自動取得し、Valkeyに保存します。
+APIサーバーはOAuthコールバックURL生成時にValkeyからngrok URLを自動取得するため、
+手動でのURL設定は不要です。
+
+### ngrokは本番環境で使う？
+
+いいえ。ngrokは開発環境でのHTTPSトンネル用です。
+本番環境では適切なドメインとSSL証明書を使用してください。
 
 ---
 
@@ -40,7 +94,7 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 ### Mock OAuthとは？
 
 開発・テスト時に、実際のOAuthプロバイダーなしで認証フローをテストできる機能です。
-`MOCK_OAUTH_ENABLED=1`で有効化できます。
+`MOCK_OAUTH_ENABLED=1`で有効化できます（デフォルトで有効）。
 
 ### ローカルでテストするには？
 
@@ -51,6 +105,11 @@ docker compose --profile default up -d
 # Mock OAuthでログイン
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
+
+### PostgreSQLのポートは？
+
+開発環境ではホスト側ポート`5434`を使用しています（他プロジェクトとの競合回避のため）。
+コンテナ内部は標準の`5432`です。CI環境ではホスト側ポート`5433`を使用します。
 
 ---
 
@@ -77,6 +136,7 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 2. OAuthリダイレクトURIを本番ドメインに更新
 3. Docker Secretsでシークレットを管理
 4. HTTPSを有効化
+5. ngrokプロファイルは使用しない
 
 ### スケールアウトできる？
 

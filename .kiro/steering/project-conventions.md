@@ -78,9 +78,12 @@ op.execute("""
 2. **test** - pytestでユニットテスト
 3. **generate-types** - OpenAPIからTypeScript型生成
 
-### CI用サービス
-- `db-ci`: 軽量PostgreSQL（pg_cron等の拡張なし）、ポート5433
-- `api-ci`: テスト用APIコンテナ、ポート8001
+### ポート構成
+- `db`: 開発用PostgreSQL、ホスト側ポート5434（他プロジェクトとの競合回避）
+- `db-ci`: 軽量PostgreSQL（pg_cron等の拡張なし）、ホスト側ポート5433
+- `api`: 開発用API、ポート8000
+- `api-ci`: テスト用APIコンテナ、ホスト側ポート8001
+- `ngrok`: ngrokダッシュボード、ポート4040
 
 ### CIテスト実行ルール（必須）
 

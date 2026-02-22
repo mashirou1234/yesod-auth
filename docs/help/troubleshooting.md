@@ -35,6 +35,30 @@ sqlalchemy.exc.OperationalError: could not connect to server
 
 ---
 
+### ポート競合エラー
+
+```
+Error response from daemon: Ports are not available: listen tcp 0.0.0.0:5434: bind: address already in use
+```
+
+**原因:** ホスト側のポート5434が他のプロセスで使用されている
+
+**解決策:**
+
+1. 使用中のプロセスを確認
+   ```bash
+   lsof -i :5434
+   ```
+
+2. 必要に応じてプロセスを停止するか、`docker-compose.yml`のポートマッピングを変更
+
+!!! note "ポート構成"
+    - 開発環境のPostgreSQLはホスト側ポート`5434`を使用（他プロジェクトとの競合回避）
+    - CI環境はポート`5433`を使用
+    - コンテナ内部はいずれも標準の`5432`
+
+---
+
 ## 認証エラー
 
 ### `Invalid or expired state`
@@ -61,6 +85,97 @@ sqlalchemy.exc.OperationalError: could not connect to server
 environment:
   - MOCK_OAUTH_ENABLED=1
 ```
+
+---
+
+## ngrok関連
+
+### ngrok URLが取得できない
+
+```
+Failed to get ngrok URL
+```
+
+**原因:** ngrokコンテナが正常に起動していない、または認証トークンが無効
+
+**解決策:**
+
+1. ngrokコンテナのログを確認
+   ```bash
+   docker compose logs ngrok
+   ```
+
+2. 認証トークンが正しいか確認
+   ```bash
+   cat secrets/ngrok_authtoken.txt
+   ```
+
+3. ngrokダッシュボード（http://localhost:4040）でトンネルの状態を確認
+
+---
+
+### ngrok authtoken無効エラー
+
+```
+ERR_NGROK_105: invalid authtoken
+```
+
+**原因:** `secrets/ngrok_authtoken.txt`の認証トークンが無効または期限切れ
+
+**解決策:**
+
+1. [ngrokダッシュボード](https://dashboard.ngrok.com/get-started/your-authtoken)で新しいトークンを取得
+2. シークレットファイルを更新
+   ```bash
+   echo "new-authtoken" > secrets/ngrok_authtoken.txt
+   ```
+3. コンテナを再起動
+   ```bash
+   docker compose --profile default --profile ngrok down
+   docker compose --profile default --profile ngrok up -d
+   ```
+
+---
+
+### ngrok URLがValkeyに保存されない
+
+**原因:** `ngrok-sync`コンテナがngrok APIに接続できない
+
+**解決策:**
+
+1. ngrok-syncコンテナのログを確認
+   ```bash
+   docker compose logs ngrok-sync
+   ```
+
+2. ngrokコンテナが先に起動しているか確認（依存関係は設定済みだが、トンネル確立に時間がかかる場合がある）
+
+3. 手動でValkeyに保存する場合
+   ```bash
+   # ngrok URLを確認
+   curl -s http://localhost:4040/api/tunnels | jq '.tunnels[0].public_url'
+
+   # Valkeyに手動保存
+   docker exec yesod-valkey valkey-cli SET ngrok:public_url "https://xxxx.ngrok-free.app"
+   ```
+
+---
+
+### OAuthコールバックでngrok URLが使われない
+
+**原因:** ValkeyにngrokのURLが保存されていない
+
+**解決策:**
+
+1. Valkeyに保存されているか確認
+   ```bash
+   docker exec yesod-valkey valkey-cli GET ngrok:public_url
+   ```
+
+2. 値が空の場合、ngrok-syncコンテナを再起動
+   ```bash
+   docker compose --profile ngrok restart ngrok-sync
+   ```
 
 ---
 
@@ -129,6 +244,13 @@ docker compose logs -f api
 
 ```bash
 docker compose logs -f db
+```
+
+### ngrokログ
+
+```bash
+docker compose logs -f ngrok
+docker compose logs -f ngrok-sync
 ```
 
 ### 全サービスのログ

@@ -26,6 +26,9 @@ cp secrets/*.example secrets/
 
 # 起動
 docker compose --profile default up -d
+
+# ngrokトンネル付き（X等のHTTPS必須プロバイダー用）
+docker compose --profile default --profile ngrok up -d
 ```
 
 APIドキュメントは http://localhost:8000/docs で確認できます。

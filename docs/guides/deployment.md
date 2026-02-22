@@ -26,12 +26,22 @@ echo "your-google-client-id" | docker secret create google_client_id -
 
 ### 3. OAuthリダイレクトURIの更新
 
-Google Cloud Console / Discord Developer Portalで、リダイレクトURIを本番ドメインに更新：
+各プロバイダーの開発者コンソールで、リダイレクトURIを本番ドメインに更新：
 
 ```
 https://api.your-domain.com/api/v1/auth/google/callback
+https://api.your-domain.com/api/v1/auth/github/callback
 https://api.your-domain.com/api/v1/auth/discord/callback
+https://api.your-domain.com/api/v1/auth/x/callback
+https://api.your-domain.com/api/v1/auth/linkedin/callback
+https://api.your-domain.com/api/v1/auth/facebook/callback
+https://api.your-domain.com/api/v1/auth/slack/callback
+https://api.your-domain.com/api/v1/auth/twitch/callback
 ```
+
+!!! warning "ngrokについて"
+    ngrokは開発環境でHTTPSトンネルを提供するためのツールです。
+    本番環境ではngrokプロファイルは使用せず、適切なドメインとSSL証明書を設定してください。
 
 ---
 
