@@ -26,6 +26,7 @@ permissions:
 
 jobs:
   run:
+    if: ${{ github.event_name != 'schedule' || vars.ORCH_ENABLE_SCHEDULE == '1' }}
     runs-on: ubuntu-latest
     concurrency:
       group: codex-orch-${{ github.repository }}
