@@ -1,0 +1,11 @@
+prefix_rule(
+    pattern=["rm", "-rf", "/"],
+    decision="forbidden",
+    justification="Dangerous command is forbidden.",
+)
+
+prefix_rule(
+    pattern=["git", "status"],
+    decision="allow",
+    justification="Status checks are safe.",
+)
