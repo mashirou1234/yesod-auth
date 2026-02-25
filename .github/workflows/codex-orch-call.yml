@@ -25,22 +25,64 @@ permissions:
   issues: write
 
 jobs:
-  orch:
-    uses: mashirou1234/Neunzehn/.github/workflows/codex-orch-reusable.yml@v1.14
-    secrets: inherit
-    with:
-      orch_repo: mashirou1234/Neunzehn
-      orch_ref: v1.14
-      orch_tz: Asia/Tokyo
-      orch_window_start: "08:00"
-      orch_window_end: "22:00"
-      issue_label_queue: codex:queue
-      issue_label_claimed: codex:claimed
-      issue_label_blocked: codex:blocked
-      issue_label_pr: codex:pr-opened
-      branch_prefix: codex/issue-
-      max_tasks_per_run: "1"
-      dry_run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || '1' }}
-      no_cost_mode: "1"
-      save_json_events: "1"
-      codex_model: ${{ github.event_name == 'workflow_dispatch' && inputs.codex_model || 'gpt-5-codex' }}
+  run:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: codex-orch-${{ github.repository }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout orchestrator repository
+        uses: actions/checkout@v4
+        with:
+          repository: mashirou1234/Neunzehn
+          ref: v1.14
+          path: .orch
+          token: ${{ secrets.ORCH_REPO_READ_TOKEN != '' && secrets.ORCH_REPO_READ_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Codex CLI
+        if: ${{ '1' != '1' }}
+        run: npm i -g @openai/codex@latest
+
+      - name: Run orchestrator
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ORCH_SCM: github
+          ORCH_TZ: Asia/Tokyo
+          ORCH_WINDOW_START: "08:00"
+          ORCH_WINDOW_END: "22:00"
+          ORCH_ISSUE_LABEL_QUEUE: codex:queue
+          ORCH_ISSUE_LABEL_CLAIMED: codex:claimed
+          ORCH_ISSUE_LABEL_BLOCKED: codex:blocked
+          ORCH_ISSUE_LABEL_PR: codex:pr-opened
+          ORCH_BRANCH_PREFIX: codex/issue-
+          ORCH_MAX_TASKS_PER_RUN: "1"
+          ORCH_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || '1' }}
+          ORCH_NO_COST_MODE: "1"
+          ORCH_SAVE_JSON_EVENTS: "1"
+          ORCH_CODEX_MODEL: ${{ github.event_name == 'workflow_dispatch' && inputs.codex_model || 'gpt-5-codex' }}
+          ORCH_SETUP_CMDS: ""
+          ORCH_TEST_CMDS: ""
+        run: bash ./.orch/scripts/orch.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: codex-orch-artifacts
+          path: artifacts/
+          if-no-files-found: ignore
