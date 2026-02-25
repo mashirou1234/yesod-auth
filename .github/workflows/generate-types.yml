@@ -1,10 +1,6 @@
 name: Generate TypeScript Types
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'api/app/**/*.py'
   workflow_dispatch:
 
 jobs:
