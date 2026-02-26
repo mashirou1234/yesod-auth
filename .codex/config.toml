@@ -1,6 +1,7 @@
 model = "gpt-5-codex"
 approval_policy = "never"
 sandbox_mode = "workspace-write"
+network_access = true
 
 [history]
 persistence = "none"
