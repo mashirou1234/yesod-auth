@@ -1,8 +1,8 @@
-# push(main) のみを有効化。pull_request は secrets ポリシー確認後に追加する。
+# push(main/master) を有効化。pull_request は secrets ポリシー確認後に追加する。
 # 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
 when:
   - event: [push]
-    branch: [main]
+    branch: [main, master]
 
 steps:
   - name: fmt
