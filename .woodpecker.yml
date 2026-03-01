@@ -1,4 +1,5 @@
 # push(main) のみを有効化。pull_request は secrets ポリシー確認後に追加する。
+# 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
 when:
   - event: [push]
     branch: [main]
@@ -9,6 +10,10 @@ steps:
     commands:
       - |
         set -eu
+        if [ ! -f Cargo.toml ]; then
+          echo "Cargo.toml not found. Skip fmt."
+          exit 0
+        fi
         if [ -f rust-toolchain.toml ]; then
           toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
         elif [ -f rust-toolchain ]; then
@@ -30,6 +35,10 @@ steps:
     commands:
       - |
         set -eu
+        if [ ! -f Cargo.toml ]; then
+          echo "Cargo.toml not found. Skip clippy."
+          exit 0
+        fi
         if [ -f rust-toolchain.toml ]; then
           toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
         elif [ -f rust-toolchain ]; then
@@ -51,6 +60,10 @@ steps:
     commands:
       - |
         set -eu
+        if [ ! -f Cargo.toml ]; then
+          echo "Cargo.toml not found. Skip test."
+          exit 0
+        fi
         if [ -f rust-toolchain.toml ]; then
           toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
         elif [ -f rust-toolchain ]; then
@@ -71,6 +84,10 @@ steps:
     commands:
       - |
         set -eu
+        if [ ! -f Cargo.toml ]; then
+          echo "Cargo.toml not found. Skip build-release."
+          exit 0
+        fi
         if [ -f rust-toolchain.toml ]; then
           toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
         elif [ -f rust-toolchain ]; then
