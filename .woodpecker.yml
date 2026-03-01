@@ -1,0 +1,87 @@
+# push(main) のみを有効化。pull_request は secrets ポリシー確認後に追加する。
+when:
+  - event: [push]
+    branch: [main]
+
+steps:
+  - name: fmt
+    image: rust:1
+    commands:
+      - |
+        set -eu
+        if [ -f rust-toolchain.toml ]; then
+          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
+        elif [ -f rust-toolchain ]; then
+          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
+        else
+          toolchain=""
+        fi
+        if [ -n "${toolchain}" ]; then
+          rustup toolchain install "${toolchain}" --profile minimal
+          rustup default "${toolchain}"
+        else
+          echo "rust-toolchain* not found. Use rust:1 (stable)."
+        fi
+      - rustup component add rustfmt
+      - cargo fmt --check
+
+  - name: clippy
+    image: rust:1
+    commands:
+      - |
+        set -eu
+        if [ -f rust-toolchain.toml ]; then
+          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
+        elif [ -f rust-toolchain ]; then
+          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
+        else
+          toolchain=""
+        fi
+        if [ -n "${toolchain}" ]; then
+          rustup toolchain install "${toolchain}" --profile minimal
+          rustup default "${toolchain}"
+        else
+          echo "rust-toolchain* not found. Use rust:1 (stable)."
+        fi
+      - rustup component add clippy
+      - cargo clippy -- -D warnings
+
+  - name: test
+    image: rust:1
+    commands:
+      - |
+        set -eu
+        if [ -f rust-toolchain.toml ]; then
+          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
+        elif [ -f rust-toolchain ]; then
+          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
+        else
+          toolchain=""
+        fi
+        if [ -n "${toolchain}" ]; then
+          rustup toolchain install "${toolchain}" --profile minimal
+          rustup default "${toolchain}"
+        else
+          echo "rust-toolchain* not found. Use rust:1 (stable)."
+        fi
+      - cargo test
+
+  - name: build-release
+    image: rust:1
+    commands:
+      - |
+        set -eu
+        if [ -f rust-toolchain.toml ]; then
+          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
+        elif [ -f rust-toolchain ]; then
+          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
+        else
+          toolchain=""
+        fi
+        if [ -n "${toolchain}" ]; then
+          rustup toolchain install "${toolchain}" --profile minimal
+          rustup default "${toolchain}"
+        else
+          echo "rust-toolchain* not found. Use rust:1 (stable)."
+        fi
+      - cargo build --release
