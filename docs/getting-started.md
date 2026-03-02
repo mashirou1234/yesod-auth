@@ -61,6 +61,7 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 
 ## 次のステップ
 
+- [初回起動トラブルシュート](help/first-start-troubleshooting.md) - 初回セットアップで詰まったときの最短切り分け
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
 - [デプロイ](guides/deployment.md) - 本番環境へのデプロイ

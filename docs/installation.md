@@ -83,3 +83,8 @@ Docker Secretsまたは環境変数で設定：
 | PostgreSQL | 5432 |
 | Valkey | 6379 |
 | Admin | 8501 |
+
+## 初回起動で詰まった場合
+
+`docker compose --profile default up -d` 実行後の確認順（`/health`、`/docs`、必須 secrets）は
+[初回起動トラブルシュート](help/first-start-troubleshooting.md) を参照してください。
