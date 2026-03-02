@@ -280,6 +280,24 @@ pip install -r requirements.txt
 pytest
 ```
 
+## PR Auto-Approve + Auto-Merge
+
+This repository includes GitHub Actions workflows for automatic PR approval and merge:
+
+- `.github/workflows/pr-auto-approve.yml`
+  - Automatically approves pull requests targeting `main` or `master`
+- `.github/workflows/pr-auto-merge.yml`
+  - Enables GitHub auto-merge (squash) for pull requests targeting `main` or `master`
+  - Actual merge happens only after all required checks pass
+
+### Required GitHub repository settings
+
+1. Enable `Allow auto-merge` in repository settings
+2. Configure branch protection for `main`/`master` with required status checks
+3. Register your CI checks (including external CI like Woodpecker) as required checks
+
+With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
+
 ### Generate TypeScript Types
 
 OpenAPIスキーマからTypeScript型定義を生成:
