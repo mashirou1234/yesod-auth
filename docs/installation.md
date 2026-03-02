@@ -13,9 +13,9 @@ YESOD Authは3つのプロファイルを提供しています：
 
 | プロファイル | 用途 | サービス |
 |-------------|------|---------|
-| `default` | ローカル開発 | db, valkey, api |
-| `full` | 管理画面含む | db, valkey, api, admin |
-| `ci` | CI/CD | db-ci, valkey, api-ci |
+| `default` | ローカル開発 | db, api, docs (`valkey` は常時有効) |
+| `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
+| `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
 
 ### 開発環境
 
@@ -30,6 +30,44 @@ docker compose --profile full up -d
 ```
 
 管理画面は http://localhost:8501 でアクセスできます。
+
+### CI相当
+
+```bash
+docker compose --profile ci up -d
+```
+
+## profile整合確認手順
+
+`docker-compose.yml` と本ドキュメントの profile 記載が一致していることを、変更時に必ず確認してください。
+
+1. Compose定義上の profile 一覧を確認する
+
+```bash
+docker compose config --profiles
+```
+
+期待値:
+
+```text
+ci
+default
+full
+```
+
+2. profile ごとのサービス対応を確認する（`docker-compose.yml` を根拠に照合）
+
+```bash
+docker compose --profile default config --services
+docker compose --profile full config --services
+docker compose --profile ci config --services
+```
+
+3. 起動コマンド例が `default` / `full` / `ci` の3つをすべて網羅していることを確認する
+
+```bash
+rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
+```
 
 ## 環境変数
 
