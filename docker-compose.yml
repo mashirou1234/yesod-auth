@@ -60,6 +60,8 @@ services:
       - google_client_secret
       - discord_client_id
       - discord_client_secret
+      - facebook_client_id
+      - facebook_client_secret
       - jwt_secret
     depends_on:
       db:
@@ -102,6 +104,8 @@ services:
       - google_client_secret
       - discord_client_id
       - discord_client_secret
+      - facebook_client_id
+      - facebook_client_secret
       - jwt_secret
     depends_on:
       db-ci:
@@ -158,6 +162,10 @@ secrets:
     file: ./secrets/discord_client_id.txt
   discord_client_secret:
     file: ./secrets/discord_client_secret.txt
+  facebook_client_id:
+    file: ./secrets/facebook_client_id.txt
+  facebook_client_secret:
+    file: ./secrets/facebook_client_secret.txt
   jwt_secret:
     file: ./secrets/jwt_secret.txt
   admin_password:
