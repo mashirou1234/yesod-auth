@@ -90,6 +90,37 @@ environment:
 
 ---
 
+### `401 Unauthorized` / `invalid_client`
+
+```json
+{"detail":"OAuth callback failed: invalid_client"}
+```
+
+**原因:** OAuth provider の `client_id` または `client_secret` が未設定、または誤っている
+
+**確認事項:**
+
+1. provider 用シークレットファイルの中身を確認
+   ```bash
+   ls -l secrets/*github* secrets/*google* 2>/dev/null
+   ```
+
+2. APIログで provider 側エラーを確認
+   ```bash
+   docker compose logs --tail=100 api | rg -n "invalid_client|401|client_secret|client_id"
+   ```
+
+**解決策:**
+
+1. `secrets/*.txt` を正しい値へ更新（例: `secrets/github_client_id.txt`, `secrets/github_client_secret.txt`）
+2. Compose を再起動して設定を反映
+   ```bash
+   docker compose up -d --force-recreate api admin
+   ```
+3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
+
+---
+
 ## Webhook
 
 ### Webhookが発火しない
