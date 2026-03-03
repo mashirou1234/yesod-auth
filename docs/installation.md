@@ -113,6 +113,50 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+### secret/環境変数の解決優先順位
+
+`api/app/config.py` の `read_secret` は、以下の優先順位で値を解決します（上位が優先）:
+
+1. `/run/secrets/<name>`（Docker Secrets）
+2. 環境変数 `<NAME_UPPERCASE>`
+3. `read_secret(name, default)` の `default` 値
+
+根拠:
+
+- 実装: `api/app/config.py`
+- テスト: `api/tests/test_config.py`
+
+### 具体例1: Docker Secrets と環境変数が両方ある場合
+
+`/run/secrets/github_client_secret` と `GITHUB_CLIENT_SECRET` の両方を設定した場合、`/run/secrets/github_client_secret` が使われます。
+
+```bash
+# 優先される値（Docker Secrets）
+echo "secret-from-file" > /run/secrets/github_client_secret
+
+# フォールバック値（このケースでは使われない）
+export GITHUB_CLIENT_SECRET="secret-from-env"
+```
+
+### 具体例2: Docker Secrets がない場合
+
+`/run/secrets/jwt_secret` がない場合は `JWT_SECRET` が使われ、環境変数もない場合はデフォルト値へフォールバックします。
+
+```bash
+# /run/secrets/jwt_secret が存在しない前提
+export JWT_SECRET="jwt-from-env"
+# -> read_secret("jwt_secret", "change-me-in-production") は jwt-from-env を返す
+
+unset JWT_SECRET
+# -> read_secret("jwt_secret", "change-me-in-production") は change-me-in-production を返す
+```
+
+### 開発/CIでの推奨設定
+
+- 開発（`docker compose --profile default`）: `secrets/*.txt` を Compose の `secrets` 経由で渡し、環境変数はローカル確認用途に限定する。
+- CI（`docker compose --profile ci`）: CIシークレットストアを使って `secrets` を生成・注入し、平文の環境変数直書きを避ける。
+- 運用: 本番相当では Docker Secrets を第一候補にし、環境変数は一時的フォールバックとして扱う。
+
 ## ポート
 
 | サービス | ポート |
