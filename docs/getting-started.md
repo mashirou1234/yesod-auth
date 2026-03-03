@@ -38,6 +38,8 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
 docker compose --profile default up -d
 ```
 
+`default`プロファイルでは、Compose設定により`MOCK_OAUTH_ENABLED=1`がAPIサービスへ適用されます（アプリ既定値は`0`）。
+
 ## 4. 動作確認
 
 ### ヘルスチェック
