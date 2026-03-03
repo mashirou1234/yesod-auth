@@ -71,6 +71,8 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 
 ## 環境変数
 
+<a id="environment-variables"></a>
+
 | 変数名 | 説明 | デフォルト |
 |--------|------|-----------|
 | `DATABASE_URL` | PostgreSQL接続URL | - |
@@ -90,6 +92,8 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 | `DEFAULT_LANGUAGE` | デフォルト言語（en, ja, fr, ko, de） | `en` |
 
 ## OAuth認証情報
+
+<a id="oauth-credentials"></a>
 
 Docker Secretsまたは環境変数で設定：
 
