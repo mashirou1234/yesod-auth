@@ -33,6 +33,11 @@ MIT Licenseです。商用利用も可能です。
 Proof Key for Code Exchangeの略で、OAuth 2.0の認可コードフローをより安全にする拡張機能です。
 YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 
+### どのsecretを必須で用意すべき？
+
+必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
+たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
+
 ---
 
 ## 開発
