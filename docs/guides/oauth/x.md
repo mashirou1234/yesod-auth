@@ -43,6 +43,7 @@ echo "your-client-secret" > secrets/x_client_secret.txt
 | 認可エンドポイント | `https://twitter.com/i/oauth2/authorize` |
 | トークンエンドポイント | `https://api.twitter.com/2/oauth2/token` |
 | ユーザー情報エンドポイント | `https://api.twitter.com/2/users/me` |
-| スコープ | `users.read tweet.read` |
+| スコープ | `users.read tweet.read offline.access` |
+| 補足 | `offline.access` は refresh token を受け取り長期セッションを維持するために必要 |
 | PKCE | ✅ 必須 |
 | OpenID Connect | ❌ 非対応 |
