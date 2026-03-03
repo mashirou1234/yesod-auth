@@ -74,6 +74,18 @@ docker compose --profile ci up -d
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
 
+### Fast verification (3 commands)
+
+Use this minimal flow for first-run verification:
+
+```bash
+docker compose --profile default up -d
+curl http://localhost:8000/health
+curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
+```
+
+`README.md` only shows the shortest verification path. For full setup details (secrets, expected responses, troubleshooting), see [`docs/getting-started.md`](docs/getting-started.md).
+
 ## API Endpoints
 
 Base URL: `http://localhost:8000/api/v1`

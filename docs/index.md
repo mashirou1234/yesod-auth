@@ -29,6 +29,7 @@ docker compose --profile default up -d
 ```
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
+最短の動作確認コマンド（起動 / health / mock login）は[クイックスタート詳細](getting-started.md)を参照してください。
 
 ## アーキテクチャ
 

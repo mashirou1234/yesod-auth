@@ -42,27 +42,22 @@ docker compose --profile default up -d
 
 ## 4. 動作確認
 
-### ヘルスチェック
+最短検証は次の3コマンドで実施できます（起動 / health / mock login）:
 
 ```bash
+docker compose --profile default up -d
 curl http://localhost:8000/health
-# {"status":"healthy"}
-```
-
-### APIドキュメント
-
-ブラウザで http://localhost:8000/docs を開きます。
-
-### Mock OAuthでテスト
-
-開発環境では、実際のOAuthプロバイダーなしでテストできます：
-
-```bash
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+期待結果:
+- `health` が `{"status":"healthy"}` を返す
+- `mock/login` がトークンを含むJSONを返す
+- APIドキュメントは http://localhost:8000/docs で確認できる
+
 ## 次のステップ
 
+- [OAuth有効化フロー](guides/oauth/index.md#oauthを有効化する) - Mock OAuthから実OAuthへ切り替える
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
 - [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
