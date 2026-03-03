@@ -55,7 +55,7 @@ YESOD Auth provides a complete OAuth 2.0 authentication solution with support fo
 
 ### Features
 
-- 🔑 **OAuth 2.0** - Google and Discord authentication with PKCE support
+- 🔑 **OAuth 2.0** - Eight-provider authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch) with PKCE support
 - 🔄 **Token Rotation** - Secure refresh token rotation
 - 👤 **User Management** - Profile updates, account linking
 - 📊 **Audit Logging** - Complete authentication event tracking
