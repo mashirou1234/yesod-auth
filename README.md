@@ -6,12 +6,14 @@
 
 ## Features
 
-- 🔑 OAuth 2.0 authentication (Google, Discord)
+- 🔑 OAuth 2.0 authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch)
 - 🐳 Docker Compose ready - just add secrets and run
 - 🗄️ PostgreSQL with automatic migrations
 - 🔒 JWT-based session management
 - 📡 REST API - integrate with any frontend
 - 👤 User profile with avatar support
+
+> Source of truth for provider support notation: `docs/guides/oauth/index.md`.
 
 ## Quick Start
 
