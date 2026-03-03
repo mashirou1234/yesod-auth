@@ -44,6 +44,8 @@ jobs:
           echo "ci-linkedin-secret" > secrets/linkedin_client_secret.txt
           echo "ci-facebook-id" > secrets/facebook_client_id.txt
           echo "ci-facebook-secret" > secrets/facebook_client_secret.txt
+          echo "ci-slack-id" > secrets/slack_client_id.txt
+          echo "ci-slack-secret" > secrets/slack_client_secret.txt
           echo "ci-jwt-secret-key" > secrets/jwt_secret.txt
           echo "ci-admin-password" > secrets/admin_password.txt
 
