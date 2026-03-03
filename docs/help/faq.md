@@ -57,6 +57,19 @@ docker compose --profile default up -d
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+<a id="admin-i18n-untranslated-fallback"></a>
+
+### Adminで未翻訳キーが出たときの表示は？
+
+`admin/i18n.py` の現在実装では、次の順でフォールバックします。
+
+1. 言語コードが未対応なら `en` を使用
+2. キーが未定義なら翻訳文ではなくキー文字列（例: `nav.unknown`）をそのまま表示
+3. フォーマット引数が不足しても例外は出さず、テンプレート文字列をそのまま返す
+
+運用上は「画面にドット区切りキーが見えたら未翻訳」と判定し、翻訳データ追加対象として扱ってください。  
+確認手順は [トラブルシューティング: Admin i18n 未翻訳キーの確認手順](./troubleshooting.md#admin-i18n-fallback) を参照してください。
+
 ---
 
 ## Webhook
