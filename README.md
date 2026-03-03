@@ -15,64 +15,17 @@
 
 ## Quick Start
 
-### 1. Clone the repository
+前提: リポジトリを clone 済みで、`secrets/*.txt` を作成済み（未作成なら `cp secrets/*.example secrets/`）。
+
+最短検証フロー（起動 → health → mock login）は次の3コマンドです。
 
 ```bash
-git clone https://github.com/mashirou1234/yesod-auth.git
-cd yesod-auth
-```
-
-### 2. Set up OAuth credentials
-
-#### Google OAuth
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable "Google+ API" or "Google Identity"
-4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-5. Set authorized redirect URI: `http://localhost:8000/auth/google/callback`
-6. Copy Client ID and Client Secret
-
-#### Discord OAuth
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application
-3. Go to "OAuth2" section
-4. Add redirect URI: `http://localhost:8000/auth/discord/callback`
-5. Copy Client ID and Client Secret
-
-### 3. Configure secrets
-
-```bash
-# Create secrets directory (already exists in repo)
-mkdir -p secrets
-
-# Add your credentials
-echo "your-google-client-id" > secrets/google_client_id.txt
-echo "your-google-client-secret" > secrets/google_client_secret.txt
-echo "your-discord-client-id" > secrets/discord_client_id.txt
-echo "your-discord-client-secret" > secrets/discord_client_secret.txt
-
-# Generate JWT secret (or use your own)
-openssl rand -hex 32 > secrets/jwt_secret.txt
-```
-
-### 4. Start the service
-
-```bash
-# API + DB + Valkey (開発用)
 docker compose --profile default up -d
-
-# Admin画面も含めて起動
-docker compose --profile default --profile full up -d
-
-# CI用（軽量構成）
-docker compose --profile ci up -d
+curl http://localhost:8000/health
+curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
-### 5. Access the API
-
-- API: http://localhost:8000
-- API Docs: http://localhost:8000/docs
-- Health Check: http://localhost:8000/health
+差分と詳細手順（OAuth資格情報の取得、`full`/`ci` プロファイル、トラブルシュート）は [docs/getting-started.md](docs/getting-started.md) を参照してください。
 
 ## API Endpoints
 

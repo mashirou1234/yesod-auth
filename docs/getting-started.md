@@ -40,30 +40,26 @@ docker compose --profile default up -d
 
 `default`プロファイルでは、Compose設定により`MOCK_OAUTH_ENABLED=1`がAPIサービスへ適用されます（アプリ既定値は`0`）。
 
-## 4. 動作確認
+## 4. 最短検証フロー（3コマンド）
 
-### ヘルスチェック
+起動/health/mock login を3コマンドで確認します。
 
 ```bash
+docker compose --profile default up -d
 curl http://localhost:8000/health
-# {"status":"healthy"}
-```
-
-### APIドキュメント
-
-ブラウザで http://localhost:8000/docs を開きます。
-
-### Mock OAuthでテスト
-
-開発環境では、実際のOAuthプロバイダーなしでテストできます：
-
-```bash
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
-## 次のステップ
+期待値:
+- `health` は `{"status":"healthy"}` を返す
+- `mock login` はアクセストークンを含むJSONを返す
 
-- [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
-- [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
-- [Webhook設定](guides/webhooks.md) - 外部サービス連携
-- [デプロイ](guides/deployment.md) - 本番環境へのデプロイ
+## 5. README Quick Startとの差分
+
+- READMEは「最短検証3コマンド」のみを示します
+- このページは前提（シークレット作成）と検証後の遷移先を含む完全版です
+- `full` / `ci` など追加プロファイルはREADMEではなくこのページ基準で確認します
+
+## 6. 次のステップ
+
+検証後は [OAuth設定インデックス](guides/oauth/index.md) を先に確認してください。
