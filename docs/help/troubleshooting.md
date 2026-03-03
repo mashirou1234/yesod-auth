@@ -121,6 +121,46 @@ environment:
 
 ---
 
+<a id="auth-rate-limit-429"></a>
+
+### `429 Too Many Requests`（認証レート制限）
+
+```json
+{"detail":"Rate limit exceeded"}
+```
+
+**原因:** 短時間に認証エンドポイントへアクセスが集中し、`api/app/auth/rate_limit.py` の制限値を超過した
+
+**確認手順（一次切り分け）:**
+
+1. 429 発生時刻と対象エンドポイントを特定する
+   ```bash
+   docker compose logs api --since=30m | rg -n "429|Too Many Requests|/api/v1/auth/"
+   ```
+
+2. 現在の制限値と参照元を確認する
+   - 参照元: `api/app/auth/rate_limit.py`
+   - 制限値: `settings.RATE_LIMIT_PER_MINUTE`（`default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"]`）
+   - ストレージ: `settings.VALKEY_URL`（レート制限カウンタ保存先）
+
+3. 実行環境の設定値が意図どおりか確認する
+   ```bash
+   docker compose exec api env | rg -n "RATE_LIMIT_PER_MINUTE|VALKEY_URL"
+   ```
+
+4. Valkey 側の疎通とエラー有無を確認する
+   ```bash
+   docker compose logs valkey --since=30m
+   ```
+
+**対処の目安:**
+
+- バースト的なアクセスが原因: クライアント側の再試行間隔を延ばす
+- 設定値が過小: `RATE_LIMIT_PER_MINUTE` を運用実態に合わせて調整
+- Valkey 障害が疑われる: Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認
+
+---
+
 ## Webhook
 
 ### Webhookが発火しない

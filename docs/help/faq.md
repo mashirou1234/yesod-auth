@@ -38,6 +38,11 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+### 429（Too Many Requests）が出たときの確認手順は？
+
+認証レート制限の切り分け手順を [トラブルシューティング: 429 Too Many Requests](./troubleshooting.md#auth-rate-limit-429) にまとめています。  
+`api/app/auth/rate_limit.py` の設定値（`RATE_LIMIT_PER_MINUTE` / `VALKEY_URL`）確認から着手してください。
+
 ---
 
 ## 開発
