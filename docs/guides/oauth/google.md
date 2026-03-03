@@ -32,6 +32,20 @@ echo "your-client-id" > secrets/google_client_id.txt
 echo "your-client-secret" > secrets/google_client_secret.txt
 ```
 
+## 共通チェック観点の適用例
+
+- [x] Callback URL
+  - [x] ローカル: `http://localhost:8000/api/v1/auth/google/callback`
+  - [x] 本番: `https://<your-domain>/api/v1/auth/google/callback`
+- [x] Scope
+  - [x] 使用スコープ: `openid email profile`
+  - [x] 不足時の症状: メールアドレス未取得でユーザー同定に失敗する
+- [x] Secrets
+  - [x] `secrets/google_client_id.txt`
+  - [x] `secrets/google_client_secret.txt`
+- [x] Test
+  - [x] `curl -I "http://localhost:8000/api/v1/auth/google/login"` が `302` を返し、Google認可画面へ遷移する
+
 ## 技術仕様
 
 | 項目 | 値 |

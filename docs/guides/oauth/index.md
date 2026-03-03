@@ -62,3 +62,28 @@ secrets/
 
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。
+
+### OAuthガイド共通チェックテンプレート
+
+新しいOAuthプロバイダーガイドを追加するときは、以下の4観点を必ず埋めてください。
+
+- Callback URL: ローカル/本番の両方で `.../api/v1/auth/{provider}/callback` を明記する
+- Scope: 必須スコープと、スコープ不足時に起きる症状を明記する
+- Secrets: `secrets/{provider}_client_id.txt` と `secrets/{provider}_client_secret.txt` の作成手順を明記する
+- Test: ログイン開始エンドポイントにアクセスして遷移確認する手順を明記する
+
+```md
+## 共通チェック観点
+
+- [ ] Callback URL
+  - [ ] ローカル: `http://localhost:8000/api/v1/auth/{provider}/callback`
+  - [ ] 本番: `https://<your-domain>/api/v1/auth/{provider}/callback`
+- [ ] Scope
+  - [ ] 使用スコープ: `<space-separated-scopes>`
+  - [ ] 不足時の症状: `<example>`
+- [ ] Secrets
+  - [ ] `secrets/{provider}_client_id.txt`
+  - [ ] `secrets/{provider}_client_secret.txt`
+- [ ] Test
+  - [ ] `curl -I "http://localhost:8000/api/v1/auth/{provider}/login"` が 302 を返す
+```
