@@ -282,21 +282,24 @@ pytest
 
 ## PR Auto-Approve + Auto-Merge
 
-This repository includes GitHub Actions workflows for automatic PR approval and merge:
+このリポジトリでは Woodpecker から PR の自動承認と auto-merge（squash）有効化を実行します。
 
-- `.github/workflows/pr-auto-approve.yml`
-  - Automatically approves pull requests targeting `main` or `master`
-- `.github/workflows/pr-auto-merge.yml`
-  - Enables GitHub auto-merge (squash) for pull requests targeting `main` or `master`
-  - Actual merge happens only after all required checks pass
+- 設定ファイル: `.woodpecker.yml`
+- 実行スクリプト: `scripts/woodpecker_pr_automerge.sh`
+- 対象: `pull_request` イベントの `main` / `master` 向け PR
+- 条件:
+  - Draft ではない
+  - 同一リポジトリ由来 PR
+  - `author_association` が `OWNER` / `MEMBER` / `COLLABORATOR`
+  - `automerge:off` ラベルが付いていない
 
-### Required GitHub repository settings
+### 必須設定
 
-1. Enable `Allow auto-merge` in repository settings
-2. Configure branch protection for `main`/`master` with required status checks
-3. Register your CI checks (including external CI like Woodpecker) as required checks
+1. GitHub で `Allow auto-merge` を有効化
+2. Branch protection の required checks を Woodpecker の context（`ci/woodpecker/pr/woodpecker`）へ設定
+3. Woodpecker の secret `github_token` に PR 承認/更新可能なトークンを設定
 
-With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
+この構成で、PR 更新時に Woodpecker が auto-merge 待機状態へ設定し、required checks 成功後に GitHub 側で自動マージされます。
 
 ### Generate TypeScript Types
 

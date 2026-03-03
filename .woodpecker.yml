@@ -103,3 +103,15 @@ steps:
           echo "rust-toolchain* not found. Use rust:1 (stable)."
         fi
       - cargo build --release
+
+  - name: github-pr-automerge
+    image: ghcr.io/cli/cli:2.67.0
+    when:
+      - event: [pull_request]
+    environment:
+      GH_TOKEN:
+        from_secret: github_token
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - sh ./scripts/woodpecker_pr_automerge.sh
