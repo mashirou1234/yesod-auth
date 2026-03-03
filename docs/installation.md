@@ -39,7 +39,7 @@ docker compose --profile full up -d
 | `VALKEY_URL` | Valkey接続URL | - |
 | `CORS_ORIGINS` | 許可するオリジン | - |
 | `FRONTEND_URL` | フロントエンドURL | - |
-| `MOCK_OAUTH_ENABLED` | Mock OAuth有効化 | `0` |
+| `MOCK_OAUTH_ENABLED` | Mock OAuth有効化（アプリ既定値は`0`。`docker compose --profile default`/`ci`ではCompose側で`1`に上書き） | `0` |
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
