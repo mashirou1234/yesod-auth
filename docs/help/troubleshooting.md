@@ -46,6 +46,32 @@ sqlalchemy.exc.OperationalError: could not connect to server
 1. 認証フローを最初からやり直す
 2. Valkeyが正常に動作しているか確認
 
+<a id="state-mismatch-flow"></a>
+
+#### `state mismatch` 診断フロー
+
+1. 発生時刻とリクエストを特定する（APIログ）
+   ```bash
+   docker compose logs api --since=30m | rg "Invalid state|/auth/.*/callback"
+   ```
+2. `state` が一度だけ消費される前提を確認する（再送/二重callbackの有無）
+   - 同一ブラウザ操作で callback が複数回呼ばれていないか
+   - リバースプロキシや監視が callback URL を再実行していないか
+3. Valkey の接続状態を確認する（保存済みstateが即時消失していないか）
+   ```bash
+   docker compose logs valkey --since=30m
+   ```
+4. OAuth開始URLとcallback URLの組み合わせを確認する（環境不一致の検出）
+   - 開始: `GET /api/v1/auth/{provider}`
+   - callback: `GET /api/v1/auth/{provider}/callback?code=...&state=...`
+   - `API_URL` / `FRONTEND_URL` の環境差分を確認
+
+| 想定原因 | 観測シグナル | 対処 |
+| --- | --- | --- |
+| callback の二重実行 | 同一 `state` で callback ログが連続する | ブラウザ再送・プロキシ再試行を止め、ログイン導線を1回実行に統一 |
+| Valkey 接続不安定 | `OAuthStateStore` 参照前後で Valkey エラーが発生 | Valkey を復旧し、`docker compose ps/logs valkey` で安定化確認後に再試行 |
+| OAuth開始とcallbackの環境不一致 | `API_URL` と実アクセス先のホスト/スキームが異なる | 環境変数を一致させて再デプロイし、再度 `/api/v1/auth/{provider}` から開始 |
+
 ---
 
 ### `Mock OAuth is disabled`
