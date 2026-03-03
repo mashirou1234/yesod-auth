@@ -92,6 +92,16 @@ Content-Type: application/json
 }
 ```
 
+**未認証時のレスポンス:**
+
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+ステータスコード: `401 Unauthorized`
+
 ---
 
 ## Mock OAuth（開発用）
