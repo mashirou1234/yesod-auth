@@ -103,3 +103,22 @@ steps:
           echo "rust-toolchain* not found. Use rust:1 (stable)."
         fi
       - cargo build --release
+
+  - name: notify-failure-ntfy
+    image: codeberg.org/l-x/woodpecker-ntfy
+    when:
+      - status: [failure]
+    settings:
+      url:
+        from_secret: ntfy_url
+      token:
+        from_secret: ntfy_token
+      title: "[CI FAILED] ${CI_REPO} #${CI_PIPELINE_NUMBER}"
+      click: ${CI_PIPELINE_URL}
+      priority: high
+      tags: warning,rotating_light
+      message: |
+        Repository: ${CI_REPO}
+        Branch: ${CI_COMMIT_BRANCH}
+        Pipeline: #${CI_PIPELINE_NUMBER}
+        URL: ${CI_PIPELINE_URL}
