@@ -61,6 +61,30 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+## 5. Webhook導入の最短導線
+
+Webhookは、getting-started から以下の2クリック以内で設定手順へ到達できます。
+
+1. このページの「次のステップ」から [Webhook設定](guides/webhooks.md) を開く
+2. ガイド内の [ローカルテスト](guides/webhooks.md#ローカルテスト) に沿って設定する
+
+### Webhook導入の前提条件
+
+- API が起動していること（`docker compose --profile default up -d`）
+- `config/webhooks.yaml` を作成済みであること
+- Webhook受信先URLを用意できること（例: [webhook.site](https://webhook.site)）
+
+### 送信確認の最小手順
+
+1. [Webhook設定](guides/webhooks.md) の例を使って `config/webhooks.yaml` を作成する
+2. Mock OAuth ログインを実行する
+3. 配信履歴 API で Webhook 送信結果を確認する
+
+```bash
+curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
+curl http://localhost:8000/api/v1/admin/webhooks/deliveries
+```
+
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
