@@ -1,5 +1,21 @@
 # トラブルシューティング
 
+## 障害時の参照順（最短導線）
+
+障害調査は次の順で確認してください。前段が正常なら次段へ進みます。
+
+1. `health`: API と依存サービスの生存確認
+2. `auth`: 認証フローの失敗箇所を特定（state / callback / session）
+3. `provider`: OAuth プロバイダー側設定・資格情報の不一致を確認
+4. `webhook`: 認証後処理や外部通知の遅延・失敗を確認
+
+最小コマンド例（最初の切り分け用）:
+
+```bash
+curl -fsS http://localhost:8000/health
+docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_client|401"
+```
+
 ## 起動時のエラー
 
 ### `pg_cron`関連のエラー

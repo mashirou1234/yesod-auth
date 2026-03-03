@@ -7,6 +7,8 @@
 | Docker | 20.10+ |
 | Docker Compose | 2.0+ |
 
+障害時の確認手順は[トラブルシューティング: 障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線)を参照してください。
+
 ## Docker Composeプロファイル
 
 YESOD Authは3つのプロファイルを提供しています：

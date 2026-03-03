@@ -64,6 +64,7 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
+- [障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線) - 調査を health → auth → provider → webhook の順で進める
 - [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
 - [デプロイ](guides/deployment.md) - 本番環境へのデプロイ
