@@ -25,11 +25,51 @@ docker compose --profile default up -d
 
 ### 管理画面付き
 
+`full` プロファイルは「設定」「起動」「確認」の順で実施してください。
+
+#### 1. 設定
+
+1. 管理画面向けシークレットを用意する（必須）
+
+```bash
+ls -l secrets/admin_password.txt
+```
+
+2. 管理画面向け環境変数の確認観点
+
+- `ADMIN_USER`: 管理者ログイン名。既定値は `admin`（`docker-compose.yml` で設定）
+- `SESSION_EXPIRY_HOURS`: 管理画面セッション期限（時間）。未指定時はアプリ既定値 `24`
+
+#### 2. 起動
+
 ```bash
 docker compose --profile full up -d
 ```
 
-管理画面は http://localhost:8501 でアクセスできます。
+#### 3. 確認
+
+1. `full` で必要サービスが起動対象に含まれること
+
+```bash
+docker compose --profile full config --services
+```
+
+期待値（順不同）: `db`, `api`, `admin`, `docs`, `valkey`
+
+2. 管理画面到達確認
+
+- URL: http://localhost:8501
+- `ADMIN_USER` と `secrets/admin_password.txt` の値でログインできること
+
+3. セッション設定確認（任意）
+
+- ログイン後、指定した `SESSION_EXPIRY_HOURS` が運用要件に合うことを確認する
+
+#### 代表的な失敗例
+
+- 症状: `admin` サービスが起動失敗する / ログインできない
+- 原因例: `secrets/admin_password.txt` 未作成、または想定外の値
+- 対処: `secrets/admin_password.txt` を作成・更新して `docker compose --profile full up -d` を再実行
 
 ### CI相当
 
