@@ -61,6 +61,25 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### ユーザー情報取得API（`/api/v1/users/me`）の前提条件
+
+`/api/v1/users/me` は認証必須APIです。呼び出し前に次の3点を満たしてください。
+
+1. APIが起動済みである（`docker compose --profile default up -d` 実行済み）
+2. アクセストークンを取得済みである（例: `GET /api/v1/auth/mock/login`）
+3. `Authorization: Bearer <access_token>` ヘッダーを付与する
+
+確認例:
+
+```bash
+# 1) トークン取得
+TOKEN=$(curl -s "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google" | jq -r '.access_token')
+
+# 2) ユーザー情報取得
+curl -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me"
+```
+
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
