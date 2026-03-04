@@ -61,6 +61,23 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### OAuth callback失敗時の確認順
+
+`/api/v1/auth/{provider}/callback` が失敗した場合は、次の順で確認すると切り分けが早くなります。
+
+1. APIログで callback エラー種別を確認
+   ```bash
+   docker compose logs api --since=30m | rg -n "callback|Invalid state|invalid_client|401"
+   ```
+2. `Invalid or expired state` の場合は、`state mismatch` 診断フローを実施
+   - [トラブルシューティング: state mismatch 診断フロー](help/troubleshooting.md#state-mismatch-flow)
+3. `OAuth callback failed: invalid_client` / `401` の場合は、シークレット値と provider 設定を確認
+   - [トラブルシューティング: 401 Unauthorized / invalid_client](help/troubleshooting.md#401-unauthorized--invalid_client)
+4. 修正後は認証を最初から再実行し、同じエラーが再現しないことを確認
+   ```bash
+   curl -I "http://localhost:8000/api/v1/auth/google"
+   ```
+
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
