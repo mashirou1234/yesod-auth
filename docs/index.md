@@ -30,6 +30,8 @@ docker compose --profile default up -d
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
 
+リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
+
 ## アーキテクチャ
 
 ```
