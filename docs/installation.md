@@ -113,6 +113,12 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+### API認証トラブル時の確認順
+
+1. このセクションのシークレットが有効化した provider 分そろっていることを確認する
+2. [クイックスタート](getting-started.md#4-動作確認)で API 到達性を確認する
+3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で症状別の対処を行う
+
 ## ポート
 
 | サービス | ポート |

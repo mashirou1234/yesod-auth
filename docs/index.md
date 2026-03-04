@@ -30,6 +30,12 @@ docker compose --profile default up -d
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
 
+## API認証トラブル時の参照順
+
+1. [インストール](installation.md#oauth認証情報)で OAuth シークレットと profile 設定を確認
+2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` を確認
+3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で原因を切り分け
+
 ## アーキテクチャ
 
 ```

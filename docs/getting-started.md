@@ -67,3 +67,11 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 - [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
 - [デプロイ](guides/deployment.md) - 本番環境へのデプロイ
+
+## API認証トラブル時の参照順
+
+API認証で問題が発生した場合は、次の順で確認してください。
+
+1. [インストール](installation.md#oauth認証情報)で OAuth シークレットの配置と profile を確認する
+2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` の到達性を確認する
+3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で症状別の診断手順を実施する
