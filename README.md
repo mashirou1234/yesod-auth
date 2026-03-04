@@ -244,6 +244,14 @@ Password: (secrets/admin_password.txt の内容)
 
 ## Monitoring
 
+### 運用時ログ確認ポイント（最小）
+
+障害切り分け時は、次の順で 1〜3 分以内に確認すると再現性が高いです。
+
+1. API コンテナログ: `docker logs --tail 200 yesod-api`
+2. DB コンテナログ: `docker logs --tail 200 yesod-db`
+3. 監査イベント件数: `docker exec yesod-db psql -U yesod_user -d yesod -c "select event_type, count(*) from audit.auth_events group by 1 order by 2 desc;"`
+
 ### Prometheus Metrics
 
 `/api/v1/metrics` エンドポイントでPrometheus形式のメトリクスを取得できます。
