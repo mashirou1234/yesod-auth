@@ -2,6 +2,9 @@
 
 このガイドでは、YESOD Authを5分でセットアップする方法を説明します。
 
+!!! info "先に確認すると安全な項目"
+    Docker要件や `default` / `full` / `ci` の違いは[インストール](installation.md)に整理しています。初回導入時は先に確認してください。
+
 ## 前提条件
 
 - Docker & Docker Compose
@@ -63,6 +66,7 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 
 ## 次のステップ
 
+- [インストール](installation.md) - profile差分と運用時の確認手順
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
 - [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
