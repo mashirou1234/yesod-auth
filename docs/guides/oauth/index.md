@@ -12,8 +12,8 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 | [LinkedIn](linkedin.md) | ✅ | - | ✅ | |
 | [Facebook](facebook.md) | ✅ | - | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
 | [Discord](discord.md) | - | ✅ | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
-| [Slack](slack.md) | - | ✅ | ✅ | プロバイダー未サポート |
-| [Twitch](twitch.md) | - | ✅ | ❌ | プロバイダー未サポート、[Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+| [Slack](slack.md) | - | ✅ | ✅ | |
+| [Twitch](twitch.md) | - | ✅ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
 
 ### PKCEについて
 
@@ -59,6 +59,15 @@ secrets/
     ```
     https://your-domain.com/api/v1/auth/{provider}/callback
     ```
+
+## セルフホスト運用チェックリスト
+
+1. 公開APIドメインを固定する（例: `https://auth.example.com`）
+2. `FRONTEND_URL` と `CORS_ORIGINS` を同一環境のURLに合わせる
+3. 利用するプロバイダーだけ `secrets/*_client_id.txt` / `*_client_secret.txt` を配置する
+4. 各プロバイダーの callback URL を `https://<api-domain>/api/v1/auth/{provider}/callback` に統一する
+5. 本番では `MOCK_OAUTH_ENABLED=0` を確認する
+6. デプロイ後に `GET /health` と実際の OAuth ログイン（最低1プロバイダー）を疎通確認する
 
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。

@@ -26,12 +26,18 @@ echo "your-google-client-id" | docker secret create google_client_id -
 
 ### 3. OAuthリダイレクトURIの更新
 
-Google Cloud Console / Discord Developer Portalで、リダイレクトURIを本番ドメインに更新：
+使用する各OAuthプロバイダーの管理画面で、リダイレクトURIを本番ドメインへ更新：
 
 ```
-https://api.your-domain.com/api/v1/auth/google/callback
-https://api.your-domain.com/api/v1/auth/discord/callback
+https://api.your-domain.com/api/v1/auth/{provider}/callback
 ```
+
+代表例:
+
+- `https://api.your-domain.com/api/v1/auth/google/callback`
+- `https://api.your-domain.com/api/v1/auth/github/callback`
+- `https://api.your-domain.com/api/v1/auth/discord/callback`
+- `https://api.your-domain.com/api/v1/auth/x/callback`
 
 ---
 
