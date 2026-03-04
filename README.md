@@ -272,6 +272,10 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 curl "http://localhost:8000/api/v1/auth/mock/users"
 ```
 
+### セッション失効時の再ログイン
+
+`401 Unauthorized` が返る場合は、`POST /api/v1/auth/refresh` でトークン再発行を試し、失敗時は OAuth ログインを再実行してください。運用時の手順は [`docs/getting-started.md`](docs/getting-started.md) の「セッション失効時の再ログイン手順」にまとめています。
+
 ### Running Tests
 
 ```bash
