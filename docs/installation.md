@@ -113,6 +113,37 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+## OAuth provider追加時の事前チェック
+
+新しい OAuth provider を追加する前に、次の4点を確認してください。事前に差分を揃えることで、導入時の手戻りを減らせます。
+
+1. 対応表と導線を更新する
+   - `docs/guides/oauth/index.md` の provider 一覧へ追記する
+   - `docs/index.md` の対応プロバイダー表示と導線を整合させる
+2. 必要な secret 名を定義する
+   - `secrets/<provider>_client_id.txt.example`
+   - `secrets/<provider>_client_secret.txt.example`
+   - `docker-compose.yml` の `api.secrets` に読み込み定義を追加する
+3. callback URL の前提を確定する
+   - provider 管理画面に登録する callback を `GET /api/v1/auth/{provider}/callback` で揃える
+   - 開発環境と本番環境でホスト名・スキームが一致することを確認する
+4. 最小動作確認を実行する
+   - API 起動後に `GET /api/v1/auth/{provider}` へアクセスして認可開始できること
+   - callback 後に `invalid_client` / `Invalid or expired state` が出ないこと
+
+### 事前チェック実行コマンド
+
+```bash
+# 1) docs 導線の更新漏れ確認
+rg -n "OAuth|プロバイダー|provider" docs/index.md docs/installation.md docs/getting-started.md docs/guides/oauth/index.md
+
+# 2) 追加providerの secret 雛形確認（<provider> は実名に置換）
+ls secrets/<provider>_client_id.txt.example secrets/<provider>_client_secret.txt.example
+
+# 3) callback 前提の確認
+rg -n "/api/v1/auth/\\{provider\\}/callback|invalid_client|Invalid or expired state" docs/guides/oauth/index.md docs/help/troubleshooting.md
+```
+
 ## ポート
 
 | サービス | ポート |

@@ -27,6 +27,9 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
 
 各ファイルを編集して、OAuthプロバイダーから取得したクレデンシャルを設定します。
 
+!!! tip "provider追加時は先にチェック"
+    新しい OAuth provider を追加する場合は、先に [OAuth provider追加時の事前チェック](installation.md#oauth-provider追加時の事前チェック) を実施してから secrets を作成してください。
+
 !!! tip "JWTシークレットの生成"
     ```bash
     openssl rand -base64 32 > secrets/jwt_secret.txt

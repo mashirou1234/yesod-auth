@@ -30,6 +30,8 @@ docker compose --profile default up -d
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
 
+OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
+
 ## アーキテクチャ
 
 ```
