@@ -113,6 +113,11 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+!!! note "Compose運用時の注意"
+    `docker-compose.yml` の既定では `google_*` / `discord_*` / `jwt_secret` が中心です。
+    GitHubを含む他プロバイダーを利用する場合は、`docs/guides/oauth/index.md` の override 例を使って
+    `api` / `api-ci` の `secrets` に対象プロバイダーを追加してください。
+
 ## ポート
 
 | サービス | ポート |

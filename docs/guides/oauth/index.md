@@ -28,6 +28,36 @@ PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防�
 
 ## 共通設定
 
+### セルフホスト向け最短手順
+
+1. 利用するOAuthプロバイダーを決める（例: GitHubのみ）
+2. `secrets/` に対象プロバイダーの `*_client_id.txt` と `*_client_secret.txt` を配置する
+3. `MOCK_OAUTH_ENABLED=0` で実OAuthを有効化する
+4. API公開URLに合わせてリダイレクトURIを更新する
+5. `/api/v1/auth/{provider}` へアクセスして、プロバイダー画面へ遷移することを確認する
+
+!!! note "docker-compose の既定設定"
+    `docker-compose.yml` の既定では `api` / `api-ci` に `google_*` と `discord_*` がマウントされています。
+    GitHubなど他プロバイダーを使う場合は、`docker-compose.override.yml` で `secrets` を追加してください。
+
+    ```yaml
+    services:
+      api:
+        secrets:
+          - github_client_id
+          - github_client_secret
+      api-ci:
+        secrets:
+          - github_client_id
+          - github_client_secret
+
+    secrets:
+      github_client_id:
+        file: ./secrets/github_client_id.txt
+      github_client_secret:
+        file: ./secrets/github_client_secret.txt
+    ```
+
 ### シークレットファイルの配置
 
 各プロバイダーのクライアントIDとシークレットは`secrets/`ディレクトリに配置します：
