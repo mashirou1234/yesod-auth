@@ -61,6 +61,23 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### エラーレスポンスの確認
+
+未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
+
+```bash
+curl -i -X POST "http://localhost:8000/api/v1/auth/logout" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"dummy"}'
+```
+
+期待値:
+
+- ステータスコード: `401 Unauthorized`
+- レスポンスボディ: `{"detail":"Not authenticated"}`
+
+詳細な調査手順は [トラブルシューティング](help/troubleshooting.md) を参照してください。
+
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
