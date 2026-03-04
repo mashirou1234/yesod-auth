@@ -37,6 +37,43 @@ docker compose --profile full up -d
 docker compose --profile ci up -d
 ```
 
+## docker compose利用時の最小確認手順
+
+`docker compose --profile default up -d` 実行後、次の3項目だけ確認すれば最小動作確認が完了します。
+
+1. コンテナ状態の確認
+
+```bash
+docker compose --profile default ps
+```
+
+期待値:
+- `api`, `db`, `docs`, `valkey` が `Up`（または `running`）
+
+2. API ヘルスチェック確認
+
+```bash
+curl -fsS http://localhost:8000/health
+```
+
+期待値:
+- HTTP 200 が返る
+
+3. API ドキュメント到達確認
+
+```bash
+curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+```
+
+期待値:
+- `200`
+
+終了時は次のコマンドで後片付けできます。
+
+```bash
+docker compose --profile default down
+```
+
 ## profile整合確認手順
 
 `docker-compose.yml` と本ドキュメントの profile 記載が一致していることを、変更時に必ず確認してください。
