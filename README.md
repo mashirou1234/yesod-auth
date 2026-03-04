@@ -29,14 +29,14 @@ cd yesod-auth
 2. Create a new project or select existing one
 3. Enable "Google+ API" or "Google Identity"
 4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-5. Set authorized redirect URI: `http://localhost:8000/auth/google/callback`
+5. Set authorized redirect URI: `http://localhost:8000/api/v1/auth/google/callback`
 6. Copy Client ID and Client Secret
 
 #### Discord OAuth
 1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
 2. Create a new application
 3. Go to "OAuth2" section
-4. Add redirect URI: `http://localhost:8000/auth/discord/callback`
+4. Add redirect URI: `http://localhost:8000/api/v1/auth/discord/callback`
 5. Copy Client ID and Client Secret
 
 ### 3. Configure secrets
@@ -73,6 +73,7 @@ docker compose --profile ci up -d
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
+- Callback URL validation checklist: [docs/getting-started.md](docs/getting-started.md#25-コールバックurlの検証)
 
 ## API Endpoints
 

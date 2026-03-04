@@ -32,6 +32,25 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
     openssl rand -base64 32 > secrets/jwt_secret.txt
     ```
 
+## 2.5 コールバックURLの検証
+
+OAuth導入時は、実装前に「登録したコールバックURL」と「実際にYESOD Authが受けるURL」が一致することを確認します。
+
+### 基本ルール
+
+- 形式は `https://<api-domain>/api/v1/auth/<provider>/callback`
+- `http` はローカル開発以外で使わない
+- 末尾スラッシュを付けない（`.../callback/` は不可）
+- `provider` は実際に有効化したものだけ登録する
+
+### 検証チェックリスト
+
+1. API公開URLを決める（例: `https://api.example.com`）
+2. プロバイダーごとに callback URL を作る（例: `https://api.example.com/api/v1/auth/google/callback`）
+3. OAuthプロバイダー管理画面の設定値と、`docs/api/auth.md` のパス仕様が一致することを確認する
+4. リバースプロキシ利用時は `X-Forwarded-Proto=https` が正しく渡る構成にする
+5. ログイン実行後、`Invalid state` や `redirect_uri_mismatch` が出ないことを確認する
+
 ## 3. 起動
 
 ```bash
