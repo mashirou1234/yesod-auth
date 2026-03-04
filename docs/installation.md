@@ -118,6 +118,18 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+### 環境変数・Secrets の優先順位
+
+設定元が複数ある場合は、以下の優先順位で値が決まります。
+
+| 対象 | 優先順位（高 → 低） | 根拠 |
+|------|----------------------|------|
+| OAuthクライアントID/Secret、`JWT_SECRET` | `/run/secrets/<name>` → 同名の環境変数（大文字）→ 既定値 | `api/app/config.py` の `read_secret()` |
+| `DATABASE_URL` / `VALKEY_URL` / `CORS_ORIGINS` / `FRONTEND_URL` など | 環境変数 → 既定値 | `api/app/config.py` の `os.getenv()` |
+| `MOCK_OAUTH_ENABLED`（`default`/`ci`プロファイル） | Compose の service `environment` での指定（`1`）→ アプリ既定値（`0`） | `docker-compose.yml` と `api/app/config.py` |
+
+`read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
+
 ### 管理画面用環境変数
 
 | 変数名 | 説明 | デフォルト |
