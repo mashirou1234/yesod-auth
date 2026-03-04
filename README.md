@@ -76,6 +76,16 @@ docker compose --profile ci up -d
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
 
+Quick API connectivity check:
+
+```bash
+curl -sS http://localhost:8000/health
+# {"status":"healthy"}
+
+curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/v1/metrics
+# 200
+```
+
 ## API Endpoints
 
 Base URL: `http://localhost:8000/api/v1`
