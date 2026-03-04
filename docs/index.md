@@ -30,6 +30,8 @@ docker compose --profile default up -d
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
 
+起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
+
 ## アーキテクチャ
 
 ```

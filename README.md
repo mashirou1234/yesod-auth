@@ -68,6 +68,8 @@ docker compose --profile default --profile full up -d
 docker compose --profile ci up -d
 ```
 
+最小動作確認は [`docs/installation.md` の「docker compose利用時の最小確認手順」](docs/installation.md#docker-compose利用時の最小確認手順) を参照してください。
+
 ### 5. Access the API
 
 - API: http://localhost:8000
