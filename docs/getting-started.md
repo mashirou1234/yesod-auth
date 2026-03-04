@@ -61,6 +61,15 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+## OAuth callback失敗時の確認順
+
+`/api/v1/auth/{provider}/callback` で失敗する場合は、次の順で確認してください。
+
+1. OAuthプロバイダー側のコールバックURLが `http://localhost:8000/api/v1/auth/{provider}/callback` と完全一致しているか
+2. `secrets/*_client_id.txt` と `secrets/*_client_secret.txt` の値が正しく、起動中コンテナに反映されているか
+3. API到達性があるか（`curl http://localhost:8000/health` が `{"status":"healthy"}` を返すか）
+4. APIログに `invalid_client` や `redirect_uri_mismatch` が出ていないか（`docker compose logs api`）
+
 ## 次のステップ
 
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
