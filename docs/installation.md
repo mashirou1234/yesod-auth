@@ -113,6 +113,45 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+## セルフホスト向け秘密情報配置例
+
+`docker-compose.yml` は `./secrets/*.txt` を参照します。セルフホスト環境では
+「アプリ配置」と「秘密情報配置」を分離し、`./secrets` をシンボリックリンクで
+接続するとローテーションしやすくなります。
+
+```text
+/opt/yesod-auth/
+  app/        # このリポジトリを配置
+  secrets/
+    current/
+      google_client_id.txt
+      google_client_secret.txt
+      discord_client_id.txt
+      discord_client_secret.txt
+      jwt_secret.txt
+      admin_password.txt   # --profile full を使う場合のみ
+```
+
+作成例:
+
+```bash
+mkdir -p /opt/yesod-auth/secrets/current
+cp secrets/*.example /opt/yesod-auth/secrets/current/
+openssl rand -hex 32 > /opt/yesod-auth/secrets/current/jwt_secret.txt
+openssl rand -base64 24 > /opt/yesod-auth/secrets/current/admin_password.txt
+chmod 600 /opt/yesod-auth/secrets/current/*.txt
+
+cd /opt/yesod-auth/app
+ln -sfn ../secrets/current secrets
+```
+
+検証:
+
+```bash
+docker compose --profile default config >/dev/null
+docker compose --profile full config >/dev/null
+```
+
 ## ポート
 
 | サービス | ポート |
