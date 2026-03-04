@@ -69,6 +69,91 @@ docker compose --profile ci config --services
 rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 ```
 
+## 初回導入で起きやすい失敗パターン
+
+初回セットアップ時に発生しやすい失敗を、症状ごとの確認順でまとめます。
+
+### 1. `docker compose up` で secret 未設定エラーになる
+
+症状例:
+
+- `Error: secret ... not found`
+- API コンテナが `CreateContainerConfigError` で起動しない
+
+確認:
+
+```bash
+ls -1 secrets | head
+ls -1 secrets/*.txt 2>/dev/null | wc -l
+```
+
+対処:
+
+1. `secrets/*.example` から必要な `.txt` を作成する
+2. 最低限 `jwt_secret.txt` は必ず作成する
+3. 有効化するOAuthプロバイダー分の client id/secret を作成する
+
+### 2. `default` 以外で起動して Mock OAuth が使えない
+
+症状例:
+
+- `/api/v1/auth/mock/login` が想定どおり動作しない
+- 初回確認で外部OAuth設定まで要求される
+
+確認:
+
+```bash
+docker compose --profile default config --services
+docker compose --profile full config --services
+```
+
+対処:
+
+1. 初回動作確認は `docker compose --profile default up -d` を使う
+2. `full` は管理画面込みの確認時に切り替える
+3. `ci` はローカル初回導入用途では使わない
+
+### 3. 8000/5432/6379 が使用中で起動失敗する
+
+症状例:
+
+- `Bind for 0.0.0.0:8000 failed: port is already allocated`
+- 一部サービスだけ `Exited` になる
+
+確認:
+
+```bash
+docker compose ps
+lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
+```
+
+対処:
+
+1. 競合プロセスや既存コンテナを停止する
+2. 必要なら `docker compose down` 後に再起動する
+3. 競合が解消しない場合は `.env` 側のポート割当を見直す
+
+### 4. 古いコンテナ状態が残って挙動が不安定になる
+
+症状例:
+
+- 設定変更後も以前の挙動のまま
+- `healthy` にならない
+
+確認:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 api
+```
+
+対処:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
 ## 環境変数
 
 | 変数名 | 説明 | デフォルト |
