@@ -203,6 +203,8 @@ docker compose up -d --build
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+`CORS_ORIGINS` が未設定または空文字の場合、API起動時に警告ログを出し、開発用デフォルト値（`http://localhost:3000,http://localhost:5173`）で起動します。
+
 ### 環境変数・Secrets の優先順位
 
 設定元が複数ある場合は、以下の優先順位で値が決まります。
