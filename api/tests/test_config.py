@@ -1,7 +1,9 @@
 """Tests for configuration helpers."""
 
+import importlib
 from unittest.mock import mock_open, patch
 
+import app.config as config_module
 from app.config import read_secret
 
 
@@ -29,3 +31,14 @@ def test_read_secret_falls_back_to_default_when_secret_and_env_missing(monkeypat
 
     with patch("app.config.os.path.exists", return_value=False):
         assert read_secret("jwt_secret", "default-value") == "default-value"
+
+
+def test_frontend_url_defaults_when_env_missing(monkeypatch):
+    """FRONTEND_URL should fall back to localhost when env var is not set."""
+    monkeypatch.delenv("FRONTEND_URL", raising=False)
+
+    reloaded = importlib.reload(config_module)
+    reloaded.get_settings.cache_clear()
+    settings = reloaded.get_settings()
+
+    assert settings.FRONTEND_URL == "http://localhost:3000"
