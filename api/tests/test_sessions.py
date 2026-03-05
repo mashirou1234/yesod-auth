@@ -68,3 +68,19 @@ async def test_sessions_list_with_valid_token_returns_200(client: AsyncClient):
     data = response.json()
     assert "sessions" in data
     assert "total" in data
+
+
+@pytest.mark.asyncio
+async def test_sessions_list_rejects_limit_over_maximum(client: AsyncClient):
+    """Session list should reject limit above maximum."""
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    response = await client.get(
+        "/api/v1/sessions?limit=1001",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 422
