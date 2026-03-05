@@ -40,6 +40,28 @@ docker compose --profile default up -d
 
 `default`プロファイルでは、Compose設定により`MOCK_OAUTH_ENABLED=1`がAPIサービスへ適用されます（アプリ既定値は`0`）。
 
+### Compose profile差分の確認
+
+起動前に、利用するプロファイルで有効になるサービス差分を確認できます。
+
+```bash
+# default: 最小構成（api / admin / db / redis）
+docker compose --profile default config --services
+
+# full: default + caddy
+docker compose --profile default --profile full config --services
+
+# ci: テスト用の isolated 構成
+docker compose --profile ci config --services
+```
+
+`MOCK_OAUTH_ENABLED` の適用差分は次で確認できます。
+
+```bash
+docker compose --profile default config | rg "MOCK_OAUTH_ENABLED|api:"
+docker compose --profile ci config | rg "MOCK_OAUTH_ENABLED|api-ci:"
+```
+
 ## 4. 動作確認
 
 ### ヘルスチェック
