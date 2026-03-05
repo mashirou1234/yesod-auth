@@ -117,18 +117,32 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 - `Error: secret ... not found`
 - API コンテナが `CreateContainerConfigError` で起動しない
 
-確認:
+診断:
 
 ```bash
-ls -1 secrets | head
-ls -1 secrets/*.txt 2>/dev/null | wc -l
+docker compose --profile default up -d 2>&1 | rg -n "secret .* not found|CreateContainerConfigError"
+```
+
+出力された `secret <name> not found` の `<name>` が不足している必須secretです。
+
+次に、`default` プロファイルで要求されるsecretと手元の `.txt` を照合します。
+
+```bash
+printf '%s\n' google_client_id google_client_secret discord_client_id discord_client_secret jwt_secret
+ls -1 secrets/*.txt 2>/dev/null | sed -E 's#^.*/##; s#\\.txt$##' | sort
 ```
 
 対処:
 
-1. `secrets/*.example` から必要な `.txt` を作成する
-2. 最低限 `jwt_secret.txt` は必ず作成する
-3. 有効化するOAuthプロバイダー分の client id/secret を作成する
+1. 不足している `<name>` について、`secrets/<name>.txt` を作成する
+2. `jwt_secret.txt` は必須として必ず作成する（例: `openssl rand -hex 32 > secrets/jwt_secret.txt`）
+3. OAuthは `default` で最低限 `google_*` と `discord_*` が必要（`docker-compose.yml` の `api`/`api-ci` secrets 定義）
+4. サンプル値が必要な場合は `secrets/*.example` を参照し、値を設定後に再起動する
+
+```bash
+docker compose --profile default up -d --force-recreate api
+docker compose --profile default ps
+```
 
 ### 2. `default` 以外で起動して Mock OAuth が使えない
 
