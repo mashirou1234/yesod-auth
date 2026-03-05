@@ -107,6 +107,7 @@ steps:
   - name: notify-failure-ntfy
     image: codeberg.org/l-x/woodpecker-ntfy
     when:
+      - event: [push]
       - status: [failure]
     settings:
       url:
