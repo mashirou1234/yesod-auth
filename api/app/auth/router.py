@@ -53,6 +53,41 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+async def _validate_oauth_state(
+    db: AsyncSession,
+    provider: str,
+    state: str | None,
+    ip_address: str | None,
+    device_info: str | None,
+) -> dict:
+    """Validate callback state and emit audit logs for missing/invalid values."""
+    if not state:
+        await AuditLogger.log_login(
+            db,
+            None,
+            provider,
+            False,
+            ip_address,
+            device_info,
+            "Missing state parameter",
+        )
+        raise HTTPException(status_code=400, detail="Missing state parameter")
+
+    state_data = await OAuthStateStore.get_and_delete(state)
+    if not state_data or state_data.get("provider") != provider:
+        await AuditLogger.log_login(
+            db,
+            None,
+            provider,
+            False,
+            ip_address,
+            device_info,
+            "Invalid state",
+        )
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    return state_data
+
+
 @router.get("/google")
 @limiter.limit("10/minute")
 async def google_login(request: Request):
@@ -75,19 +110,14 @@ async def google_login(request: Request):
 async def google_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Google OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "google":
-        await AuditLogger.log_login(
-            db, None, "google", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "google", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
@@ -170,19 +200,14 @@ async def discord_login(request: Request):
 async def discord_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Discord OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "discord":
-        await AuditLogger.log_login(
-            db, None, "discord", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "discord", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
@@ -265,19 +290,14 @@ async def github_login(request: Request):
 async def github_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "github":
-        await AuditLogger.log_login(
-            db, None, "github", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "github", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
@@ -360,17 +380,14 @@ async def x_login(request: Request):
 async def x_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle X (Twitter) OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "x":
-        await AuditLogger.log_login(db, None, "x", False, ip_address, device_info, "Invalid state")
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "x", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
@@ -457,19 +474,14 @@ async def linkedin_login(request: Request):
 async def linkedin_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle LinkedIn OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "linkedin":
-        await AuditLogger.log_login(
-            db, None, "linkedin", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "linkedin", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
@@ -552,19 +564,14 @@ async def facebook_login(request: Request):
 async def facebook_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Facebook OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "facebook":
-        await AuditLogger.log_login(
-            db, None, "facebook", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "facebook", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
@@ -648,19 +655,14 @@ async def slack_login(request: Request):
 async def slack_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Slack OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "slack":
-        await AuditLogger.log_login(
-            db, None, "slack", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "slack", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
@@ -744,19 +746,14 @@ async def twitch_login(request: Request):
 async def twitch_callback(
     request: Request,
     code: str,
-    state: str,
+    state: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle Twitch OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
     # Verify and consume state
-    state_data = await OAuthStateStore.get_and_delete(state)
-    if not state_data or state_data.get("provider") != "twitch":
-        await AuditLogger.log_login(
-            db, None, "twitch", False, ip_address, device_info, "Invalid state"
-        )
-        raise HTTPException(status_code=400, detail="Invalid or expired state")
+    state_data = await _validate_oauth_state(db, "twitch", state, ip_address, device_info)
 
     code_verifier = state_data.get("code_verifier")
     redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
