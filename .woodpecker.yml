@@ -1,9 +1,7 @@
-# push(main/master) と pull_request を有効化。
+# required check と整合するよう、全ブランチ push で CI を実行する。
 # 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
 when:
-  - event: [pull_request]
   - event: [push]
-    branch: [main, master]
 
 steps:
   - name: fmt
