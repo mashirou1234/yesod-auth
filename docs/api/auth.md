@@ -78,6 +78,19 @@ Content-Type: application/json
     リフレッシュ時に新しいリフレッシュトークンが発行されます。
     古いリフレッシュトークンは無効化されます。
 
+### refresh失敗時エラー分類
+
+`POST /api/v1/auth/refresh` で失敗した場合は、まずレスポンスコードと API ログを突き合わせて次の表で分類します。
+
+| 症状 | APIレスポンス/ログ例 | 主な原因 | 初動対応 |
+| --- | --- | --- | --- |
+| トークン欠落・形式不正 | `422 Unprocessable Entity` / `refresh_token` の入力エラー | リクエストボディが欠落、JSONキー名の誤り | 送信 payload を `{ "refresh_token": "..." }` に統一して再試行 |
+| 期限切れ・改ざん・失効済み | `401 Unauthorized` / `Could not validate credentials` | refresh token の期限切れ、署名不一致、logout/revoke 済み | 再ログインして新しい token pair を払い出し、古い token を破棄 |
+| サーバー設定不整合 | `401 Unauthorized` が継続し複数ユーザーで再現 | `JWT_SECRET` 差し替え、環境差分、ローテーション手順漏れ | 稼働中コンテナの secret 読み込み元を確認し、全ノードの設定を揃える |
+| 一時的な基盤障害 | `500 Internal Server Error` / DB・Valkey 接続失敗ログ | DB/Valkey 疎通不安定、依存サービス瞬断 | `docker compose ps` と各サービスログを確認し復旧後に再試行 |
+
+詳細な切り分け手順は [`トラブルシューティング > 認証エラー`](../help/troubleshooting.md#認証エラー) を参照してください。
+
 ---
 
 ## ログアウト
