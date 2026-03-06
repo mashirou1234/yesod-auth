@@ -35,6 +35,20 @@
 GET /api/v1/auth/google
 ```
 
+### OAuth provider が無効な場合
+
+対象: `GET /api/v1/auth/{provider}`（google / github / discord / x / linkedin / facebook / slack / twitch）
+
+- 条件: 対象 provider の `*_CLIENT_ID` または `*_CLIENT_SECRET` が未設定
+- 応答: `503 Service Unavailable`
+- 例:
+
+```json
+{
+  "detail": "OAuth provider 'google' is disabled. Configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+}
+```
+
 ### 2. コールバック
 
 認証成功後、フロントエンドにリダイレクト：
