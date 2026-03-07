@@ -49,6 +49,34 @@ docker compose --profile default up -d
 
 `default`プロファイルでは、Compose設定により`MOCK_OAUTH_ENABLED=1`がAPIサービスへ適用されます（アプリ既定値は`0`）。
 
+## 3.5 初回ヘルスチェック（推奨）
+
+初回起動時は、次の3点を順に確認すると原因切り分けがしやすくなります。
+
+### 1. コンテナ状態を確認
+
+```bash
+docker compose --profile default ps
+```
+
+`api` と `admin` が `Up` になっていることを確認します。
+
+### 2. APIログを確認
+
+```bash
+docker compose --profile default logs --tail=100 api
+```
+
+エラーで停止していないか、ポート `8000` で待受を開始しているかを確認します。
+
+### 3. HTTPヘルスエンドポイントを確認
+
+```bash
+curl -i http://localhost:8000/health
+```
+
+`HTTP/1.1 200 OK`（または `HTTP/2 200`）と `{"status":"healthy"}` が返れば初回ヘルスチェックは完了です。
+
 ## 4. 動作確認
 
 ### ヘルスチェック
