@@ -10,6 +10,24 @@ from app.auth.tokens import settings as token_settings
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/api/v1/sessions"),
+        ("delete", "/api/v1/sessions"),
+    ],
+)
+async def test_sessions_endpoints_require_authorization_header(
+    client: AsyncClient, method: str, path: str
+):
+    """Missing Authorization header should be rejected by protected session endpoints."""
+    response = await getattr(client, method)(path)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated"
+
+
+@pytest.mark.asyncio
 async def test_sessions_list_requires_valid_token(client: AsyncClient):
     """Invalid token should be rejected on session listing endpoint."""
     response = await client.get(

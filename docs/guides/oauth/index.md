@@ -62,3 +62,19 @@ secrets/
 
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。
+
+## provider追加時チェックリスト
+
+新しいOAuth providerを追加・有効化するときは、次の順で確認してください。
+
+1. `docs/guides/oauth/index.md` の対応プロバイダー表に行を追加する（PKCE/OpenID Connect/備考を含む）。
+2. `docs/guides/oauth/<provider>.md` を作成または更新し、以下を明記する。
+   - Provider管理画面での設定手順
+   - Redirect URI（`/api/v1/auth/<provider>/callback`）
+   - 必要スコープ
+   - クライアントID/シークレットの配置方法
+3. `secrets/<provider>_client_id.txt` と `secrets/<provider>_client_secret.txt` の命名で統一する。
+4. `docs/installation.md` と `docs/help/faq.md` の「有効化したprovider分だけsecretを用意する」方針と矛盾がないか確認する。
+5. セルフホスト公開前に、本番ドメインのRedirect URIへ更新し、ローカル値（`localhost`）が残っていないか確認する。
+
+上記を満たすと、導入時の設定漏れを抑えつつ、OSSとして再利用しやすい説明構成を維持できます。
