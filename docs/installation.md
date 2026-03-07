@@ -288,15 +288,24 @@ docker compose up -d --build
 
 <a id="environment-variables"></a>
 
+### 必須（未設定時に運用影響が出る）
+
+| 変数/シークレット | 用途 | 未設定時の症状 | 既定値/補足 |
+|------------------|------|----------------|------------|
+| `DATABASE_URL` | PostgreSQL接続先 | API/管理画面がDB接続エラーで起動失敗、または意図しないDBへ接続 | 開発向け既定値あり。セルフホストでは明示設定推奨 |
+| `VALKEY_URL` | Valkey接続先（state/レート制御） | OAuthの`state mismatch`やセッション関連エラーが発生しやすくなる | 開発向け既定値あり。セルフホストでは明示設定推奨 |
+| `FRONTEND_URL` | OAuth完了後のリダイレクト先 | ログイン後の遷移先が不正になり、認証完了後のUXが壊れる | 既定値 `http://localhost:3000` |
+| `CORS_ORIGINS` | API許可オリジン | ブラウザから`CORS`エラーでAPI呼び出し失敗 | 既定値 `http://localhost:3000,http://localhost:5173` |
+| `jwt_secret` | JWT署名鍵 | トークン検証不整合や`401`が発生。既定値運用はセキュリティ上非推奨 | Docker Secret推奨（`secrets/jwt_secret.txt`） |
+| `<provider>_client_id` / `<provider>_client_secret` | OAuth provider資格情報 | 該当providerで`invalid_client`や認証失敗が発生 | 有効化して使うprovider分のみ必須 |
+
+### 推奨（運用品質・セキュリティ向上）
+
 | 変数名 | 説明 | デフォルト |
 |--------|------|-----------|
-| `DATABASE_URL` | PostgreSQL接続URL | - |
-| `VALKEY_URL` | Valkey接続URL | - |
-| `CORS_ORIGINS` | 許可するオリジン | - |
-| `FRONTEND_URL` | フロントエンドURL | - |
-| `MOCK_OAUTH_ENABLED` | Mock OAuth有効化（アプリ既定値は`0`。`docker compose --profile default`/`ci`ではCompose側で`1`に上書き） | `0` |
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
+| `SESSION_EXPIRY_HOURS` | 管理画面セッション有効期限（時間） | `24` |
 
 `CORS_ORIGINS` が未設定または空文字の場合、API起動時に警告ログを出し、開発用デフォルト値（`http://localhost:3000,http://localhost:5173`）で起動します。
 
@@ -312,13 +321,16 @@ docker compose up -d --build
 
 `read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
 
-### 管理画面用環境変数
+### 任意（要件に応じて設定）
 
 | 変数名 | 説明 | デフォルト |
 |--------|------|-----------|
+| `MOCK_OAUTH_ENABLED` | Mock OAuth有効化（アプリ既定値は`0`。`docker compose --profile default`/`ci`ではCompose側で`1`に上書き） | `0` |
 | `ADMIN_USER` | 管理者ユーザー名 | `admin` |
-| `SESSION_EXPIRY_HOURS` | セッション有効期限（時間） | `24` |
-| `DEFAULT_LANGUAGE` | デフォルト言語（en, ja, fr, ko, de） | `en` |
+| `DEFAULT_LANGUAGE` | 管理画面デフォルト言語（en, ja, fr, ko, de） | `en` |
+
+関連ヘルプ:
+- [トラブルシューティング（認証エラー）](./help/troubleshooting.md#認証エラー)
 
 ## OAuth認証情報
 
