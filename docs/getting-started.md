@@ -160,6 +160,36 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### セッション失効時の再ログイン手順
+
+アクセストークン失効で `401 Unauthorized` が返る場合は、次の順序で復旧します。
+
+1. まずリフレッシュトークンで再発行を試す
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"<refresh_token>"}'
+```
+
+2. 再発行できない場合は OAuth ログインを再実行する
+
+```bash
+# 例: Google OAuth を再開始
+open "http://localhost:8000/api/v1/auth/google"
+```
+
+3. 複数端末で状態がずれた場合は古いセッションを失効させる
+
+```bash
+curl -X DELETE "http://localhost:8000/api/v1/sessions/me" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+補足:
+- 認証API詳細は `docs/api/auth.md` を参照してください。
+- セッションAPI一覧は `README.md` の `Sessions` セクションと同一です。
+
 ### OAuth callback失敗時の確認順
 
 `/api/v1/auth/{provider}/callback` が失敗した場合は、次の順で確認すると切り分けが早くなります。
@@ -195,7 +225,6 @@ TOKEN=$(curl -s "http://localhost:8000/api/v1/auth/mock/login?user=alice&provide
 curl -H "Authorization: Bearer ${TOKEN}" \
   "http://localhost:8000/api/v1/users/me"
 ```
-
 ### エラーレスポンスの確認
 
 未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
