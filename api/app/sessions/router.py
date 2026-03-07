@@ -3,7 +3,7 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     current_user: User = Depends(get_current_user),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
     db: AsyncSession = Depends(get_db),
 ):
     """List all active sessions for current user."""
@@ -32,6 +33,7 @@ async def list_sessions(
             )
         )
         .order_by(RefreshToken.created_at.desc())
+        .limit(limit)
     )
     sessions = result.scalars().all()
 
