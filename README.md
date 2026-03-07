@@ -28,6 +28,8 @@ cd yesod-auth
 
 Choose one or more providers and create OAuth apps:
 
+- Self-hosted production callback format: `https://<your-domain>/api/v1/auth/{provider}/callback`
+
 - Google: <http://localhost:8000/api/v1/auth/google/callback>
 - GitHub: <http://localhost:8000/api/v1/auth/github/callback>
 - Discord: <http://localhost:8000/api/v1/auth/discord/callback>
@@ -227,7 +229,7 @@ export function useAuth() {
   const token = ref(localStorage.getItem('auth_token'));
   const user = ref(null);
 
-  const login = (provider: 'google' | 'discord') => {
+  const login = (provider: 'google' | 'github' | 'discord' | 'x' | 'linkedin' | 'facebook' | 'slack' | 'twitch') => {
     window.location.href = `http://localhost:8000/api/v1/auth/${provider}`;
   };
 
@@ -270,8 +272,8 @@ export function useAuth() {
 | `secrets/github_client_secret.txt` | GitHub OAuth Client Secret |
 | `secrets/discord_client_id.txt` | Discord OAuth Client ID |
 | `secrets/discord_client_secret.txt` | Discord OAuth Client Secret |
-| `secrets/x_client_id.txt` | X OAuth Client ID |
-| `secrets/x_client_secret.txt` | X OAuth Client Secret |
+| `secrets/x_client_id.txt` | X (Twitter) OAuth Client ID |
+| `secrets/x_client_secret.txt` | X (Twitter) OAuth Client Secret |
 | `secrets/linkedin_client_id.txt` | LinkedIn OAuth Client ID |
 | `secrets/linkedin_client_secret.txt` | LinkedIn OAuth Client Secret |
 | `secrets/facebook_client_id.txt` | Facebook OAuth Client ID |
