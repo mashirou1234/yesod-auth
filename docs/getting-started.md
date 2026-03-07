@@ -134,6 +134,23 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### エラーレスポンスの確認
+
+未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
+
+```bash
+curl -i -X POST "http://localhost:8000/api/v1/auth/logout" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"dummy"}'
+```
+
+期待値:
+
+- ステータスコード: `401 Unauthorized`
+- レスポンスボディ: `{"detail":"Not authenticated"}`
+
+詳細な調査手順は [トラブルシューティング](help/troubleshooting.md) を参照してください。
+
 ## 5. Webhook導入の最短導線
 
 Webhookは、getting-started から以下の2クリック以内で設定手順へ到達できます。
