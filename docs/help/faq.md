@@ -38,6 +38,11 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+### GitHubログインをorganizationメンバーだけに制限できる？
+
+現状のYESOD AuthはGitHub OAuthでorganization所属チェックを行いません。
+organization制限が必要な場合は、`read:org`スコープとコールバック後の所属検証を追加実装してください。
+
 ---
 
 ## 開発

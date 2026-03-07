@@ -6,7 +6,7 @@
 |---------|------|------|
 | GET | `/api/v1/auth/google` | Google OAuth開始 |
 | GET | `/api/v1/auth/google/callback` | Googleコールバック |
-| GET | `/api/v1/auth/github` | GitHub OAuth開始 |
+| GET | `/api/v1/auth/github` | GitHub OAuth開始（organization所属の制限判定は未実装） |
 | GET | `/api/v1/auth/github/callback` | GitHubコールバック |
 | GET | `/api/v1/auth/discord` | Discord OAuth開始 |
 | GET | `/api/v1/auth/discord/callback` | Discordコールバック |
