@@ -78,6 +78,7 @@ nav:
     - Webhook API: api/webhooks.md
   - ヘルプ:
     - FAQ: help/faq.md
+    - 初回起動トラブルシュート: help/first-start-troubleshooting.md
     - トラブルシューティング: help/troubleshooting.md
 
 extra:
