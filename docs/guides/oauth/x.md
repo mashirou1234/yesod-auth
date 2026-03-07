@@ -36,6 +36,40 @@ echo "your-client-secret" > secrets/x_client_secret.txt
 !!! tip "PKCEは必須"
     X OAuth 2.0ではPKCEが必須です。YESOD Authは自動的にPKCEを使用します。
 
+## よくあるエラーレスポンス例
+
+### `401 Unauthorized` / `invalid_client`
+
+X の `client_id` / `client_secret` が未設定または不正な場合に発生します。
+
+```json
+{
+  "detail": "OAuth callback failed: invalid_client"
+}
+```
+
+確認ポイント:
+
+- `secrets/x_client_id.txt` と `secrets/x_client_secret.txt` の値
+- X Developer Portal 側での Client Secret 再発行有無
+- Callback URI が `http://localhost:8000/api/v1/auth/x/callback` と一致しているか
+
+### `400 Bad Request` / `invalid_request`
+
+認可コードの期限切れや callback パラメータ不整合で発生します。
+
+```json
+{
+  "detail": "OAuth callback failed: invalid_request"
+}
+```
+
+確認ポイント:
+
+- 認証開始 (`/api/v1/auth/x`) からやり直す
+- ブラウザ戻る操作や callback URL の再実行を避ける
+- `API_URL` と実アクセス先ホスト/スキームの一致
+
 ## 技術仕様
 
 | 項目 | 値 |
