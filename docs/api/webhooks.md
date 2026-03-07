@@ -91,4 +91,29 @@ POST /api/v1/admin/webhooks/reload
 | `user.oauth_linked` | OAuth連携 | user_id, provider |
 | `user.oauth_unlinked` | OAuth連携解除 | user_id, provider |
 
+---
+
+## Webhook再送時の重複受信対策
+
+配信先のタイムアウトや一時的な `5xx` により、同一イベントが再送されることがあります。  
+受信側では `event_id` を冪等キーとして扱い、**同じ `event_id` は1回だけ処理**してください。
+
+### 推奨フロー
+
+1. 受信時に `event_id` を抽出する
+2. `event_id` が未処理なら処理を実行して処理済みとして保存する
+3. `event_id` が処理済みなら副作用を実行せず `200 OK` を返す
+
+### 実装メモ
+
+- 冪等キー: JSON ボディの `event_id`
+- 管理用途: `X-Webhook-ID` と `X-Webhook-Event` を監査ログに残す
+- 保持期間: 少なくとも Webhook 再送が起こり得る期間（運用で定義したリトライ期間）以上
+
+### 最小再現手順（ローカル）
+
+1. 受信側で `event_id` の処理履歴を保存するログを有効化する
+2. 同じペイロード（同じ `event_id`）を2回送信する
+3. 1回目のみ業務処理が実行され、2回目は重複としてスキップされることを確認する
+
 詳細な設定方法は[Webhook設定ガイド](../guides/webhooks.md)を参照してください。
