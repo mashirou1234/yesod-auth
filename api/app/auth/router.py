@@ -44,6 +44,16 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
+OAUTH_PROVIDER_CREDENTIAL_FIELDS = {
+    "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+    "discord": ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
+    "github": ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
+    "x": ("X_CLIENT_ID", "X_CLIENT_SECRET"),
+    "linkedin": ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
+    "facebook": ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
+    "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
+    "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
+}
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -53,10 +63,29 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+def _ensure_provider_enabled(provider: str) -> None:
+    """Ensure OAuth provider credentials exist before starting auth flow."""
+    client_id_field, client_secret_field = OAUTH_PROVIDER_CREDENTIAL_FIELDS[provider]
+    client_id = getattr(settings, client_id_field, "")
+    client_secret = getattr(settings, client_secret_field, "")
+
+    if client_id and client_secret:
+        return
+
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=(
+            f"OAuth provider '{provider}' is disabled. "
+            f"Configure {client_id_field} and {client_secret_field}."
+        ),
+    )
+
+
 @router.get("/google")
 @limiter.limit("10/minute")
 async def google_login(request: Request):
     """Start Google OAuth flow with PKCE."""
+    _ensure_provider_enabled("google")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -152,6 +181,7 @@ async def google_callback(
 @limiter.limit("10/minute")
 async def discord_login(request: Request):
     """Start Discord OAuth flow with PKCE."""
+    _ensure_provider_enabled("discord")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -247,6 +277,7 @@ async def discord_callback(
 @limiter.limit("10/minute")
 async def github_login(request: Request):
     """Start GitHub OAuth flow with PKCE."""
+    _ensure_provider_enabled("github")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -342,6 +373,7 @@ async def github_callback(
 @limiter.limit("10/minute")
 async def x_login(request: Request):
     """Start X (Twitter) OAuth flow with PKCE."""
+    _ensure_provider_enabled("x")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -439,6 +471,7 @@ async def x_callback(
 @limiter.limit("10/minute")
 async def linkedin_login(request: Request):
     """Start LinkedIn OAuth flow with PKCE."""
+    _ensure_provider_enabled("linkedin")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -534,6 +567,7 @@ async def linkedin_callback(
 @limiter.limit("10/minute")
 async def facebook_login(request: Request):
     """Start Facebook OAuth flow with PKCE."""
+    _ensure_provider_enabled("facebook")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -629,6 +663,7 @@ async def facebook_callback(
 @limiter.limit("10/minute")
 async def slack_login(request: Request):
     """Start Slack OAuth flow with PKCE."""
+    _ensure_provider_enabled("slack")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
@@ -725,6 +760,7 @@ async def slack_callback(
 @limiter.limit("10/minute")
 async def twitch_login(request: Request):
     """Start Twitch OAuth flow with PKCE."""
+    _ensure_provider_enabled("twitch")
     state = secrets.token_urlsafe(32)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
