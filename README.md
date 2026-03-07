@@ -104,6 +104,7 @@ docker compose --profile ci up -d
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
+- Callback URL validation checklist: [docs/getting-started.md](docs/getting-started.md#25-コールバックurlの検証)
 
 Quick API connectivity check:
 
