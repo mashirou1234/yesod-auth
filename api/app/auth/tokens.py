@@ -88,7 +88,7 @@ async def validate_refresh_token(
         select(RefreshToken).where(
             and_(
                 RefreshToken.token_hash == token_hash,
-                not RefreshToken.is_revoked,
+                RefreshToken.is_revoked.is_(False),
                 RefreshToken.expires_at > datetime.now(UTC),
             )
         )
@@ -138,7 +138,7 @@ async def revoke_all_user_tokens(db: AsyncSession, user_id: uuid.UUID) -> int:
         select(RefreshToken).where(
             and_(
                 RefreshToken.user_id == user_id,
-                not RefreshToken.is_revoked,
+                RefreshToken.is_revoked.is_(False),
             )
         )
     )

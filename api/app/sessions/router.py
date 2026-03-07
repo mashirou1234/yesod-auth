@@ -28,7 +28,7 @@ async def list_sessions(
         .where(
             and_(
                 RefreshToken.user_id == current_user.id,
-                not RefreshToken.is_revoked,
+                RefreshToken.is_revoked.is_(False),
                 RefreshToken.expires_at > datetime.now(UTC),
             )
         )
@@ -65,7 +65,7 @@ async def revoke_session(
             and_(
                 RefreshToken.id == session_id,
                 RefreshToken.user_id == current_user.id,
-                not RefreshToken.is_revoked,
+                RefreshToken.is_revoked.is_(False),
             )
         )
     )
@@ -93,7 +93,7 @@ async def revoke_all_sessions(
         select(RefreshToken).where(
             and_(
                 RefreshToken.user_id == current_user.id,
-                not RefreshToken.is_revoked,
+                RefreshToken.is_revoked.is_(False),
             )
         )
     )
