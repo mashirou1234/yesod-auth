@@ -23,6 +23,27 @@
 !!! tip "トークン未取得時"
     先に [認証API](./auth.md) の OAuth フローでアクセストークンを取得してください。
 
+## 認証・認可エラー例
+
+`/api/v1/users/me` 系エンドポイントは Bearer トークン必須です。  
+トークン未指定・期限切れ・不正トークン時は `401 Unauthorized` を返します。
+
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+```json
+{
+  "detail": "Invalid or expired token"
+}
+```
+
+!!! tip "確認の目安"
+    `Authorization` ヘッダーを外して `GET /api/v1/users/me` を実行すると、
+    上記いずれかの `401` レスポンスを再現できます。
+
 ---
 
 ## 現在のユーザー情報
