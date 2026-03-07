@@ -99,6 +99,54 @@ curl https://api.your-domain.com/health
 docker compose logs -f api
 ```
 
+## OAuthシークレットローテーション手順
+
+プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
+
+### 切替前チェック
+
+- redirect URI が現在の本番ドメインを向いていることを確認する
+  - 例: `https://api.your-domain.com/api/v1/auth/google/callback`
+  - 例: `https://api.your-domain.com/api/v1/auth/discord/callback`
+- 新旧シークレットを同時に参照できる退避手順を準備する（即時ロールバック用）
+- 反映対象（Compose の secret / ECS task definition / K8s Secret）を運用手順書に明記する
+- 反映前にヘルスチェックの現状値を取得する
+  ```bash
+  curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health
+  # 期待値: 200
+  ```
+
+### 切替実施
+
+1. 対象環境へ新しい OAuth client secret を反映する
+2. API プロセスを再起動または再デプロイして新シークレットを読み込ませる
+3. 起動ログで secret 読み込み失敗や OAuth 初期化失敗がないことを確認する
+   ```bash
+   docker compose logs --since=10m api | rg -n "secret|oauth|ERROR|FATAL" || true
+   ```
+
+### 切替後検証
+
+1. ヘルスチェックが成功すること
+   ```bash
+   curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health
+   # 期待値: 200
+   ```
+2. 認証開始エンドポイントに到達できること（`docs/api/auth.md` の仕様と整合）
+   ```bash
+   curl -I https://api.your-domain.com/api/v1/auth/google
+   curl -I https://api.your-domain.com/api/v1/auth/discord
+   ```
+3. 認証コールバック URL が想定ドメインのままであること（`/api/v1/auth/{provider}/callback`）
+
+### 失敗時のロールバック（最小3ステップ）
+
+1. 旧シークレットへ即時切り戻し（更新前バックアップを復元）
+2. API を再起動/再デプロイして旧シークレットを再読込
+3. `curl https://api.your-domain.com/health` と `/api/v1/auth/{provider}` への到達を再確認
+
+ロールバック後の追加確認は「ロールバック時の最小確認項目」を参照してください。
+
 ## ロールバック時の最小確認項目
 デプロイ直後に不具合が発生してロールバックした場合は、次の最小確認を順に実施してください。
 
