@@ -32,6 +32,15 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
     openssl rand -base64 32 > secrets/jwt_secret.txt
     ```
 
+### OAuthガイドへの導線
+
+クイックスタートで起動確認した後、利用するプロバイダーの設定を進めてください。
+
+- [OAuth設定ハブ](guides/oauth/index.md)
+- [Google OAuth ガイド](guides/oauth/google.md)
+- [Discord OAuth ガイド](guides/oauth/discord.md)
+- [GitHub OAuth ガイド](guides/oauth/github.md)
+
 ## 3. 起動
 
 ```bash

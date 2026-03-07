@@ -22,7 +22,7 @@ git clone https://github.com/mashirou1234/yesod-auth.git
 cd yesod-auth
 ```
 
-### 2. Set up OAuth credentials
+### 2. Set up OAuth credentials (Client ID / Client Secret)
 
 #### Google OAuth
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -45,7 +45,7 @@ cd yesod-auth
 # Create secrets directory (already exists in repo)
 mkdir -p secrets
 
-# Add your credentials
+# Add your OAuth credentials (Client ID / Client Secret)
 echo "your-google-client-id" > secrets/google_client_id.txt
 echo "your-google-client-secret" > secrets/google_client_secret.txt
 echo "your-discord-client-id" > secrets/discord_client_id.txt
