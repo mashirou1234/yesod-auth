@@ -135,6 +135,29 @@ function verifySignature(payload, secret, timestamp, signature) {
 }
 ```
 
+## 署名検証失敗時の調査順
+
+`X-Webhook-Signature` が一致しない場合は、以下の順で原因を切り分けます。
+
+1. 受信側が参照しているシークレットと `config/webhooks.yaml` のシークレット参照先が一致しているか確認する。
+2. `X-Webhook-Timestamp` と生のリクエストボディ（JSON再シリアライズ前）で検証しているか確認する。
+3. 受信側の実装で `timestamp + "." + raw_body` の形式を使っているか確認する。
+4. API 側で配信失敗ログを確認し、対象 endpoint とイベントを特定する。
+5. 必要に応じて設定を再読み込みし、同じイベントを再送して再検証する。
+
+```bash
+# API側のWebhook失敗ログを確認
+docker compose logs api --since=30m | rg "webhook|signature|delivery"
+
+# 現在のWebhook設定を確認
+curl http://localhost:8000/api/v1/admin/webhooks/endpoints
+
+# 設定変更後の再読み込み
+curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
+```
+
+詳細な障害対応は [トラブルシューティング](../help/troubleshooting.md#署名検証に失敗する) も参照してください。
+
 ### 署名検証失敗時の監査ログ項目
 
 署名検証に失敗した場合は、再現性のある調査のために最低限以下を記録してください。
