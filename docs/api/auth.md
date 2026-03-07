@@ -156,6 +156,21 @@ Content-Type: application/json
 | 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
 | 429 | レート制限超過 | `/refresh` の短時間連続呼び出し | 間隔を空けて再試行（バックオフ推奨） |
 
+例（型不一致による入力不正 / `422 Unprocessable Entity`）:
+
+```json
+{
+  "detail": [
+    {
+      "type": "string_type",
+      "loc": ["body", "refresh_token"],
+      "msg": "Input should be a valid string",
+      "input": 12345
+    }
+  ]
+}
+```
+
 ### POST `/api/v1/auth/logout`
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
@@ -163,6 +178,23 @@ Content-Type: application/json
 | 200 | ログアウト成功 | リフレッシュトークン失効処理成功 | クライアント側トークンを削除 |
 | 401 | 認証失敗 | `Authorization` ヘッダ欠落/無効 | 有効な Bearer トークンで再実行 |
 | 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
+
+例（`refresh_token` 欠落による入力不正 / `422 Unprocessable Entity`）:
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "refresh_token"],
+      "msg": "Field required",
+      "input": {}
+    }
+  ]
+}
+```
+
+使い分け: `401` は未認証・無効トークン、`400` 系（本 API では主に `422`）は JSON 入力不正を示します。
 
 ### OAuth callback 共通（参考）
 
