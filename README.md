@@ -103,6 +103,8 @@ Base URL: `http://localhost:8000/api/v1`
 | POST | `/auth/refresh` | Refresh access token |
 | POST | `/auth/logout` | Logout (invalidate token) |
 
+認証エラーコードの運用向け一覧は [`docs/api/auth.md`](docs/api/auth.md) を参照してください。
+
 ### Users
 
 | Method | Endpoint | Description |

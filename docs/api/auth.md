@@ -142,6 +142,40 @@ Content-Type: application/json
 
 ステータスコード: `401 Unauthorized`
 
+## エラーコード早見表（refresh/logout）
+
+`api/app/auth/router.py` の実装定義に合わせた運用向け一覧です。
+
+### POST `/api/v1/auth/refresh`
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 200 | リフレッシュ成功 | トークンローテーション成功 | 新しい `access_token` / `refresh_token` を保存 |
+| 401 | `Invalid or expired refresh token` | 期限切れ・失効済み・改ざん | 再ログインして新しいトークンを取得 |
+| 401 | `User not found` | 紐づくユーザーが削除済み | セッションを破棄して再認証 |
+| 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
+| 429 | レート制限超過 | `/refresh` の短時間連続呼び出し | 間隔を空けて再試行（バックオフ推奨） |
+
+### POST `/api/v1/auth/logout`
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 200 | ログアウト成功 | リフレッシュトークン失効処理成功 | クライアント側トークンを削除 |
+| 401 | 認証失敗 | `Authorization` ヘッダ欠落/無効 | 有効な Bearer トークンで再実行 |
+| 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
+
+### OAuth callback 共通（参考）
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 400 | `Invalid or expired state` | state 不一致/期限切れ | 認証フローを最初から再実行 |
+| 400 | `Failed to exchange code` | 認可コード交換失敗 | provider 設定・redirect URI を確認 |
+| 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
+| 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
+
+!!! tip "維持ルール"
+    ルータ変更時は `api/app/auth/router.py` の `HTTPException` と `@limiter.limit(...)` を更新し、本表も同時に更新してください。
+
 ---
 
 ## Mock OAuth（開発用）
