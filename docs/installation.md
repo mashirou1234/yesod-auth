@@ -229,6 +229,8 @@ docker compose up -d --build
 
 Docker Secretsまたは環境変数で設定：
 
+初回導入時は、設定後に [初回導入チェックリスト](getting-started.md#初回導入チェックリスト) を順に実行して動作確認してください。
+
 | シークレット名 | 説明 |
 |---------------|------|
 | `google_client_id` | Google OAuth Client ID |

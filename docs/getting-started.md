@@ -70,6 +70,33 @@ curl http://localhost:8000/health
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+## 初回導入チェックリスト
+
+初回セットアップ時は、以下を上から順に確認してください。Quick Start の手順と重なる項目は最小限にし、失敗しやすいポイント（secret不足・callback URL不一致）を優先しています。
+
+- [ ] profile定義が想定どおりか確認する
+  コマンド: `docker compose config --profiles`
+  確認基準: `default` `full` `ci` の3つが表示される。
+- [ ] 必須 secret が存在するか確認する
+  コマンド: `ls secrets/*client_id.txt secrets/*client_secret.txt secrets/jwt_secret.txt`
+  確認基準: 使うプロバイダー分の `client_id/client_secret` と `jwt_secret` が不足なく存在する。
+- [ ] OAuth callback URL の登録値を確認する
+  確認場所: 各プロバイダー管理画面の Redirect/Callback URL 設定
+  参照先: [OAuth設定ガイド](guides/oauth/index.md) と各プロバイダー節（`docs/guides/oauth/*.md`）
+  確認基準: `http://localhost:8000/api/v1/auth/<provider>/callback` と完全一致（スキーム/ホスト/ポート/パス）。
+- [ ] API が正常起動しているか確認する
+  コマンド: `curl http://localhost:8000/health`
+  確認基準: `{"status":"healthy"}` が返る。
+- [ ] 認可開始エンドポイントがリダイレクトを返すか確認する
+  コマンド: `curl -I http://localhost:8000/api/v1/auth/google/login`
+  確認基準: `HTTP/1.1 302` または `HTTP/2 302` が返る。
+- [ ] エラー時の参照順を確認する
+  確認場所: [トラブルシューティング](help/troubleshooting.md) の `state mismatch` / `provider error` 節
+  確認基準: 失敗時に `health -> auth -> provider` の順で切り分けできる。
+
+!!! warning "プロバイダ仕様変更時の更新対象"
+    Callback URL や scope の仕様が変わった場合は、`docs/guides/oauth/index.md` と `docs/guides/oauth/*.md` の該当プロバイダー節を先に更新し、本チェックリストの確認基準も合わせて見直してください。
+
 ## 次のステップ
 
 - [初回起動トラブルシュート](help/first-start-troubleshooting.md) - 初回セットアップで詰まったときの最短切り分け
