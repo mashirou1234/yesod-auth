@@ -27,6 +27,15 @@ echo "your-client-secret" > secrets/github_client_secret.txt
     YESOD Authは`read:user`と`user:email`スコープを使用します。
     これにより、ユーザーの基本情報とメールアドレスを取得できます。
 
+## organization制限時の挙動
+
+- 現在のGitHub OAuth実装は`read:user user:email`のみを要求し、organization所属チェックは行いません。
+- そのため、organization制限を有効化したい場合は、アプリ側で追加実装が必要です。
+- 追加実装の例:
+  - 認可スコープに`read:org`を追加
+  - コールバック後にGitHub APIで所属organizationを検証
+  - 未所属ユーザーはログイン完了前に拒否
+
 ## 共通チェック観点の適用例
 
 - [x] Callback URL

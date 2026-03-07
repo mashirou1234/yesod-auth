@@ -32,6 +32,29 @@ echo "your-client-id" > secrets/google_client_id.txt
 echo "your-client-secret" > secrets/google_client_secret.txt
 ```
 
+## 5. `redirect_uri_mismatch` の切り分け
+
+Google 側で `Error 400: redirect_uri_mismatch` が表示された場合は、以下を順に確認します。
+
+1. 実際に callback を受ける URL を確認
+    - ローカル開発: `http://localhost:8000/api/v1/auth/google/callback`
+    - 本番運用: `https://<your-domain>/api/v1/auth/google/callback`
+2. Google Cloud Console の OAuth クライアント設定を確認
+    - 「承認済みのリダイレクト URI」に上記 URL が **完全一致** で登録されていること
+    - スキーム (`http`/`https`)、ホスト、ポート、パス、末尾 `/` の有無が一致していること
+3. アプリ側設定を確認
+    - `API_URL` が実際の公開 URL と一致していること
+    - reverse proxy 配下では `X-Forwarded-Proto` が正しく引き継がれていること
+4. 再現確認
+    - 必ず `GET /api/v1/auth/google` から開始し、古いタブを再利用しない
+    - 失敗時は API ログで callback URL を確認する
+
+```bash
+docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri|mismatch"
+```
+
+`Invalid or expired state` が同時に発生する場合は、[トラブルシューティング](../../help/troubleshooting.md#state-mismatch-flow) の診断フローも併せて確認してください。
+
 ## 共通チェック観点の適用例
 
 - [x] Callback URL
