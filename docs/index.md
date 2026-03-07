@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | :material-shield-check: **OAuth 2.0対応** | :material-refresh: **トークンローテーション** |
-| Google、GitHub、Discord、X、LinkedIn、Facebook、Slack、Twitchに対応。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
+| OAuthガイドで扱う8プロバイダー（Google、GitHub、Discord、X (Twitter)、LinkedIn、Facebook、Slack、Twitch）の設定手順を提供。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
 | :material-webhook: **Webhook連携** | :material-docker: **Docker対応** |
 | ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
@@ -31,6 +31,11 @@ docker compose --profile default up -d
 ```
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
+
+主要ドキュメント:
+
+- [Quick Start](index.md#クイックスタート)
+- [OAuth設定ガイド](guides/oauth/index.md)
 
 起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
 
@@ -62,8 +67,8 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
   <a href="guides/oauth/discord.md" title="Discord">
     <img src="assets/icons/discord.svg" alt="Discord" width="48" height="48">
   </a>
-  <a href="guides/oauth/x.md" title="X">
-    <img src="assets/icons/x.svg" alt="X" width="48" height="48">
+  <a href="guides/oauth/x.md" title="X (Twitter)">
+    <img src="assets/icons/x.svg" alt="X (Twitter)" width="48" height="48">
   </a>
   <a href="guides/oauth/linkedin.md" title="LinkedIn">
     <img src="assets/icons/linkedin.svg" alt="LinkedIn" width="48" height="48">
@@ -79,7 +84,7 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
   </a>
 </div>
 
-詳細は[OAuth設定ガイド](guides/oauth/index.md)を参照してください。
+各プロバイダーの対応状況（公式PKCE/独自PKCE/OpenID Connect/備考）は、[OAuth設定ガイド](guides/oauth/index.md)の一覧表を正として参照してください。
 
 ## ライセンス
 
