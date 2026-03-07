@@ -1,5 +1,6 @@
 """YESOD Auth - Main application."""
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -21,6 +22,7 @@ from app.webhooks.router import router as webhooks_router
 from app.webhooks.worker import WebhookWorker
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 # Global webhook worker instance
 _webhook_worker: WebhookWorker | None = None
@@ -30,6 +32,12 @@ _webhook_worker: WebhookWorker | None = None
 async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown."""
     global _webhook_worker
+
+    if settings.CORS_ORIGINS_USING_DEFAULT:
+        logger.warning(
+            "CORS_ORIGINS is not configured. Using development defaults: %s",
+            ",".join(settings.CORS_ORIGINS),
+        )
 
     # Load webhook configuration
     WebhookConfigLoader.load()
@@ -55,7 +63,7 @@ YESOD Auth provides a complete OAuth 2.0 authentication solution with support fo
 
 ### Features
 
-- 🔑 **OAuth 2.0** - Google and Discord authentication with PKCE support
+- 🔑 **OAuth 2.0** - Eight-provider authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch) with PKCE support
 - 🔄 **Token Rotation** - Secure refresh token rotation
 - 👤 **User Management** - Profile updates, account linking
 - 📊 **Audit Logging** - Complete authentication event tracking
