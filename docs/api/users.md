@@ -10,6 +10,42 @@
 
 ---
 
+## 更新系エンドポイントの前提条件
+
+`PATCH /api/v1/users/me` と `DELETE /api/v1/users/me` を呼び出す前に、次を満たしてください。
+
+1. OAuthログイン後に取得した有効なアクセストークンを `Authorization: Bearer <access_token>` で付与する
+2. `PATCH` のリクエストボディは `Content-Type: application/json` で送る
+3. `PATCH` で更新できる項目は `display_name`（最大255文字）と `avatar_url`（最大500文字）のみ
+4. `PATCH` は指定した項目だけ更新され、`null` を送るとその項目をクリアする
+5. `DELETE` 実行後のアカウントはソフトデリート状態になり、同一トークンでの継続利用はできない
+
+!!! tip "トークン未取得時"
+    先に [認証API](./auth.md) の OAuth フローでアクセストークンを取得してください。
+
+## 認証・認可エラー例
+
+`/api/v1/users/me` 系エンドポイントは Bearer トークン必須です。  
+トークン未指定・期限切れ・不正トークン時は `401 Unauthorized` を返します。
+
+```json
+{
+  "detail": "Not authenticated"
+}
+```
+
+```json
+{
+  "detail": "Invalid or expired token"
+}
+```
+
+!!! tip "確認の目安"
+    `Authorization` ヘッダーを外して `GET /api/v1/users/me` を実行すると、
+    上記いずれかの `401` レスポンスを再現できます。
+
+---
+
 ## 現在のユーザー情報
 
 ```bash
