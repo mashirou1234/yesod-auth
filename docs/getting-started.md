@@ -74,6 +74,27 @@ docker compose --profile default up -d
 
 `default`プロファイルでは、Compose設定により`MOCK_OAUTH_ENABLED=1`がAPIサービスへ適用されます（アプリ既定値は`0`）。
 
+### Compose profile差分の確認
+
+起動前に、利用するプロファイルで有効になるサービス差分を確認できます。
+
+```bash
+# default: ローカル開発用（db / valkey / api / docs）
+docker compose --profile default config --services
+
+# full: 管理画面込み（db / valkey / admin / api / docs）
+docker compose --profile full config --services
+
+# ci: テスト用の軽量構成（db-ci / valkey / api-ci）
+docker compose --profile ci config --services
+```
+
+`MOCK_OAUTH_ENABLED` の適用差分は次で確認できます。
+
+```bash
+docker compose --profile default config | rg "MOCK_OAUTH_ENABLED|api:"
+docker compose --profile ci config | rg "MOCK_OAUTH_ENABLED|api-ci:"
+```
 ## 3.5 初回ヘルスチェック（推奨）
 
 初回起動時は、次の3点を順に確認すると原因切り分けがしやすくなります。
@@ -84,7 +105,7 @@ docker compose --profile default up -d
 docker compose --profile default ps
 ```
 
-`api` と `admin` が `Up` になっていることを確認します。
+`db` `valkey` `api` `docs` が `Up` になっていることを確認します。
 
 ### 2. APIログを確認
 
@@ -101,7 +122,6 @@ curl -i http://localhost:8000/health
 ```
 
 `HTTP/1.1 200 OK`（または `HTTP/2 200`）と `{"status":"healthy"}` が返れば初回ヘルスチェックは完了です。
-
 ## 4. 動作確認
 
 ### ヘルスチェック
