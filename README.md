@@ -1,6 +1,6 @@
 # YESOD Auth
 
-🔐 Docker-ready OAuth authentication API template with Google & Discord support.
+🔐 Docker-ready OAuth authentication API template with multi-provider OAuth support.
 
 > **YESOD** (יסוד) - "Foundation" in Hebrew. The ninth sephira in the Kabbalistic Tree of Life, representing the foundation that connects the spiritual and physical realms.
 
@@ -26,20 +26,18 @@ cd yesod-auth
 
 ### 2. Set up OAuth credentials (Client ID / Client Secret)
 
-#### Google OAuth
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable "Google+ API" or "Google Identity"
-4. Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client ID"
-5. Set authorized redirect URI: `http://localhost:8000/auth/google/callback`
-6. Copy Client ID and Client Secret
+Choose one or more providers and create OAuth apps:
 
-#### Discord OAuth
-1. Go to [Discord Developer Portal](https://discord.com/developers/applications)
-2. Create a new application
-3. Go to "OAuth2" section
-4. Add redirect URI: `http://localhost:8000/auth/discord/callback`
-5. Copy Client ID and Client Secret
+- Google: <http://localhost:8000/api/v1/auth/google/callback>
+- GitHub: <http://localhost:8000/api/v1/auth/github/callback>
+- Discord: <http://localhost:8000/api/v1/auth/discord/callback>
+- X: <http://localhost:8000/api/v1/auth/x/callback>
+- LinkedIn: <http://localhost:8000/api/v1/auth/linkedin/callback>
+- Facebook: <http://localhost:8000/api/v1/auth/facebook/callback>
+- Slack: <http://localhost:8000/api/v1/auth/slack/callback>
+- Twitch: <http://localhost:8000/api/v1/auth/twitch/callback>
+
+Provider-specific setup steps are documented in [`docs/guides/oauth/`](docs/guides/oauth/index.md).
 
 ### 3. Configure secrets
 
@@ -47,11 +45,11 @@ cd yesod-auth
 # Create secrets directory (already exists in repo)
 mkdir -p secrets
 
-# Add your OAuth credentials (Client ID / Client Secret)
+# Add your OAuth credentials (set only providers you use)
 echo "your-google-client-id" > secrets/google_client_id.txt
 echo "your-google-client-secret" > secrets/google_client_secret.txt
-echo "your-discord-client-id" > secrets/discord_client_id.txt
-echo "your-discord-client-secret" > secrets/discord_client_secret.txt
+echo "your-github-client-id" > secrets/github_client_id.txt
+echo "your-github-client-secret" > secrets/github_client_secret.txt
 
 # Generate JWT secret (or use your own)
 openssl rand -hex 32 > secrets/jwt_secret.txt
@@ -98,8 +96,20 @@ Base URL: `http://localhost:8000/api/v1`
 |--------|----------|-------------|
 | GET | `/auth/google` | Start Google OAuth flow |
 | GET | `/auth/google/callback` | Google OAuth callback |
+| GET | `/auth/github` | Start GitHub OAuth flow |
+| GET | `/auth/github/callback` | GitHub OAuth callback |
 | GET | `/auth/discord` | Start Discord OAuth flow |
 | GET | `/auth/discord/callback` | Discord OAuth callback |
+| GET | `/auth/x` | Start X OAuth flow |
+| GET | `/auth/x/callback` | X OAuth callback |
+| GET | `/auth/linkedin` | Start LinkedIn OAuth flow |
+| GET | `/auth/linkedin/callback` | LinkedIn OAuth callback |
+| GET | `/auth/facebook` | Start Facebook OAuth flow |
+| GET | `/auth/facebook/callback` | Facebook OAuth callback |
+| GET | `/auth/slack` | Start Slack OAuth flow |
+| GET | `/auth/slack/callback` | Slack OAuth callback |
+| GET | `/auth/twitch` | Start Twitch OAuth flow |
+| GET | `/auth/twitch/callback` | Twitch OAuth callback |
 | POST | `/auth/refresh` | Refresh access token |
 | POST | `/auth/logout` | Logout (invalidate token) |
 
@@ -225,8 +235,20 @@ export function useAuth() {
 |------|-------------|
 | `secrets/google_client_id.txt` | Google OAuth Client ID |
 | `secrets/google_client_secret.txt` | Google OAuth Client Secret |
+| `secrets/github_client_id.txt` | GitHub OAuth Client ID |
+| `secrets/github_client_secret.txt` | GitHub OAuth Client Secret |
 | `secrets/discord_client_id.txt` | Discord OAuth Client ID |
 | `secrets/discord_client_secret.txt` | Discord OAuth Client Secret |
+| `secrets/x_client_id.txt` | X OAuth Client ID |
+| `secrets/x_client_secret.txt` | X OAuth Client Secret |
+| `secrets/linkedin_client_id.txt` | LinkedIn OAuth Client ID |
+| `secrets/linkedin_client_secret.txt` | LinkedIn OAuth Client Secret |
+| `secrets/facebook_client_id.txt` | Facebook OAuth Client ID |
+| `secrets/facebook_client_secret.txt` | Facebook OAuth Client Secret |
+| `secrets/slack_client_id.txt` | Slack OAuth Client ID |
+| `secrets/slack_client_secret.txt` | Slack OAuth Client Secret |
+| `secrets/twitch_client_id.txt` | Twitch OAuth Client ID |
+| `secrets/twitch_client_secret.txt` | Twitch OAuth Client Secret |
 | `secrets/jwt_secret.txt` | JWT signing secret |
 
 ## Admin Panel
