@@ -42,6 +42,20 @@ echo "your-client-secret" > secrets/linkedin_client_secret.txt
     YESOD Authは`openid`、`profile`、`email`スコープを要求し、
     ユーザー情報は`/v2/userinfo`エンドポイントから取得します。
 
+## 6. 必要権限（scope）一覧
+
+YESOD Auth の LinkedIn ログインで要求する最小 scope は次の 3 つです。
+
+| scope | 用途 | 未付与時の主な症状 |
+|------|------|------------------|
+| `openid` | OpenID Connect の ID トークン取得 | コールバック後に認証が完了しない |
+| `profile` | 表示名などの基本プロフィール取得 | `display_name` が空、またはプロフィール取得に失敗 |
+| `email` | メールアドレス取得 | メール未取得でユーザー作成/照合に失敗 |
+
+!!! warning "scopeは削らない"
+    `openid profile email` の 3 つはセットで必要です。
+    一部のみを要求すると、`/v2/userinfo` から必要情報を取得できずログイン失敗の原因になります。
+
 ## 技術仕様
 
 | 項目 | 値 |
