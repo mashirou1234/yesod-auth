@@ -58,6 +58,27 @@ PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防�
         file: ./secrets/github_client_secret.txt
     ```
 
+## 有効化判定フロー（最初に確認）
+
+OAuthプロバイダーを「有効化できているか」を、次の順序で確認してください。
+
+1. 利用するプロバイダーを決める
+   使う予定のプロバイダー（例: Google / GitHub）だけを対象にします。未使用プロバイダーの認証情報は必須ではありません。
+2. 実行モードを決める
+   実プロバイダー検証なら通常モード、ローカル疎通だけ先に確認するなら `MOCK_OAUTH_ENABLED=1` を使います。環境変数の意味は [インストールガイド（環境変数）](../../installation.md#environment-variables) を参照してください。
+3. 認証情報の入力先を決める
+   認証情報は Docker Secrets（`/run/secrets/<name>`）または環境変数（`<NAME>`）で設定します。YESOD Auth は `read_secret` で **Secretsを優先し、未設定時に環境変数へフォールバック** します。
+4. プロバイダーごとの必須2項目を満たす
+   対象プロバイダーごとに `*_client_id` と `*_client_secret` の両方を設定します。名前一覧は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) を参照してください。
+5. 起動後に導線で確認する
+   `GET /api/v1/auth/{provider}` で認可画面へ遷移できることを確認し、失敗時は [トラブルシューティング](../../help/troubleshooting.md) を参照します。
+
+### config / secrets の参照関係（要点）
+
+- アプリ設定は `api/app/config.py` の `read_secret()` で読み込みます。
+- 優先順位は `Docker Secrets (/run/secrets/<name>)` → `環境変数(<NAME>)` → `既定値` です。
+- そのため、同名を両方設定した場合は Secrets 側が採用されます。
+
 ### シークレットファイルの配置
 
 各プロバイダーのクライアントIDとシークレットは`secrets/`ディレクトリに配置します：
