@@ -23,6 +23,50 @@ echo "your-client-id" > secrets/twitch_client_id.txt
 echo "your-client-secret" > secrets/twitch_client_secret.txt
 ```
 
+## 4. 追加設定の最小手順（セルフホスト向け）
+
+1. **Callback URLを実運用値へ更新**
+    - ローカル: `http://localhost:8000/api/v1/auth/twitch/callback`
+    - 本番: `https://<your-domain>/api/v1/auth/twitch/callback`
+2. **スコープを固定**
+    - YESOD Auth の既定は `openid user:read:email`
+    - Twitch側の設定変更時も、この2つを維持する
+3. **APIコンテナへ secrets を渡す**
+    - `docker-compose.override.yml` で `twitch_client_id` / `twitch_client_secret` を `api` と `api-ci` に追加する
+4. **実OAuthモードを有効化**
+    - `MOCK_OAUTH_ENABLED=0`（または未設定）を確認する
+
+### docker-compose.override.yml の最小例
+
+```yaml
+services:
+  api:
+    secrets:
+      - twitch_client_id
+      - twitch_client_secret
+  api-ci:
+    secrets:
+      - twitch_client_id
+      - twitch_client_secret
+
+secrets:
+  twitch_client_id:
+    file: ./secrets/twitch_client_id.txt
+  twitch_client_secret:
+    file: ./secrets/twitch_client_secret.txt
+```
+
+### 最小確認手順
+
+```bash
+# 1) API起動確認
+curl -fsS http://localhost:8000/health
+
+# 2) Twitch OAuth導線確認（302想定）
+curl -fsS -o /dev/null -w '%{http_code}\n' \
+  "http://localhost:8000/api/v1/auth/twitch"
+```
+
 !!! info "Helix API"
     YESOD Authは[Twitch Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"}を使用します。
     `openid`と`user:read:email`スコープを要求し、
