@@ -13,6 +13,8 @@
 | :material-webhook: **Webhook連携** | :material-docker: **Docker対応** |
 | ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
+> 対応プロバイダー表記の参照元（正）は `docs/guides/oauth/index.md` です。
+
 ## クイックスタート
 
 ```bash
@@ -34,6 +36,8 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 - [Quick Start](index.md#クイックスタート)
 - [OAuth設定ガイド](guides/oauth/index.md)
+
+起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
 
 ## アーキテクチャ
 
