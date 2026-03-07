@@ -137,6 +137,39 @@ environment:
 
 ---
 
+<a id="admin-i18n-fallback"></a>
+
+### Admin i18n 未翻訳キーの確認手順
+
+**症状:** Admin 画面で翻訳文の代わりに `nav.xxx` のようなドット区切りキーが表示される
+
+**実装上の期待挙動 (`admin/i18n.py`):**
+
+1. 未対応言語コードは `en` にフォールバック
+2. 未翻訳キーはキー文字列をそのまま返却
+3. フォーマット引数不足時はテンプレート文字列をそのまま返却
+
+**確認コマンド（最小再現）:**
+
+```bash
+python3 - <<'PY'
+from admin.i18n import get_text
+print("unsupported lang ->", get_text("nav.overview", "zz"))
+print("missing key ->", get_text("nav.not_exists", "ja"))
+print("missing format arg ->", get_text("common.environment_warning", "en"))
+PY
+```
+
+**判断基準:**
+
+- `unsupported lang` が英語文言なら言語フォールバックは正常
+- `missing key` が `nav.not_exists` のようにキー文字列なら未翻訳フォールバックは正常
+- `missing format arg` がテンプレート文字列（例: `{name}` を含む）なら例外回避フォールバックは正常
+
+FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示は？](./faq.md#admin-i18n-untranslated-fallback) を参照。
+
+---
+
 ## Webhook
 
 ### Webhookが発火しない
