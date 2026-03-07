@@ -323,6 +323,20 @@ docker compose up -d --build
 
 `read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
 
+## リフレッシュトークン運用時の注意
+
+`/api/v1/auth/refresh` は「アクセストークンの延命」ではなく「ローテーションを伴う再発行」です。導入時は次の3点を必ず満たしてください。
+
+1. クライアントは refresh 応答で返る最新トークンに必ず置き換える（旧トークンの再利用を避ける）。
+2. `REFRESH_TOKEN_LIFETIME_DAYS` を短縮する場合は、セッション再認証頻度が上がる前提で運用手順を見直す。
+3. `401` が継続する場合は refresh ループを止め、再ログインにフォールバックする。
+
+確認コマンド（最小再現）:
+
+```bash
+rg -n "REFRESH_TOKEN_LIFETIME_DAYS|/api/v1/auth/refresh|再ログイン" docs/installation.md README.md
+```
+
 ### 任意（要件に応じて設定）
 
 | 変数名 | 説明 | デフォルト |
