@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+import logging
 from pathlib import Path
 from unittest.mock import patch
 
@@ -249,6 +250,57 @@ class TestWebhookConfigValidation:
             result = WebhookConfigLoader.load()
 
         assert len(result.endpoints) == 0
+
+    def test_invalid_yaml_is_logged_and_disables_webhooks(self, caplog):
+        """Invalid YAML should be logged and result in disabled webhooks."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write("endpoints:\n  - id: broken\n    url: [unterminated\n")
+            config_path = Path(f.name)
+
+        try:
+            with (
+                patch.object(config_module, "CONFIG_PATH", config_path),
+                caplog.at_level(logging.ERROR, logger=config_module.__name__),
+            ):
+                WebhookConfigLoader._config = None
+                result = WebhookConfigLoader.load()
+
+            assert len(result.endpoints) == 0
+            assert "Failed to parse webhook configuration" in caplog.text
+        finally:
+            config_path.unlink()
+
+    def test_unresolved_secret_is_logged_and_endpoint_skipped(self, caplog):
+        """Unresolved secret reference should be logged and endpoint skipped."""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "${MISSING_WEBHOOK_SECRET}",
+                    "events": ["user.created"],
+                }
+            ]
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with (
+                patch.object(config_module, "CONFIG_PATH", config_path),
+                patch.dict(os.environ, {}, clear=True),
+                caplog.at_level(logging.WARNING, logger=config_module.__name__),
+            ):
+                WebhookConfigLoader._config = None
+                result = WebhookConfigLoader.load()
+
+            assert len(result.endpoints) == 0
+            assert "Skipping invalid endpoint" in caplog.text
+            assert "secret could not be resolved" in caplog.text
+        finally:
+            config_path.unlink()
 
     def test_get_endpoints_for_event(self):
         """Test filtering endpoints by event type."""

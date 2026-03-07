@@ -1,6 +1,6 @@
 # YESOD Auth
 
-🔐 Docker-ready OAuth authentication API template with multi-provider support.
+🔐 Docker-ready OAuth authentication API template with multi-provider OAuth support.
 
 > **YESOD** (יסוד) - "Foundation" in Hebrew. The ninth sephira in the Kabbalistic Tree of Life, representing the foundation that connects the spiritual and physical realms.
 
@@ -13,6 +13,8 @@
 - 📡 REST API - integrate with any frontend
 - 👤 User profile with avatar support
 
+> Source of truth for provider support notation: `docs/guides/oauth/index.md`.
+
 ## Quick Start
 
 ### 1. Clone the repository
@@ -22,31 +24,66 @@ git clone https://github.com/mashirou1234/yesod-auth.git
 cd yesod-auth
 ```
 
-### 2. Set up OAuth credentials
+### 2. Set up OAuth credentials (Client ID / Client Secret)
 
-1. Choose one or more providers:
-   - `google`, `github`, `discord`, `x`, `linkedin`, `facebook`, `slack`, `twitch`
-2. Configure callback URL on each provider:
-   - Local: `http://localhost:8000/api/v1/auth/{provider}/callback`
-   - Self-hosted production: `https://<your-domain>/api/v1/auth/{provider}/callback`
-3. Follow provider-specific guides:
-   - [OAuth setup docs](docs/guides/oauth/index.md)
+Choose one or more providers and create OAuth apps:
+
+- Self-hosted production callback format: `https://<your-domain>/api/v1/auth/{provider}/callback`
+
+- Google: <http://localhost:8000/api/v1/auth/google/callback>
+- GitHub: <http://localhost:8000/api/v1/auth/github/callback>
+- Discord: <http://localhost:8000/api/v1/auth/discord/callback>
+- X: <http://localhost:8000/api/v1/auth/x/callback>
+- LinkedIn: <http://localhost:8000/api/v1/auth/linkedin/callback>
+- Facebook: <http://localhost:8000/api/v1/auth/facebook/callback>
+- Slack: <http://localhost:8000/api/v1/auth/slack/callback>
+- Twitch: <http://localhost:8000/api/v1/auth/twitch/callback>
+
+Provider-specific setup steps are documented in [`docs/guides/oauth/`](docs/guides/oauth/index.md).
 
 ### 3. Configure secrets
 
 ```bash
-# Create secrets directory (already exists in repo)
-mkdir -p secrets
+# Generate local secret files from templates
+cp secrets/*.example secrets/
 
-# Add your credentials for enabled providers
-# Example: Google + GitHub
-echo "your-google-client-id" > secrets/google_client_id.txt
-echo "your-google-client-secret" > secrets/google_client_secret.txt
-echo "your-github-client-id" > secrets/github_client_id.txt
-echo "your-github-client-secret" > secrets/github_client_secret.txt
+# Fill OAuth credentials for the providers you use
+$EDITOR secrets/google_client_id.txt
+$EDITOR secrets/google_client_secret.txt
+$EDITOR secrets/github_client_id.txt
+$EDITOR secrets/github_client_secret.txt
 
-# Generate JWT secret (or use your own)
+# Generate JWT secret (or use your own value)
 openssl rand -hex 32 > secrets/jwt_secret.txt
+
+# Required when running --profile full (admin panel)
+openssl rand -base64 24 > secrets/admin_password.txt
+
+# Restrict file permissions
+chmod 600 secrets/*.txt
+```
+
+#### Self-hosted secret layout example
+
+`docker-compose.yml` reads from `./secrets/*.txt`. For self-hosted deployments,
+prepare a dedicated secret directory and mount it as `./secrets` with a symlink:
+
+```text
+/opt/yesod-auth/
+  app/        # git checkout
+  secrets/
+    current/
+      google_client_id.txt
+      google_client_secret.txt
+      discord_client_id.txt
+      discord_client_secret.txt
+      jwt_secret.txt
+      admin_password.txt   # only for --profile full
+```
+
+```bash
+cd /opt/yesod-auth/app
+ln -sfn ../secrets/current secrets
 ```
 
 ### 4. Start the service
@@ -62,11 +99,24 @@ docker compose --profile default --profile full up -d
 docker compose --profile ci up -d
 ```
 
+最小動作確認は [`docs/installation.md` の「docker compose利用時の最小確認手順」](docs/installation.md#docker-compose利用時の最小確認手順) を参照してください。
+
 ### 5. Access the API
 
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
+- Callback URL validation checklist: [docs/getting-started.md](docs/getting-started.md#25-コールバックurlの検証)
+
+Quick API connectivity check:
+
+```bash
+curl -sS http://localhost:8000/health
+# {"status":"healthy"}
+
+curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/api/v1/metrics
+# 200
+```
 
 ## API Endpoints
 
@@ -76,10 +126,27 @@ Base URL: `http://localhost:8000/api/v1`
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/auth/{provider}` | Start OAuth flow (`google`,`github`,`discord`,`x`,`linkedin`,`facebook`,`slack`,`twitch`) |
-| GET | `/auth/{provider}/callback` | OAuth callback |
+| GET | `/auth/google` | Start Google OAuth flow |
+| GET | `/auth/google/callback` | Google OAuth callback |
+| GET | `/auth/github` | Start GitHub OAuth flow |
+| GET | `/auth/github/callback` | GitHub OAuth callback |
+| GET | `/auth/discord` | Start Discord OAuth flow |
+| GET | `/auth/discord/callback` | Discord OAuth callback |
+| GET | `/auth/x` | Start X OAuth flow |
+| GET | `/auth/x/callback` | X OAuth callback |
+| GET | `/auth/linkedin` | Start LinkedIn OAuth flow |
+| GET | `/auth/linkedin/callback` | LinkedIn OAuth callback |
+| GET | `/auth/facebook` | Start Facebook OAuth flow |
+| GET | `/auth/facebook/callback` | Facebook OAuth callback |
+| GET | `/auth/slack` | Start Slack OAuth flow |
+| GET | `/auth/slack/callback` | Slack OAuth callback |
+| GET | `/auth/twitch` | Start Twitch OAuth flow |
+| GET | `/auth/twitch/callback` | Twitch OAuth callback |
 | POST | `/auth/refresh` | Refresh access token |
 | POST | `/auth/logout` | Logout (invalidate token) |
+
+運用時の注意点（refresh token のローテーション/再ログイン方針）は [docs/installation.md](docs/installation.md#リフレッシュトークン運用時の注意) を参照してください。
+認証エラーコードの運用向け一覧は [`docs/api/auth.md`](docs/api/auth.md) を参照してください。
 
 ### Users
 
@@ -216,6 +283,7 @@ export function useAuth() {
 | `secrets/twitch_client_id.txt` | Twitch OAuth Client ID |
 | `secrets/twitch_client_secret.txt` | Twitch OAuth Client Secret |
 | `secrets/jwt_secret.txt` | JWT signing secret |
+| `secrets/admin_password.txt` | Admin panel password (`--profile full` only) |
 
 ## Admin Panel
 
@@ -235,6 +303,25 @@ Password: (secrets/admin_password.txt の内容)
 ```
 
 ## Monitoring
+
+### セルフホスト時の最小監視項目
+
+運用開始直後は、まず次の4項目を監視対象に設定してください。
+
+| 項目 | 確認方法 | 異常の目安 |
+|------|----------|------------|
+| APIヘルス | `curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/health` | `200` 以外が連続 |
+| APIエラー率 | `docker logs --since 5m yesod-api \| rg " 5[0-9]{2} "` | 5分窓で5xxが継続発生 |
+| DB接続健全性 | `docker logs --since 5m yesod-db \| rg -i "error|fatal|panic"` | 接続エラー/再起動ループ |
+| OAuth失敗兆候 | `docker logs --since 10m yesod-api \| rg "invalid_client|Invalid state|OAuth callback failed"` | 同種エラーが短時間に複数回 |
+
+### 運用時ログ確認ポイント（最小）
+
+障害切り分け時は、次の順で 1〜3 分以内に確認すると再現性が高いです。
+
+1. API コンテナログ: `docker logs --tail 200 yesod-api`
+2. DB コンテナログ: `docker logs --tail 200 yesod-db`
+3. 監査イベント件数: `docker exec yesod-db psql -U yesod_user -d yesod -c "select event_type, count(*) from audit.auth_events group by 1 order by 2 desc;"`
 
 ### Prometheus Metrics
 

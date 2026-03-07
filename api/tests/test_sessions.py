@@ -10,6 +10,24 @@ from app.auth.tokens import settings as token_settings
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/api/v1/sessions"),
+        ("delete", "/api/v1/sessions"),
+    ],
+)
+async def test_sessions_endpoints_require_authorization_header(
+    client: AsyncClient, method: str, path: str
+):
+    """Missing Authorization header should be rejected by protected session endpoints."""
+    response = await getattr(client, method)(path)
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Not authenticated"
+
+
+@pytest.mark.asyncio
 async def test_sessions_list_requires_valid_token(client: AsyncClient):
     """Invalid token should be rejected on session listing endpoint."""
     response = await client.get(
@@ -68,3 +86,19 @@ async def test_sessions_list_with_valid_token_returns_200(client: AsyncClient):
     data = response.json()
     assert "sessions" in data
     assert "total" in data
+
+
+@pytest.mark.asyncio
+async def test_sessions_list_rejects_limit_over_maximum(client: AsyncClient):
+    """Session list should reject limit above maximum."""
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    response = await client.get(
+        "/api/v1/sessions?limit=1001",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 422
