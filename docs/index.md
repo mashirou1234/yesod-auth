@@ -31,6 +31,8 @@ docker compose --profile default up -d
 ```
 
 APIドキュメントは http://localhost:8000/docs で確認できます。
+セルフホスト運用時の秘密情報配置は
+[インストールガイドの配置例](installation.md#セルフホスト向け秘密情報配置例)を参照してください。
 
 主要ドキュメント:
 

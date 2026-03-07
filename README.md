@@ -42,17 +42,46 @@ Provider-specific setup steps are documented in [`docs/guides/oauth/`](docs/guid
 ### 3. Configure secrets
 
 ```bash
-# Create secrets directory (already exists in repo)
-mkdir -p secrets
+# Generate local secret files from templates
+cp secrets/*.example secrets/
 
-# Add your OAuth credentials (set only providers you use)
-echo "your-google-client-id" > secrets/google_client_id.txt
-echo "your-google-client-secret" > secrets/google_client_secret.txt
-echo "your-github-client-id" > secrets/github_client_id.txt
-echo "your-github-client-secret" > secrets/github_client_secret.txt
+# Fill OAuth credentials for the providers you use
+$EDITOR secrets/google_client_id.txt
+$EDITOR secrets/google_client_secret.txt
+$EDITOR secrets/github_client_id.txt
+$EDITOR secrets/github_client_secret.txt
 
-# Generate JWT secret (or use your own)
+# Generate JWT secret (or use your own value)
 openssl rand -hex 32 > secrets/jwt_secret.txt
+
+# Required when running --profile full (admin panel)
+openssl rand -base64 24 > secrets/admin_password.txt
+
+# Restrict file permissions
+chmod 600 secrets/*.txt
+```
+
+#### Self-hosted secret layout example
+
+`docker-compose.yml` reads from `./secrets/*.txt`. For self-hosted deployments,
+prepare a dedicated secret directory and mount it as `./secrets` with a symlink:
+
+```text
+/opt/yesod-auth/
+  app/        # git checkout
+  secrets/
+    current/
+      google_client_id.txt
+      google_client_secret.txt
+      discord_client_id.txt
+      discord_client_secret.txt
+      jwt_secret.txt
+      admin_password.txt   # only for --profile full
+```
+
+```bash
+cd /opt/yesod-auth/app
+ln -sfn ../secrets/current secrets
 ```
 
 ### 4. Start the service
@@ -250,6 +279,7 @@ export function useAuth() {
 | `secrets/twitch_client_id.txt` | Twitch OAuth Client ID |
 | `secrets/twitch_client_secret.txt` | Twitch OAuth Client Secret |
 | `secrets/jwt_secret.txt` | JWT signing secret |
+| `secrets/admin_password.txt` | Admin panel password (`--profile full` only) |
 
 ## Admin Panel
 

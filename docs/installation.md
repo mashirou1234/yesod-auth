@@ -360,6 +360,45 @@ Docker Secretsまたは環境変数で設定：
 | `twitch_client_secret` | Twitch OAuth Client Secret |
 | `jwt_secret` | JWT署名用シークレット |
 
+## セルフホスト向け秘密情報配置例
+
+`docker-compose.yml` は `./secrets/*.txt` を参照します。セルフホスト環境では
+「アプリ配置」と「秘密情報配置」を分離し、`./secrets` をシンボリックリンクで
+接続するとローテーションしやすくなります。
+
+```text
+/opt/yesod-auth/
+  app/        # このリポジトリを配置
+  secrets/
+    current/
+      google_client_id.txt
+      google_client_secret.txt
+      discord_client_id.txt
+      discord_client_secret.txt
+      jwt_secret.txt
+      admin_password.txt   # --profile full を使う場合のみ
+```
+
+作成例:
+
+```bash
+mkdir -p /opt/yesod-auth/secrets/current
+cp secrets/*.example /opt/yesod-auth/secrets/current/
+openssl rand -hex 32 > /opt/yesod-auth/secrets/current/jwt_secret.txt
+openssl rand -base64 24 > /opt/yesod-auth/secrets/current/admin_password.txt
+chmod 600 /opt/yesod-auth/secrets/current/*.txt
+
+cd /opt/yesod-auth/app
+ln -sfn ../secrets/current secrets
+```
+
+検証:
+
+```bash
+docker compose --profile default config >/dev/null
+docker compose --profile full config >/dev/null
+```
+
 ### secret/環境変数の解決優先順位
 
 `api/app/config.py` の `read_secret` は、以下の優先順位で値を解決します（上位が優先）:
@@ -403,7 +442,6 @@ unset JWT_SECRET
 - 開発（`docker compose --profile default`）: `secrets/*.txt` を Compose の `secrets` 経由で渡し、環境変数はローカル確認用途に限定する。
 - CI（`docker compose --profile ci`）: CIシークレットストアを使って `secrets` を生成・注入し、平文の環境変数直書きを避ける。
 - 運用: 本番相当では Docker Secrets を第一候補にし、環境変数は一時的フォールバックとして扱う。
-
 ## ポート
 
 | サービス | ポート |
