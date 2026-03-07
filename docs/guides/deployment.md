@@ -93,6 +93,28 @@ curl https://api.your-domain.com/health
 docker compose logs -f api
 ```
 
+## ロールバック時の最小確認項目
+デプロイ直後に不具合が発生してロールバックした場合は、次の最小確認を順に実施してください。
+
+1. 稼働コンテナがロールバック対象の構成で起動している
+   ```bash
+   docker compose ps
+   ```
+2. APIヘルスチェックが成功する
+   ```bash
+   curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health
+   # 期待値: 200
+   ```
+3. 直近ログに致命的な起動失敗がない
+   ```bash
+   docker compose logs --since=10m api | rg -n "ERROR|Traceback|FATAL" || true
+   ```
+4. OAuthコールバックURLが意図した環境を向いている
+   - `https://api.your-domain.com/api/v1/auth/google/callback`
+   - `https://api.your-domain.com/api/v1/auth/discord/callback`
+
+障害の切り分けが必要な場合は、`docs/help/troubleshooting.md` の認証・起動時エラー項目を参照してください。
+
 ## ログ保全設定例
 
 長期運用では「保持期間」「ローテーション」「収集先」を先に決めておくと、障害調査と監査の再現性が上がります。
