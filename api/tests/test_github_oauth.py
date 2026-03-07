@@ -1,6 +1,6 @@
 """Tests for GitHub OAuth implementation."""
 
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -264,3 +264,24 @@ class TestGitHubMockLogin:
         assert response.status_code == 200
         data = response.json()
         assert data["email"] == "bob@example.com"
+
+
+class TestGitHubOAuthCallback:
+    """Tests for GitHub OAuth callback endpoint."""
+
+    @pytest.mark.asyncio
+    async def test_callback_rejects_mismatched_state(self, client):
+        """State mismatch must fail callback to protect against CSRF replay."""
+        with (
+            patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
+            patch(
+                "app.auth.router.OAuthStateStore.get_and_delete",
+                new=AsyncMock(return_value=None),
+            ),
+        ):
+            response = await client.get(
+                "/api/v1/auth/github/callback?code=test-code&state=unexpected-state"
+            )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Invalid or expired state"}
