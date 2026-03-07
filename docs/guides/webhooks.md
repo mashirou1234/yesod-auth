@@ -158,6 +158,35 @@ curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
 
 詳細な障害対応は [トラブルシューティング](../help/troubleshooting.md#署名検証に失敗する) も参照してください。
 
+### 署名検証失敗時の監査ログ項目
+
+署名検証に失敗した場合は、再現性のある調査のために最低限以下を記録してください。
+
+| 項目 | 例 | 用途 |
+|------|----|------|
+| `event_type` | `webhook.signature_verification_failed` | 監査イベント種別の統一 |
+| `verified_at` | `2026-03-05T08:55:12Z` | 発生時刻の特定 |
+| `webhook_id` | `my-service` | 対象エンドポイントの特定 |
+| `x_webhook_event` | `user.login` | 通知イベント種別の特定 |
+| `x_webhook_timestamp` | `1730787312` | リプレイ判定と時刻ずれ調査 |
+| `signature_prefix` | `sha256` | 署名方式の判定 |
+| `payload_sha256` | `8d1f...` | 本文改ざん有無の比較用（本文は生保存しない） |
+| `failure_reason` | `hmac_mismatch` | 失敗理由の分類 |
+| `source_ip` | `203.0.113.10` | 送信元調査 |
+| `request_id` | `req-7f9d...` | アプリログとの突合 |
+
+`failure_reason` は次のように固定値化しておくと運用しやすくなります。
+
+- `missing_signature_header`
+- `missing_timestamp_header`
+- `timestamp_skew`
+- `invalid_signature_format`
+- `hmac_mismatch`
+- `replay_detected`
+
+!!! warning "記録しない情報"
+    共有シークレット、平文の署名値、受信ペイロード全文（PII を含む可能性）は監査ログへ保存しないでください。
+
 ## リトライ動作
 
 配信失敗時は指数バックオフでリトライします：
