@@ -41,6 +41,12 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
 
+## API認証トラブル時の参照順
+
+1. [インストール](installation.md#oauth認証情報)で OAuth シークレットと profile 設定を確認
+2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` を確認
+3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で原因を切り分け
+
 ## アーキテクチャ
 
 ```
