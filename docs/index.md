@@ -57,6 +57,8 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
 
+OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
+
 ## アーキテクチャ
 
 ```
