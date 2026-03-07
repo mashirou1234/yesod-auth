@@ -53,6 +53,8 @@ sqlalchemy.exc.OperationalError: could not connect to server
 
 ## 認証エラー
 
+`/api/v1/auth/refresh` の失敗を先に分類したい場合は、[`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) を起点に確認してください。
+
 ### `Invalid or expired state`
 
 **原因:** OAuth認証中にセッションが切れた、または不正なリクエスト
