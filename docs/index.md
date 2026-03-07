@@ -47,6 +47,18 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` を確認
 3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で原因を切り分け
 
+## 導入者向けの読み進め方
+
+初回導入時は、次の順序で確認すると最短で環境を立ち上げられます。
+
+1. [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
+2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
+3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+
+リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
+
+OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
+
 ## アーキテクチャ
 
 ```

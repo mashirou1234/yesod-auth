@@ -2,6 +2,9 @@
 
 このガイドでは、YESOD Authを5分でセットアップする方法を説明します。
 
+!!! info "先に確認すると安全な項目"
+    Docker要件や `default` / `full` / `ci` の違いは[インストール](installation.md)に整理しています。初回導入時は先に確認してください。
+
 ## 前提条件
 
 - Docker & Docker Compose
@@ -26,6 +29,9 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
 ```
 
 各ファイルを編集して、OAuthプロバイダーから取得したクレデンシャルを設定します。
+
+!!! tip "provider追加時は先にチェック"
+    新しい OAuth provider を追加する場合は、先に [OAuth provider追加時の事前チェック](installation.md#oauth-provider追加時の事前チェック) を実施してから secrets を作成してください。
 
 !!! tip "JWTシークレットの生成"
     ```bash
@@ -134,7 +140,7 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
-## 5. セッション失効時の再ログイン手順
+### セッション失効時の再ログイン手順
 
 アクセストークン失効で `401 Unauthorized` が返る場合は、次の順序で復旧します。
 
@@ -164,6 +170,41 @@ curl -X DELETE "http://localhost:8000/api/v1/sessions/me" \
 - 認証API詳細は `docs/api/auth.md` を参照してください。
 - セッションAPI一覧は `README.md` の `Sessions` セクションと同一です。
 
+### OAuth callback失敗時の確認順
+
+`/api/v1/auth/{provider}/callback` が失敗した場合は、次の順で確認すると切り分けが早くなります。
+
+1. APIログで callback エラー種別を確認
+   ```bash
+   docker compose logs api --since=30m | rg -n "callback|Invalid state|invalid_client|401"
+   ```
+2. `Invalid or expired state` の場合は、`state mismatch` 診断フローを実施
+   - [トラブルシューティング: state mismatch 診断フロー](help/troubleshooting.md#state-mismatch-flow)
+3. `OAuth callback failed: invalid_client` / `401` の場合は、シークレット値と provider 設定を確認
+   - [トラブルシューティング: 401 Unauthorized / invalid_client](help/troubleshooting.md#401-unauthorized--invalid_client)
+4. 修正後は認証を最初から再実行し、同じエラーが再現しないことを確認
+   ```bash
+   curl -I "http://localhost:8000/api/v1/auth/google"
+   ```
+
+### ユーザー情報取得API（`/api/v1/users/me`）の前提条件
+
+`/api/v1/users/me` は認証必須APIです。呼び出し前に次の3点を満たしてください。
+
+1. APIが起動済みである（`docker compose --profile default up -d` 実行済み）
+2. アクセストークンを取得済みである（例: `GET /api/v1/auth/mock/login`）
+3. `Authorization: Bearer <access_token>` ヘッダーを付与する
+
+確認例:
+
+```bash
+# 1) トークン取得
+TOKEN=$(curl -s "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google" | jq -r '.access_token')
+
+# 2) ユーザー情報取得
+curl -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me"
+```
 ### エラーレスポンスの確認
 
 未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
@@ -231,9 +272,9 @@ curl http://localhost:8000/api/v1/admin/webhooks/deliveries
 
 !!! warning "プロバイダ仕様変更時の更新対象"
     Callback URL や scope の仕様が変わった場合は、`docs/guides/oauth/index.md` と `docs/guides/oauth/*.md` の該当プロバイダー節を先に更新し、本チェックリストの確認基準も合わせて見直してください。
-
 ## 次のステップ
 
+- [インストール](installation.md) - profile差分と運用時の確認手順
 - [初回起動トラブルシュート](help/first-start-troubleshooting.md) - 初回セットアップで詰まったときの最短切り分け
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
 - [障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線) - 調査を health → auth → provider → webhook の順で進める
