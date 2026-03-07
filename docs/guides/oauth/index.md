@@ -12,8 +12,8 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 | [LinkedIn](linkedin.md) | ✅ | - | ✅ | |
 | [Facebook](facebook.md) | ✅ | - | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
 | [Discord](discord.md) | - | ✅ | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
-| [Slack](slack.md) | - | ✅ | ✅ | プロバイダー未サポート |
-| [Twitch](twitch.md) | - | ✅ | ❌ | プロバイダー未サポート、[Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+| [Slack](slack.md) | - | ✅ | ✅ | |
+| [Twitch](twitch.md) | - | ✅ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
 
 ### PKCEについて
 
@@ -27,6 +27,57 @@ PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防�
     将来的にプロバイダーがPKCEをサポートした場合、自動的にセキュリティが強化されます。
 
 ## 共通設定
+
+### セルフホスト向け最短手順
+
+1. 利用するOAuthプロバイダーを決める（例: GitHubのみ）
+2. `secrets/` に対象プロバイダーの `*_client_id.txt` と `*_client_secret.txt` を配置する
+3. `MOCK_OAUTH_ENABLED=0` で実OAuthを有効化する
+4. API公開URLに合わせてリダイレクトURIを更新する
+5. `/api/v1/auth/{provider}` へアクセスして、プロバイダー画面へ遷移することを確認する
+
+!!! note "docker-compose の既定設定"
+    `docker-compose.yml` の既定では `api` / `api-ci` に `google_*` と `discord_*` がマウントされています。
+    GitHubなど他プロバイダーを使う場合は、`docker-compose.override.yml` で `secrets` を追加してください。
+
+    ```yaml
+    services:
+      api:
+        secrets:
+          - github_client_id
+          - github_client_secret
+      api-ci:
+        secrets:
+          - github_client_id
+          - github_client_secret
+
+    secrets:
+      github_client_id:
+        file: ./secrets/github_client_id.txt
+      github_client_secret:
+        file: ./secrets/github_client_secret.txt
+    ```
+
+## 有効化判定フロー（最初に確認）
+
+OAuthプロバイダーを「有効化できているか」を、次の順序で確認してください。
+
+1. 利用するプロバイダーを決める
+   使う予定のプロバイダー（例: Google / GitHub）だけを対象にします。未使用プロバイダーの認証情報は必須ではありません。
+2. 実行モードを決める
+   実プロバイダー検証なら通常モード、ローカル疎通だけ先に確認するなら `MOCK_OAUTH_ENABLED=1` を使います。環境変数の意味は [インストールガイド（環境変数）](../../installation.md#environment-variables) を参照してください。
+3. 認証情報の入力先を決める
+   認証情報は Docker Secrets（`/run/secrets/<name>`）または環境変数（`<NAME>`）で設定します。YESOD Auth は `read_secret` で **Secretsを優先し、未設定時に環境変数へフォールバック** します。
+4. プロバイダーごとの必須2項目を満たす
+   対象プロバイダーごとに `*_client_id` と `*_client_secret` の両方を設定します。名前一覧は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) を参照してください。
+5. 起動後に導線で確認する
+   `GET /api/v1/auth/{provider}` で認可画面へ遷移できることを確認し、失敗時は [トラブルシューティング](../../help/troubleshooting.md) を参照します。
+
+### config / secrets の参照関係（要点）
+
+- アプリ設定は `api/app/config.py` の `read_secret()` で読み込みます。
+- 優先順位は `Docker Secrets (/run/secrets/<name>)` → `環境変数(<NAME>)` → `既定値` です。
+- そのため、同名を両方設定した場合は Secrets 側が採用されます。
 
 ### シークレットファイルの配置
 
@@ -60,6 +111,15 @@ secrets/
     https://your-domain.com/api/v1/auth/{provider}/callback
     ```
 
+## セルフホスト運用チェックリスト
+
+1. 公開APIドメインを固定する（例: `https://auth.example.com`）
+2. `FRONTEND_URL` と `CORS_ORIGINS` を同一環境のURLに合わせる
+3. 利用するプロバイダーだけ `secrets/*_client_id.txt` / `*_client_secret.txt` を配置する
+4. 各プロバイダーの callback URL を `https://<api-domain>/api/v1/auth/{provider}/callback` に統一する
+5. 本番では `MOCK_OAUTH_ENABLED=0` を確認する
+6. デプロイ後に `GET /health` と実際の OAuth ログイン（最低1プロバイダー）を疎通確認する
+
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。
 
@@ -78,3 +138,28 @@ secrets/
 5. セルフホスト公開前に、本番ドメインのRedirect URIへ更新し、ローカル値（`localhost`）が残っていないか確認する。
 
 上記を満たすと、導入時の設定漏れを抑えつつ、OSSとして再利用しやすい説明構成を維持できます。
+
+### OAuthガイド共通チェックテンプレート
+
+新しいOAuthプロバイダーガイドを追加するときは、以下の4観点を必ず埋めてください。
+
+- Callback URL: ローカル/本番の両方で `.../api/v1/auth/{provider}/callback` を明記する
+- Scope: 必須スコープと、スコープ不足時に起きる症状を明記する
+- Secrets: `secrets/{provider}_client_id.txt` と `secrets/{provider}_client_secret.txt` の作成手順を明記する
+- Test: ログイン開始エンドポイントにアクセスして遷移確認する手順を明記する
+
+```md
+## 共通チェック観点
+
+- [ ] Callback URL
+  - [ ] ローカル: `http://localhost:8000/api/v1/auth/{provider}/callback`
+  - [ ] 本番: `https://<your-domain>/api/v1/auth/{provider}/callback`
+- [ ] Scope
+  - [ ] 使用スコープ: `<space-separated-scopes>`
+  - [ ] 不足時の症状: `<example>`
+- [ ] Secrets
+  - [ ] `secrets/{provider}_client_id.txt`
+  - [ ] `secrets/{provider}_client_secret.txt`
+- [ ] Test
+  - [ ] `curl -I "http://localhost:8000/api/v1/auth/{provider}/login"` が 302 を返す
+```

@@ -1,6 +1,6 @@
 site_name: YESOD Auth
 site_url: https://mashirou1234.github.io/yesod-auth/
-site_description: OAuth 2.0認証基盤 - Google/Discord対応、Webhook連携
+site_description: OAuth 2.0認証基盤 - マルチプロバイダー対応、Webhook連携
 site_author: mashirou1234
 repo_url: https://github.com/mashirou1234/yesod-auth
 repo_name: mashirou1234/yesod-auth
@@ -78,6 +78,7 @@ nav:
     - Webhook API: api/webhooks.md
   - ヘルプ:
     - FAQ: help/faq.md
+    - 初回起動トラブルシュート: help/first-start-troubleshooting.md
     - トラブルシューティング: help/troubleshooting.md
 
 extra:

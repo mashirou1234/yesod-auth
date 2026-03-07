@@ -29,6 +29,7 @@ logs/
 
 # Test
 .pytest_cache/
+.hypothesis/
 .coverage
 htmlcov/
 
@@ -39,3 +40,4 @@ htmlcov/
 config/webhooks.yaml
 
 .codex-orch/
+/artifacts/
