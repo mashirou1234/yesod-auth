@@ -34,6 +34,15 @@ echo "your-client-id" > secrets/slack_client_id.txt
 echo "your-client-secret" > secrets/slack_client_secret.txt
 ```
 
+## 6. ローカル検証の注意点
+
+- Slack側の`Redirect URLs`と、YESOD Authのcallback URL（`/api/v1/auth/slack/callback`）は**完全一致**が必要です。`http/https`、ホスト名、ポート、末尾スラッシュの差分でも失敗します。
+- ローカルで検証する場合は、開始URLと同じ環境でcallbackを受けるようにします。例:
+    - OAuth開始: `http://localhost:8000/api/v1/auth/slack/login`
+    - callback: `http://localhost:8000/api/v1/auth/slack/callback`
+- 開発時は`MOCK_OAUTH_ENABLED=1`を無効化してから実OAuthを試してください。Mock OAuthが有効だと、Slack設定ミスが見えにくくなります。
+- `OpenID Connect`を有効化していない場合、Slackログイン画面まで進んでもユーザー情報取得で失敗します。
+
 !!! info "OpenID Connect"
     SlackはOpenID Connectを使用します。
     YESOD Authは`openid`、`email`、`profile`スコープを要求し、
