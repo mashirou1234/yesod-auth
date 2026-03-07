@@ -7,6 +7,8 @@
 | Docker | 20.10+ |
 | Docker Compose | 2.0+ |
 
+障害時の確認手順は[トラブルシューティング: 障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線)を参照してください。
+
 ## Docker Composeプロファイル
 
 YESOD Authは3つのプロファイルを提供しています：
@@ -16,6 +18,43 @@ YESOD Authは3つのプロファイルを提供しています：
 | `default` | ローカル開発 | db, api, docs (`valkey` は常時有効) |
 | `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
 | `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
+
+## Docker起動前チェック項目
+
+`docker compose up` 実行前に、次の4項目を確認してください。
+
+1. Docker Engine / Docker Compose のバージョン確認
+
+```bash
+docker --version
+docker compose version
+```
+
+期待値:
+- Docker 20.10 以上
+- Docker Compose 2.0 以上
+
+2. 必須 secret ファイルの存在確認
+
+```bash
+ls -1 secrets/jwt_secret.txt
+```
+
+必要に応じて、有効化する OAuth プロバイダーの `secrets/*.txt` も追加してください。
+
+3. 主要ポートの競合確認（8000 / 5432 / 6379）
+
+```bash
+lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
+```
+
+競合がある場合は既存プロセスまたは既存コンテナを停止してから起動します。
+
+4. 初回確認で使用する profile の決定
+
+- 初回導入確認: `default`
+- 管理画面確認まで行う場合: `full`
+- CI相当確認のみ: `ci`
 
 ### 開発環境
 
@@ -203,6 +242,8 @@ docker compose up -d --build
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+`CORS_ORIGINS` が未設定または空文字の場合、API起動時に警告ログを出し、開発用デフォルト値（`http://localhost:3000,http://localhost:5173`）で起動します。
+
 ### 環境変数・Secrets の優先順位
 
 設定元が複数ある場合は、以下の優先順位で値が決まります。
@@ -226,6 +267,8 @@ docker compose up -d --build
 ## OAuth認証情報
 
 Docker Secretsまたは環境変数で設定：
+
+初回導入時は、設定後に [初回導入チェックリスト](getting-started.md#初回導入チェックリスト) を順に実行して動作確認してください。
 
 | シークレット名 | 説明 |
 |---------------|------|
@@ -255,3 +298,8 @@ Docker Secretsまたは環境変数で設定：
 | PostgreSQL | 5432 |
 | Valkey | 6379 |
 | Admin | 8501 |
+
+## 初回起動で詰まった場合
+
+`docker compose --profile default up -d` 実行後の確認順（`/health`、`/docs`、必須 secrets）は
+[初回起動トラブルシュート](help/first-start-troubleshooting.md) を参照してください。

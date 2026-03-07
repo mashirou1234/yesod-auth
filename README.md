@@ -6,12 +6,14 @@
 
 ## Features
 
-- 🔑 OAuth 2.0 authentication (Google, Discord)
+- 🔑 OAuth 2.0 authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch)
 - 🐳 Docker Compose ready - just add secrets and run
 - 🗄️ PostgreSQL with automatic migrations
 - 🔒 JWT-based session management
 - 📡 REST API - integrate with any frontend
 - 👤 User profile with avatar support
+
+> Source of truth for provider support notation: `docs/guides/oauth/index.md`.
 
 ## Quick Start
 
@@ -22,7 +24,7 @@ git clone https://github.com/mashirou1234/yesod-auth.git
 cd yesod-auth
 ```
 
-### 2. Set up OAuth credentials
+### 2. Set up OAuth credentials (Client ID / Client Secret)
 
 #### Google OAuth
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
@@ -45,7 +47,7 @@ cd yesod-auth
 # Create secrets directory (already exists in repo)
 mkdir -p secrets
 
-# Add your credentials
+# Add your OAuth credentials (Client ID / Client Secret)
 echo "your-google-client-id" > secrets/google_client_id.txt
 echo "your-google-client-secret" > secrets/google_client_secret.txt
 echo "your-discord-client-id" > secrets/discord_client_id.txt
@@ -243,6 +245,17 @@ Password: (secrets/admin_password.txt の内容)
 ```
 
 ## Monitoring
+
+### セルフホスト時の最小監視項目
+
+運用開始直後は、まず次の4項目を監視対象に設定してください。
+
+| 項目 | 確認方法 | 異常の目安 |
+|------|----------|------------|
+| APIヘルス | `curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/health` | `200` 以外が連続 |
+| APIエラー率 | `docker logs --since 5m yesod-api \| rg " 5[0-9]{2} "` | 5分窓で5xxが継続発生 |
+| DB接続健全性 | `docker logs --since 5m yesod-db \| rg -i "error|fatal|panic"` | 接続エラー/再起動ループ |
+| OAuth失敗兆候 | `docker logs --since 10m yesod-api \| rg "invalid_client|Invalid state|OAuth callback failed"` | 同種エラーが短時間に複数回 |
 
 ### 運用時ログ確認ポイント（最小）
 

@@ -1,5 +1,21 @@
 # トラブルシューティング
 
+## 障害時の参照順（最短導線）
+
+障害調査は次の順で確認してください。前段が正常なら次段へ進みます。
+
+1. `health`: API と依存サービスの生存確認
+2. `auth`: 認証フローの失敗箇所を特定（state / callback / session）
+3. `provider`: OAuth プロバイダー側設定・資格情報の不一致を確認
+4. `webhook`: 認証後処理や外部通知の遅延・失敗を確認
+
+最小コマンド例（最初の切り分け用）:
+
+```bash
+curl -fsS http://localhost:8000/health
+docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_client|401"
+```
+
 ## 起動時のエラー
 
 ### `pg_cron`関連のエラー
@@ -36,6 +52,8 @@ sqlalchemy.exc.OperationalError: could not connect to server
 ---
 
 ## 認証エラー
+
+`/api/v1/auth/refresh` の失敗を先に分類したい場合は、[`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) を起点に確認してください。
 
 ### `Invalid or expired state`
 
@@ -118,6 +136,39 @@ environment:
    docker compose up -d --force-recreate api admin
    ```
 3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
+
+---
+
+<a id="admin-i18n-fallback"></a>
+
+### Admin i18n 未翻訳キーの確認手順
+
+**症状:** Admin 画面で翻訳文の代わりに `nav.xxx` のようなドット区切りキーが表示される
+
+**実装上の期待挙動 (`admin/i18n.py`):**
+
+1. 未対応言語コードは `en` にフォールバック
+2. 未翻訳キーはキー文字列をそのまま返却
+3. フォーマット引数不足時はテンプレート文字列をそのまま返却
+
+**確認コマンド（最小再現）:**
+
+```bash
+python3 - <<'PY'
+from admin.i18n import get_text
+print("unsupported lang ->", get_text("nav.overview", "zz"))
+print("missing key ->", get_text("nav.not_exists", "ja"))
+print("missing format arg ->", get_text("common.environment_warning", "en"))
+PY
+```
+
+**判断基準:**
+
+- `unsupported lang` が英語文言なら言語フォールバックは正常
+- `missing key` が `nav.not_exists` のようにキー文字列なら未翻訳フォールバックは正常
+- `missing format arg` がテンプレート文字列（例: `{name}` を含む）なら例外回避フォールバックは正常
+
+FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示は？](./faq.md#admin-i18n-untranslated-fallback) を参照。
 
 ---
 
