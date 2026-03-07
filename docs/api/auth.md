@@ -6,7 +6,7 @@
 |---------|------|------|
 | GET | `/api/v1/auth/google` | Google OAuth開始 |
 | GET | `/api/v1/auth/google/callback` | Googleコールバック |
-| GET | `/api/v1/auth/github` | GitHub OAuth開始 |
+| GET | `/api/v1/auth/github` | GitHub OAuth開始（organization所属の制限判定は未実装） |
 | GET | `/api/v1/auth/github/callback` | GitHubコールバック |
 | GET | `/api/v1/auth/discord` | Discord OAuth開始 |
 | GET | `/api/v1/auth/discord/callback` | Discordコールバック |
@@ -25,6 +25,19 @@
 
 ---
 
+## 認可エラー方針（401 / 403）
+
+認証・認可に関するステータスコードは次の方針で使い分けます。
+
+| ステータス | 使う条件 | 代表例 |
+| --- | --- | --- |
+| `401 Unauthorized` | 認証情報がない、無効、期限切れ | `Authorization` ヘッダー未指定、無効トークン、期限切れトークン |
+| `403 Forbidden` | 認証は成功しているが操作権限が不足 | 有効トークンだが管理者専用操作を実行した場合 |
+
+`/api/v1/auth/logout` や `/api/v1/auth/refresh` でトークン検証に失敗した場合は `401` を返します。`403` は「誰かは特定できるが、その操作は許可しない」ケースで返します。
+
+---
+
 ## OAuth認証フロー
 
 ### 1. 認証開始
@@ -33,6 +46,20 @@
 
 ```
 GET /api/v1/auth/google
+```
+
+### OAuth provider が無効な場合
+
+対象: `GET /api/v1/auth/{provider}`（google / github / discord / x / linkedin / facebook / slack / twitch）
+
+- 条件: 対象 provider の `*_CLIENT_ID` または `*_CLIENT_SECRET` が未設定
+- 応答: `503 Service Unavailable`
+- 例:
+
+```json
+{
+  "detail": "OAuth provider 'google' is disabled. Configure GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET."
+}
 ```
 
 ### 2. コールバック
@@ -78,6 +105,19 @@ Content-Type: application/json
     リフレッシュ時に新しいリフレッシュトークンが発行されます。
     古いリフレッシュトークンは無効化されます。
 
+### refresh失敗時エラー分類
+
+`POST /api/v1/auth/refresh` で失敗した場合は、まずレスポンスコードと API ログを突き合わせて次の表で分類します。
+
+| 症状 | APIレスポンス/ログ例 | 主な原因 | 初動対応 |
+| --- | --- | --- | --- |
+| トークン欠落・形式不正 | `422 Unprocessable Entity` / `refresh_token` の入力エラー | リクエストボディが欠落、JSONキー名の誤り | 送信 payload を `{ "refresh_token": "..." }` に統一して再試行 |
+| 期限切れ・改ざん・失効済み | `401 Unauthorized` / `Could not validate credentials` | refresh token の期限切れ、署名不一致、logout/revoke 済み | 再ログインして新しい token pair を払い出し、古い token を破棄 |
+| サーバー設定不整合 | `401 Unauthorized` が継続し複数ユーザーで再現 | `JWT_SECRET` 差し替え、環境差分、ローテーション手順漏れ | 稼働中コンテナの secret 読み込み元を確認し、全ノードの設定を揃える |
+| 一時的な基盤障害 | `500 Internal Server Error` / DB・Valkey 接続失敗ログ | DB/Valkey 疎通不安定、依存サービス瞬断 | `docker compose ps` と各サービスログを確認し復旧後に再試行 |
+
+詳細な切り分け手順は [`トラブルシューティング > 認証エラー`](../help/troubleshooting.md#認証エラー) を参照してください。
+
 ---
 
 ## ログアウト
@@ -102,6 +142,40 @@ Content-Type: application/json
 
 ステータスコード: `401 Unauthorized`
 
+## エラーコード早見表（refresh/logout）
+
+`api/app/auth/router.py` の実装定義に合わせた運用向け一覧です。
+
+### POST `/api/v1/auth/refresh`
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 200 | リフレッシュ成功 | トークンローテーション成功 | 新しい `access_token` / `refresh_token` を保存 |
+| 401 | `Invalid or expired refresh token` | 期限切れ・失効済み・改ざん | 再ログインして新しいトークンを取得 |
+| 401 | `User not found` | 紐づくユーザーが削除済み | セッションを破棄して再認証 |
+| 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
+| 429 | レート制限超過 | `/refresh` の短時間連続呼び出し | 間隔を空けて再試行（バックオフ推奨） |
+
+### POST `/api/v1/auth/logout`
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 200 | ログアウト成功 | リフレッシュトークン失効処理成功 | クライアント側トークンを削除 |
+| 401 | 認証失敗 | `Authorization` ヘッダ欠落/無効 | 有効な Bearer トークンで再実行 |
+| 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
+
+### OAuth callback 共通（参考）
+
+| HTTP | 条件 | 原因の目安 | 対処の目安 |
+|------|------|-----------|-----------|
+| 400 | `Invalid or expired state` | state 不一致/期限切れ | 認証フローを最初から再実行 |
+| 400 | `Failed to exchange code` | 認可コード交換失敗 | provider 設定・redirect URI を確認 |
+| 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
+| 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
+
+!!! tip "維持ルール"
+    ルータ変更時は `api/app/auth/router.py` の `HTTPException` と `@limiter.limit(...)` を更新し、本表も同時に更新してください。
+
 ---
 
 ## Mock OAuth（開発用）
@@ -123,3 +197,9 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 ```bash
 GET /api/v1/auth/mock/users
 ```
+
+---
+
+## 関連運用ドキュメント
+
+- [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目)
