@@ -160,6 +160,28 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### Mock OAuthから実OAuthへ切り替える最小チェック
+
+Mock 検証が完了したら、実 OAuth へ切り替える前に次の3点だけ確認します。
+
+1. モード切替: `MOCK_OAUTH_ENABLED=0`（または未設定）になっている
+2. 秘密情報: 利用する provider の `client_id` / `client_secret` を `secrets/*.txt` に設定済み
+3. redirect URI: provider 管理画面の callback URL が `https://<api-domain>/api/v1/auth/<provider>/callback` と一致している
+
+切替後の最小確認コマンド:
+
+```bash
+# 1) APIの生存確認
+curl -fsS http://localhost:8000/health
+
+# 2) 実OAuth開始導線の到達確認（302 を期待）
+curl -fsS -o /dev/null -w '%{http_code}\n' \
+  "http://localhost:8000/api/v1/auth/google"
+```
+
+`invalid_client` や `redirect_uri_mismatch` が出る場合は
+[トラブルシューティング](help/troubleshooting.md) を参照してください。
+
 ### セッション失効時の再ログイン手順
 
 アクセストークン失効で `401 Unauthorized` が返る場合は、次の順序で復旧します。
