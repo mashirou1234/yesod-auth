@@ -139,6 +139,29 @@ environment:
 
 ---
 
+### 管理者トークン失効で管理APIが `401 Unauthorized` になる
+
+**症状:** 管理画面操作や `GET /api/v1/admin/*` 呼び出しが `401 Unauthorized` を返す
+
+**再認証導線:**
+
+1. まず現在トークンの失効を確認
+   ```bash
+   curl -i -H "Authorization: Bearer <access_token>" \
+     http://localhost:8000/api/v1/admin/webhooks/endpoints
+   ```
+2. 有効な `refresh_token` が残っている場合は `POST /api/v1/auth/refresh` で再発行
+   ```bash
+   curl -sS -X POST http://localhost:8000/api/v1/auth/refresh \
+     -H "Content-Type: application/json" \
+     -d '{"refresh_token":"<refresh_token>"}'
+   ```
+3. `refresh_token` も失効済みなら、OAuth ログインを最初から実行して新しいトークンを取得
+4. 新しい `access_token` で管理APIを再実行し、`200` を確認
+5. 同事象が頻発する場合は `ACCESS_TOKEN_LIFETIME_SECONDS` を見直し、運用手順に定期再認証を追加
+
+**補足:** フロントエンド実装では、管理APIで `401` を受けた場合に `/api/v1/auth/refresh` を1回試し、失敗時に再ログインへ遷移すると再現性高く復旧できます。
+
 <a id="admin-i18n-fallback"></a>
 
 ### Admin i18n 未翻訳キーの確認手順
