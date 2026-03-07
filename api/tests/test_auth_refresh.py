@@ -1,9 +1,14 @@
 """Refresh token endpoint tests."""
 
+import time
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
+from limits import RateLimitItemPerMinute
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,8 +19,12 @@ from app.models.user import User
 
 
 @pytest.fixture(autouse=True)
-def disable_rate_limiter():
+def disable_rate_limiter(request: pytest.FixtureRequest):
     """Avoid external Redis dependency for refresh endpoint tests."""
+    if request.node.get_closest_marker("enable_rate_limiter"):
+        yield
+        return
+
     original_enabled = app.state.limiter.enabled
     app.state.limiter.enabled = False
     try:
@@ -96,3 +105,42 @@ async def test_refresh_rejects_revoked_session_token(
     )
     assert refresh_response.status_code == 401
     assert refresh_response.json() == {"detail": "Invalid or expired refresh token"}
+
+
+@pytest.mark.asyncio
+@pytest.mark.enable_rate_limiter
+async def test_refresh_rate_limited_response_includes_retry_after_header(client: AsyncClient):
+    """Rate limited refresh response should include Retry-After header."""
+    limiter = app.state.limiter
+    limit_item = RateLimitItemPerMinute(30, 1)
+    synthetic_limit = Limit(
+        limit=limit_item,
+        key_func=limiter._key_func,
+        scope=None,
+        per_method=False,
+        methods=None,
+        error_message=None,
+        exempt_when=None,
+        cost=1,
+        override_defaults=False,
+    )
+
+    def raise_rate_limit(request, endpoint_func=None, in_middleware=True):
+        request.state.view_rate_limit = (limit_item, ["test-client"])
+        raise RateLimitExceeded(synthetic_limit)
+
+    reset_at = int(time.time()) + 60
+    with (
+        patch.object(limiter, "_check_request_limit", side_effect=raise_rate_limit),
+        patch.object(limiter.limiter, "get_window_stats", return_value=(reset_at, 0)),
+    ):
+        response = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": "invalid-refresh-token"},
+        )
+
+    assert response.status_code == 429
+    retry_after = response.headers.get("Retry-After")
+    assert retry_after is not None
+    assert retry_after.isdigit()
+    assert int(retry_after) >= 0
