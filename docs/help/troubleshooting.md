@@ -1,5 +1,21 @@
 # トラブルシューティング
 
+## 障害時の参照順（最短導線）
+
+障害調査は次の順で確認してください。前段が正常なら次段へ進みます。
+
+1. `health`: API と依存サービスの生存確認
+2. `auth`: 認証フローの失敗箇所を特定（state / callback / session）
+3. `provider`: OAuth プロバイダー側設定・資格情報の不一致を確認
+4. `webhook`: 認証後処理や外部通知の遅延・失敗を確認
+
+最小コマンド例（最初の切り分け用）:
+
+```bash
+curl -fsS http://localhost:8000/health
+docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_client|401"
+```
+
 ## 起動時のエラー
 
 ### `pg_cron`関連のエラー
@@ -36,6 +52,8 @@ sqlalchemy.exc.OperationalError: could not connect to server
 ---
 
 ## 認証エラー
+
+`/api/v1/auth/refresh` の失敗を先に分類したい場合は、[`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) を起点に確認してください。
 
 ### `Invalid or expired state`
 
@@ -118,6 +136,100 @@ environment:
    docker compose up -d --force-recreate api admin
    ```
 3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
+
+---
+
+<a id="auth-rate-limit-429"></a>
+
+### `429 Too Many Requests`（認証レート制限）
+
+```json
+{"detail":"Rate limit exceeded"}
+```
+
+**原因:** 短時間に認証エンドポイントへアクセスが集中し、`api/app/auth/rate_limit.py` の制限値を超過した
+
+**確認手順（一次切り分け）:**
+
+1. 429 発生時刻と対象エンドポイントを特定する
+   ```bash
+   docker compose logs api --since=30m | rg -n "429|Too Many Requests|/api/v1/auth/"
+   ```
+
+2. 現在の制限値と参照元を確認する
+   - 参照元: `api/app/auth/rate_limit.py`
+   - 制限値: `settings.RATE_LIMIT_PER_MINUTE`（`default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"]`）
+   - ストレージ: `settings.VALKEY_URL`（レート制限カウンタ保存先）
+
+3. 実行環境の設定値が意図どおりか確認する
+   ```bash
+   docker compose exec api env | rg -n "RATE_LIMIT_PER_MINUTE|VALKEY_URL"
+   ```
+
+4. Valkey 側の疎通とエラー有無を確認する
+   ```bash
+   docker compose logs valkey --since=30m
+   ```
+
+**対処の目安:**
+
+- バースト的なアクセスが原因: クライアント側の再試行間隔を延ばす
+- 設定値が過小: `RATE_LIMIT_PER_MINUTE` を運用実態に合わせて調整
+- Valkey 障害が疑われる: Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認
+
+### 管理者トークン失効で管理APIが `401 Unauthorized` になる
+
+**症状:** 管理画面操作や `GET /api/v1/admin/*` 呼び出しが `401 Unauthorized` を返す
+
+**再認証導線:**
+
+1. まず現在トークンの失効を確認
+   ```bash
+   curl -i -H "Authorization: Bearer <access_token>" \
+     http://localhost:8000/api/v1/admin/webhooks/endpoints
+   ```
+2. 有効な `refresh_token` が残っている場合は `POST /api/v1/auth/refresh` で再発行
+   ```bash
+   curl -sS -X POST http://localhost:8000/api/v1/auth/refresh \
+     -H "Content-Type: application/json" \
+     -d '{"refresh_token":"<refresh_token>"}'
+   ```
+3. `refresh_token` も失効済みなら、OAuth ログインを最初から実行して新しいトークンを取得
+4. 新しい `access_token` で管理APIを再実行し、`200` を確認
+5. 同事象が頻発する場合は `ACCESS_TOKEN_LIFETIME_SECONDS` を見直し、運用手順に定期再認証を追加
+
+**補足:** フロントエンド実装では、管理APIで `401` を受けた場合に `/api/v1/auth/refresh` を1回試し、失敗時に再ログインへ遷移すると再現性高く復旧できます。
+
+<a id="admin-i18n-fallback"></a>
+
+### Admin i18n 未翻訳キーの確認手順
+
+**症状:** Admin 画面で翻訳文の代わりに `nav.xxx` のようなドット区切りキーが表示される
+
+**実装上の期待挙動 (`admin/i18n.py`):**
+
+1. 未対応言語コードは `en` にフォールバック
+2. 未翻訳キーはキー文字列をそのまま返却
+3. フォーマット引数不足時はテンプレート文字列をそのまま返却
+
+**確認コマンド（最小再現）:**
+
+```bash
+python3 - <<'PY'
+from admin.i18n import get_text
+print("unsupported lang ->", get_text("nav.overview", "zz"))
+print("missing key ->", get_text("nav.not_exists", "ja"))
+print("missing format arg ->", get_text("common.environment_warning", "en"))
+PY
+```
+
+**判断基準:**
+
+- `unsupported lang` が英語文言なら言語フォールバックは正常
+- `missing key` が `nav.not_exists` のようにキー文字列なら未翻訳フォールバックは正常
+- `missing format arg` がテンプレート文字列（例: `{name}` を含む）なら例外回避フォールバックは正常
+
+FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示は？](./faq.md#admin-i18n-untranslated-fallback) を参照。
 
 ---
 
