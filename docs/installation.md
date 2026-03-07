@@ -7,6 +7,8 @@
 | Docker | 20.10+ |
 | Docker Compose | 2.0+ |
 
+障害時の確認手順は[トラブルシューティング: 障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線)を参照してください。
+
 ## Docker Composeプロファイル
 
 YESOD Authは3つのプロファイルを提供しています：
@@ -16,6 +18,43 @@ YESOD Authは3つのプロファイルを提供しています：
 | `default` | ローカル開発 | db, api, docs (`valkey` は常時有効) |
 | `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
 | `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
+
+## Docker起動前チェック項目
+
+`docker compose up` 実行前に、次の4項目を確認してください。
+
+1. Docker Engine / Docker Compose のバージョン確認
+
+```bash
+docker --version
+docker compose version
+```
+
+期待値:
+- Docker 20.10 以上
+- Docker Compose 2.0 以上
+
+2. 必須 secret ファイルの存在確認
+
+```bash
+ls -1 secrets/jwt_secret.txt
+```
+
+必要に応じて、有効化する OAuth プロバイダーの `secrets/*.txt` も追加してください。
+
+3. 主要ポートの競合確認（8000 / 5432 / 6379）
+
+```bash
+lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
+```
+
+競合がある場合は既存プロセスまたは既存コンテナを停止してから起動します。
+
+4. 初回確認で使用する profile の決定
+
+- 初回導入確認: `default`
+- 管理画面確認まで行う場合: `full`
+- CI相当確認のみ: `ci`
 
 ### 開発環境
 
@@ -77,6 +116,43 @@ docker compose --profile full config --services
 docker compose --profile ci up -d
 ```
 
+## docker compose利用時の最小確認手順
+
+`docker compose --profile default up -d` 実行後、次の3項目だけ確認すれば最小動作確認が完了します。
+
+1. コンテナ状態の確認
+
+```bash
+docker compose --profile default ps
+```
+
+期待値:
+- `api`, `db`, `docs`, `valkey` が `Up`（または `running`）
+
+2. API ヘルスチェック確認
+
+```bash
+curl -fsS http://localhost:8000/health
+```
+
+期待値:
+- HTTP 200 が返る
+
+3. API ドキュメント到達確認
+
+```bash
+curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+```
+
+期待値:
+- `200`
+
+終了時は次のコマンドで後片付けできます。
+
+```bash
+docker compose --profile default down
+```
+
 ## profile整合確認手順
 
 `docker-compose.yml` と本ドキュメントの profile 記載が一致していることを、変更時に必ず確認してください。
@@ -109,6 +185,91 @@ docker compose --profile ci config --services
 rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 ```
 
+## 初回導入で起きやすい失敗パターン
+
+初回セットアップ時に発生しやすい失敗を、症状ごとの確認順でまとめます。
+
+### 1. `docker compose up` で secret 未設定エラーになる
+
+症状例:
+
+- `Error: secret ... not found`
+- API コンテナが `CreateContainerConfigError` で起動しない
+
+確認:
+
+```bash
+ls -1 secrets | head
+ls -1 secrets/*.txt 2>/dev/null | wc -l
+```
+
+対処:
+
+1. `secrets/*.example` から必要な `.txt` を作成する
+2. 最低限 `jwt_secret.txt` は必ず作成する
+3. 有効化するOAuthプロバイダー分の client id/secret を作成する
+
+### 2. `default` 以外で起動して Mock OAuth が使えない
+
+症状例:
+
+- `/api/v1/auth/mock/login` が想定どおり動作しない
+- 初回確認で外部OAuth設定まで要求される
+
+確認:
+
+```bash
+docker compose --profile default config --services
+docker compose --profile full config --services
+```
+
+対処:
+
+1. 初回動作確認は `docker compose --profile default up -d` を使う
+2. `full` は管理画面込みの確認時に切り替える
+3. `ci` はローカル初回導入用途では使わない
+
+### 3. 8000/5432/6379 が使用中で起動失敗する
+
+症状例:
+
+- `Bind for 0.0.0.0:8000 failed: port is already allocated`
+- 一部サービスだけ `Exited` になる
+
+確認:
+
+```bash
+docker compose ps
+lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
+```
+
+対処:
+
+1. 競合プロセスや既存コンテナを停止する
+2. 必要なら `docker compose down` 後に再起動する
+3. 競合が解消しない場合は `.env` 側のポート割当を見直す
+
+### 4. 古いコンテナ状態が残って挙動が不安定になる
+
+症状例:
+
+- 設定変更後も以前の挙動のまま
+- `healthy` にならない
+
+確認:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 api
+```
+
+対処:
+
+```bash
+docker compose down
+docker compose up -d --build
+```
+
 ## 環境変数
 
 | 変数名 | 説明 | デフォルト |
@@ -121,6 +282,20 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
 
+`CORS_ORIGINS` が未設定または空文字の場合、API起動時に警告ログを出し、開発用デフォルト値（`http://localhost:3000,http://localhost:5173`）で起動します。
+
+### 環境変数・Secrets の優先順位
+
+設定元が複数ある場合は、以下の優先順位で値が決まります。
+
+| 対象 | 優先順位（高 → 低） | 根拠 |
+|------|----------------------|------|
+| OAuthクライアントID/Secret、`JWT_SECRET` | `/run/secrets/<name>` → 同名の環境変数（大文字）→ 既定値 | `api/app/config.py` の `read_secret()` |
+| `DATABASE_URL` / `VALKEY_URL` / `CORS_ORIGINS` / `FRONTEND_URL` など | 環境変数 → 既定値 | `api/app/config.py` の `os.getenv()` |
+| `MOCK_OAUTH_ENABLED`（`default`/`ci`プロファイル） | Compose の service `environment` での指定（`1`）→ アプリ既定値（`0`） | `docker-compose.yml` と `api/app/config.py` |
+
+`read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
+
 ### 管理画面用環境変数
 
 | 変数名 | 説明 | デフォルト |
@@ -132,6 +307,8 @@ rg -n "docker compose --profile (default|full|ci) up -d" docs/installation.md
 ## OAuth認証情報
 
 Docker Secretsまたは環境変数で設定：
+
+初回導入時は、設定後に [初回導入チェックリスト](getting-started.md#初回導入チェックリスト) を順に実行して動作確認してください。
 
 | シークレット名 | 説明 |
 |---------------|------|
@@ -161,3 +338,8 @@ Docker Secretsまたは環境変数で設定：
 | PostgreSQL | 5432 |
 | Valkey | 6379 |
 | Admin | 8501 |
+
+## 初回起動で詰まった場合
+
+`docker compose --profile default up -d` 実行後の確認順（`/health`、`/docs`、必須 secrets）は
+[初回起動トラブルシュート](help/first-start-troubleshooting.md) を参照してください。
