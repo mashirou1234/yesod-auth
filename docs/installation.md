@@ -19,6 +19,43 @@ YESOD Authは3つのプロファイルを提供しています：
 | `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
 | `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
 
+## Docker起動前チェック項目
+
+`docker compose up` 実行前に、次の4項目を確認してください。
+
+1. Docker Engine / Docker Compose のバージョン確認
+
+```bash
+docker --version
+docker compose version
+```
+
+期待値:
+- Docker 20.10 以上
+- Docker Compose 2.0 以上
+
+2. 必須 secret ファイルの存在確認
+
+```bash
+ls -1 secrets/jwt_secret.txt
+```
+
+必要に応じて、有効化する OAuth プロバイダーの `secrets/*.txt` も追加してください。
+
+3. 主要ポートの競合確認（8000 / 5432 / 6379）
+
+```bash
+lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
+```
+
+競合がある場合は既存プロセスまたは既存コンテナを停止してから起動します。
+
+4. 初回確認で使用する profile の決定
+
+- 初回導入確認: `default`
+- 管理画面確認まで行う場合: `full`
+- CI相当確認のみ: `ci`
+
 ### 開発環境
 
 ```bash
