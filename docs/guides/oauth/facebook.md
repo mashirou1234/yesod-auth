@@ -39,6 +39,17 @@ echo "your-app-secret" > secrets/facebook_client_secret.txt
     YESOD Authは[Facebook Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"}を使用します。
     `email`と`public_profile`スコープを要求し、ユーザー情報を取得します。
 
+## 6. 長期トークン運用の注意
+
+- YESOD Auth の標準ログインフローは、Facebookトークンをアプリ内セッション発行のために利用します。  
+  追加で Facebook API を継続呼び出しする場合のみ、長期トークン運用を検討してください。
+- Facebook のユーザーアクセストークン（access token）は期限付きです。運用時は以下を必ず定義してください。
+  - 失効前の更新タイミング（例: expiry の7日前に更新ジョブ）
+  - 失効時の再認可導線（管理者通知または再ログイン誘導）
+  - 監査用ログ（更新日時・失敗理由・対象ユーザー）
+- 長期トークンを保存する場合は、`secrets/` 直置きや平文コミットを避け、シークレット管理基盤を利用してください。
+- 障害時は [トラブルシューティング](../../help/troubleshooting.md) の OAuth 再ログイン手順とあわせて確認してください。
+
 ## 技術仕様
 
 | 項目 | 値 |
