@@ -36,6 +36,20 @@ echo "your-client-secret" > secrets/github_client_secret.txt
   - コールバック後にGitHub APIで所属organizationを検証
   - 未所属ユーザーはログイン完了前に拒否
 
+## 共通チェック観点の適用例
+
+- [x] Callback URL
+  - [x] ローカル: `http://localhost:8000/api/v1/auth/github/callback`
+  - [x] 本番: `https://<your-domain>/api/v1/auth/github/callback`
+- [x] Scope
+  - [x] 使用スコープ: `read:user user:email`
+  - [x] 不足時の症状: メールアドレス取得不可で初回ログイン連携に失敗する
+- [x] Secrets
+  - [x] `secrets/github_client_id.txt`
+  - [x] `secrets/github_client_secret.txt`
+- [x] Test
+  - [x] `curl -I "http://localhost:8000/api/v1/auth/github/login"` が `302` を返し、GitHub認可画面へ遷移する
+
 ## 技術仕様
 
 | 項目 | 値 |

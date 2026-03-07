@@ -297,6 +297,7 @@ curl http://localhost:8000/api/v1/admin/webhooks/deliveries
 - [インストール](installation.md) - profile差分と運用時の確認手順
 - [初回起動トラブルシュート](help/first-start-troubleshooting.md) - 初回セットアップで詰まったときの最短切り分け
 - [OAuth設定](guides/oauth/index.md) - 各プロバイダーの設定方法
+- [OAuthガイド共通チェックテンプレート](guides/oauth/index.md#oauthガイド共通チェックテンプレート) - callback/scope/secrets/test の確認観点
 - [障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線) - 調査を health → auth → provider → webhook の順で進める
 - [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow) - `Invalid or expired state` の診断手順
 - [Webhook設定](guides/webhooks.md) - 外部サービス連携
