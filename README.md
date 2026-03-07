@@ -246,6 +246,17 @@ Password: (secrets/admin_password.txt の内容)
 
 ## Monitoring
 
+### セルフホスト時の最小監視項目
+
+運用開始直後は、まず次の4項目を監視対象に設定してください。
+
+| 項目 | 確認方法 | 異常の目安 |
+|------|----------|------------|
+| APIヘルス | `curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/health` | `200` 以外が連続 |
+| APIエラー率 | `docker logs --since 5m yesod-api \| rg " 5[0-9]{2} "` | 5分窓で5xxが継続発生 |
+| DB接続健全性 | `docker logs --since 5m yesod-db \| rg -i "error|fatal|panic"` | 接続エラー/再起動ループ |
+| OAuth失敗兆候 | `docker logs --since 10m yesod-api \| rg "invalid_client|Invalid state|OAuth callback failed"` | 同種エラーが短時間に複数回 |
+
 ### 運用時ログ確認ポイント（最小）
 
 障害切り分け時は、次の順で 1〜3 分以内に確認すると再現性が高いです。
