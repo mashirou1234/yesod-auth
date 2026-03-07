@@ -134,6 +134,25 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 ```
 
+### ユーザー情報取得API（`/api/v1/users/me`）の前提条件
+
+`/api/v1/users/me` は認証必須APIです。呼び出し前に次の3点を満たしてください。
+
+1. APIが起動済みである（`docker compose --profile default up -d` 実行済み）
+2. アクセストークンを取得済みである（例: `GET /api/v1/auth/mock/login`）
+3. `Authorization: Bearer <access_token>` ヘッダーを付与する
+
+確認例:
+
+```bash
+# 1) トークン取得
+TOKEN=$(curl -s "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google" | jq -r '.access_token')
+
+# 2) ユーザー情報取得
+curl -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me"
+```
+
 ### エラーレスポンスの確認
 
 未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
@@ -201,7 +220,6 @@ curl http://localhost:8000/api/v1/admin/webhooks/deliveries
 
 !!! warning "プロバイダ仕様変更時の更新対象"
     Callback URL や scope の仕様が変わった場合は、`docs/guides/oauth/index.md` と `docs/guides/oauth/*.md` の該当プロバイダー節を先に更新し、本チェックリストの確認基準も合わせて見直してください。
-
 ## 次のステップ
 
 - [初回起動トラブルシュート](help/first-start-troubleshooting.md) - 初回セットアップで詰まったときの最短切り分け
