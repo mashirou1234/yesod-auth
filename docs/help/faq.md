@@ -48,6 +48,19 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 現状のYESOD AuthはGitHub OAuthでorganization所属チェックを行いません。
 organization制限が必要な場合は、`read:org`スコープとコールバック後の所属検証を追加実装してください。
 
+### 認証失敗時の一次分類は？
+
+まずは HTTP ステータスと代表メッセージで次の4分類に分けると切り分けが速くなります。
+
+| 一次分類 | 典型シグナル | 主な原因 | 最初に見る場所 |
+| --- | --- | --- | --- |
+| 入力不正（422） | `Field required` / `Input should be a valid string` | `refresh_token` の欠落・型不正 | [`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) |
+| 認証失敗（401） | `Not authenticated` / `Could not validate credentials` | access/refresh token の期限切れ・失効・改ざん | [`トラブルシューティング: 認証エラー`](./troubleshooting.md#認証エラー) |
+| state不整合（400） | `Invalid or expired state` | callback 二重実行、Valkey不安定、環境不一致 | [`トラブルシューティング: state mismatch 診断フロー`](./troubleshooting.md#state-mismatch-flow) |
+| レート制限（429） | `Rate limit exceeded` / `Too Many Requests` | 短時間の連続アクセス、制限値過小 | [`トラブルシューティング: 429 Too Many Requests`](./troubleshooting.md#auth-rate-limit-429) |
+
+運用メモとして、分類時は「発生時刻」「対象エンドポイント」「利用プロバイダー（mock/google/github等）」をセットで記録すると再現調査が容易です。
+
 ---
 
 ## 開発
