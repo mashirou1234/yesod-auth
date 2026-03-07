@@ -58,9 +58,26 @@ curl http://localhost:8000/health
 # {"status":"healthy"}
 ```
 
-### APIドキュメント
+### curlだけで行う最小スモーク手順（GUI不要）
 
-ブラウザで http://localhost:8000/docs を開きます。
+初期導入後は、次の3コマンドだけでAPIの疎通を確認できます。
+
+```bash
+# 1) APIの生存確認（200 + healthy）
+curl -fsS http://localhost:8000/health
+
+# 2) APIドキュメント到達確認（200）
+curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+
+# 3) Mock OAuth開始エンドポイントの到達確認（302）
+curl -fsS -o /dev/null -w '%{http_code}\n' \
+  "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
+```
+
+期待値:
+- 1) `{"status":"healthy"}`
+- 2) `200`
+- 3) `302`
 
 ### Mock OAuthでテスト
 
