@@ -93,6 +93,40 @@ curl https://api.your-domain.com/health
 docker compose logs -f api
 ```
 
+## ログ保全設定例
+
+長期運用では「保持期間」「ローテーション」「収集先」を先に決めておくと、障害調査と監査の再現性が上がります。
+
+### Docker ログドライバ（json-file）でローテーション
+
+```yaml
+services:
+  api:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "7"
+```
+
+`max-size` と `max-file` を設定すると、単一コンテナのログ肥大化を防げます。Compose 本番設定（例: `compose.prod.yml`）に分離して管理する運用を推奨します。
+
+### ホスト側 logrotate で永続ログを保全
+
+```conf
+/var/log/yesod-auth/*.log {
+  daily
+  rotate 14
+  compress
+  delaycompress
+  missingok
+  notifempty
+  copytruncate
+}
+```
+
+14日保持の例です。セキュリティ監査や法令対応が必要な環境では、保持日数を要件に合わせて調整してください。
+
 ## バックアップ
 
 PostgreSQLのバックアップ：
