@@ -12,6 +12,7 @@ limiter = Limiter(
     key_func=get_remote_address,
     default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"],
     storage_uri=settings.VALKEY_URL,
+    headers_enabled=True,
 )
 
 
