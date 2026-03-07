@@ -3,6 +3,8 @@
 import os
 from functools import lru_cache
 
+DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
+
 
 def read_secret(name: str, default: str = "") -> str:
     """Read secret from Docker secrets or environment variable."""
@@ -11,6 +13,17 @@ def read_secret(name: str, default: str = "") -> str:
         with open(secret_path) as f:
             return f.read().strip()
     return os.getenv(name.upper(), default)
+
+
+def resolve_cors_origins(raw_value: str | None) -> tuple[list[str], bool]:
+    """Resolve CORS origins and whether default values are in use."""
+    if raw_value is None or not raw_value.strip():
+        return DEFAULT_CORS_ORIGINS.split(","), True
+
+    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
+    if not origins:
+        return DEFAULT_CORS_ORIGINS.split(","), True
+    return origins, False
 
 
 class Settings:
@@ -77,9 +90,9 @@ class Settings:
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
     # CORS
-    CORS_ORIGINS: list[str] = os.getenv(
-        "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
-    ).split(",")
+    _cors_origins, _cors_origins_using_default = resolve_cors_origins(os.getenv("CORS_ORIGINS"))
+    CORS_ORIGINS: list[str] = _cors_origins
+    CORS_ORIGINS_USING_DEFAULT: bool = _cors_origins_using_default
 
 
 @lru_cache
