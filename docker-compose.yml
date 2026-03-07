@@ -62,6 +62,8 @@ services:
       - github_client_secret
       - discord_client_id
       - discord_client_secret
+      - x_client_id
+      - x_client_secret
       - jwt_secret
     depends_on:
       db:
@@ -106,6 +108,8 @@ services:
       - github_client_secret
       - discord_client_id
       - discord_client_secret
+      - x_client_id
+      - x_client_secret
       - jwt_secret
     depends_on:
       db-ci:
@@ -166,6 +170,10 @@ secrets:
     file: ./secrets/discord_client_id.txt
   discord_client_secret:
     file: ./secrets/discord_client_secret.txt
+  x_client_id:
+    file: ./secrets/x_client_id.txt
+  x_client_secret:
+    file: ./secrets/x_client_secret.txt
   jwt_secret:
     file: ./secrets/jwt_secret.txt
   admin_password:
