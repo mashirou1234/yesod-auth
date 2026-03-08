@@ -178,6 +178,37 @@ environment:
 - 設定値が過小: `RATE_LIMIT_PER_MINUTE` を運用実態に合わせて調整
 - Valkey 障害が疑われる: Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認
 
+<a id="users-pagination-limit-check"></a>
+
+### `/api/v1/sessions` で `limit=1/100` の結果が不安定
+
+**症状:** 同一トークンで `GET /api/v1/users/me` は成功するが、`/api/v1/sessions?limit=1` または `limit=100` の件数/応答が期待とずれる
+
+**確認手順:**
+
+1. 同じアクセストークンで `users/me` が成功することを先に確認する
+   ```bash
+   curl -i -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/users/me"
+   ```
+2. `limit=1` と `limit=100` を連続実行し、HTTPステータスと件数を比較する
+   ```bash
+   curl -sS -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+   curl -sS -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+   ```
+3. 期待値から外れる場合は API ログを確認する
+   ```bash
+   docker compose logs api --since=30m | rg -n "/api/v1/sessions|401|422"
+   ```
+
+**期待値:**
+
+- 両方とも `200` を返す
+- 返却件数は指定 `limit` を超えない
+- `401` が混在する場合はトークン失効を疑い、再ログイン後に再検証する
+
 ### 管理者トークン失効で管理APIが `401 Unauthorized` になる
 
 **症状:** 管理画面操作や `GET /api/v1/admin/*` 呼び出しが `401 Unauthorized` を返す
