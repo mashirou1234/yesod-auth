@@ -247,6 +247,9 @@ TOKEN=$(curl -s "http://localhost:8000/api/v1/auth/mock/login?user=alice&provide
 curl -H "Authorization: Bearer ${TOKEN}" \
   "http://localhost:8000/api/v1/users/me"
 ```
+
+`limit=1/100` の境界値を含む一覧系確認を同じトークンで行う場合は、[ユーザーAPIの検証例](api/users.md#ページング境界値limit1100の検証例) を参照してください。
+
 ### エラーレスポンスの確認
 
 未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。

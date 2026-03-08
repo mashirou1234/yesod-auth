@@ -10,6 +10,35 @@
 
 ---
 
+## ページング境界値（`limit=1/100`）の検証例
+
+`/api/v1/users/me` 自体はページング対象ではありません。  
+ただし、ユーザー認証後の一覧系確認を同一トークンで実施する場合は、`/api/v1/sessions` の `limit` 境界値をあわせて確認できます。
+
+```bash
+# 前提: OAuthログイン済みトークンを利用
+TOKEN="<access_token>"
+
+# 最小件数境界
+curl -sS -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+
+# 実運用でよく使う上限確認（100件）
+curl -sS -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+```
+
+確認観点:
+
+1. どちらも `200 OK` で返る
+2. `.items | length` が指定した `limit` を超えない
+3. 同一トークンで `GET /api/v1/users/me` も継続して成功する
+
+!!! tip "切り分け導線"
+    `limit=1/100` で期待どおりにならない場合は、[トラブルシューティングの確認手順](../help/troubleshooting.md#users-pagination-limit-check) を参照してください。
+
+---
+
 ## 更新系エンドポイントの前提条件
 
 `PATCH /api/v1/users/me` と `DELETE /api/v1/users/me` を呼び出す前に、次を満たしてください。
