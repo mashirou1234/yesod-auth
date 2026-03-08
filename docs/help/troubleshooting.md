@@ -168,6 +168,7 @@ environment:
 
 4. Valkey 側の疎通とエラー有無を確認する
    ```bash
+   docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
    docker compose logs valkey --since=30m
    ```
 
