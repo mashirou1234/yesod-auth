@@ -99,6 +99,29 @@ curl https://api.your-domain.com/health
 docker compose logs -f api
 ```
 
+## OAuth callback監視チェック
+
+セルフホスト運用では、`/api/v1/auth/{provider}/callback` の失敗を「発生後に調査」ではなく「定期監視で先に検知」する運用を推奨します。
+
+### 監視項目（最小3点）
+
+1. callback 失敗ログ件数（`invalid_client` / `Invalid state`）
+2. callback URL への 4xx/5xx 応答の増加
+3. callback 処理遅延（認証開始から callback 完了まで）が急増していないこと
+
+### 日次確認コマンド（例）
+
+```bash
+docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_client|Invalid state" || true
+```
+
+### しきい値の目安（初期値）
+
+- 直近24時間で `invalid_client` が 1 件以上: provider secret の不整合を疑い、即時確認
+- 直近24時間で `Invalid state` が 3 件以上: callback 二重実行やセッション保持不安定を疑い、調査開始
+
+`Invalid state` の切り分け手順は `docs/help/troubleshooting.md` の `state mismatch 診断フロー` を参照してください。プロバイダー設定の前提は `docs/guides/oauth/index.md` の `セルフホスト運用チェックリスト` と合わせて確認します。
+
 ## OAuthシークレットローテーション手順
 
 プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
