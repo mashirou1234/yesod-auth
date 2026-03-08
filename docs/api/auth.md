@@ -158,6 +158,31 @@ Content-Type: application/json
 
 `api/app/auth/router.py` の実装定義に合わせた運用向け一覧です。
 
+## エラーレスポンスの trace id 付与方針
+
+障害調査で「利用者のエラー応答」と「APIログ」を突き合わせやすくするため、認証APIのエラーレスポンスには trace id を付与する方針で運用します。
+
+- 対象: `4xx` / `5xx` のエラーレスポンス（`/refresh`・`/logout`・OAuth callback を含む）
+- 返却形式: レスポンスヘッダー `X-Trace-Id` と JSON ボディ `trace_id` に同一値を設定
+- 値の形式: UUID または同等の十分な一意性を持つ文字列
+- 生成ルール: upstream（Ingress/Proxy）から request id が渡される場合はそれを優先し、ない場合は API 側で生成
+- セキュリティ: `trace_id` にユーザー識別子・メールアドレス・トークンなどの機微情報を含めない
+
+例（`401 Unauthorized`）:
+
+```json
+{
+  "detail": "Could not validate credentials",
+  "trace_id": "8b3f76c7-6d50-4f22-90f6-e4d8d7275d89"
+}
+```
+
+運用メモ:
+
+- 問い合わせ対応時は、利用者から `trace_id` と発生時刻（UTC/JST）をセットで受領する
+- 既存クライアント互換のため、`detail` の意味は維持し、`trace_id` は追加情報として扱う
+- 本節は「方針」定義です。実装を変更した場合は、この章と実装を同時に更新してください
+
 ### POST `/api/v1/auth/refresh`
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
