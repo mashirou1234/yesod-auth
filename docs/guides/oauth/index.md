@@ -72,6 +72,8 @@ OAuthプロバイダーを「有効化できているか」を、次の順序で
    対象プロバイダーごとに `*_client_id` と `*_client_secret` の両方を設定します。名前一覧は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) を参照してください。
 5. 起動後に導線で確認する
    `GET /api/v1/auth/{provider}` で認可画面へ遷移できることを確認し、失敗時は [トラブルシューティング](../../help/troubleshooting.md) を参照します。
+6. 時刻同期を確認する（self-host）
+   OAuth認可コードは短命なため、ホスト時刻のずれで `invalid_grant` が発生します。`timedatectl status` で NTP 同期状態を確認し、ずれがある場合は [clock skew 診断](../../help/troubleshooting.md#oauth-clock-skew) を参照してください。
 
 ### config / secrets の参照関係（要点）
 

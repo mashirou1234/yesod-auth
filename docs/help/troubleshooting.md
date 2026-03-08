@@ -139,6 +139,43 @@ environment:
 
 ---
 
+<a id="oauth-clock-skew"></a>
+
+### OAuth callback で `invalid_grant` が断続的に発生する（clock skew）
+
+**症状:** 同一設定でも時間帯やホストごとに `invalid_grant` / `code has expired` が発生し、再試行で一時的に成功する
+
+**原因:** APIサーバー・リバースプロキシ・ホストOSの時刻差（clock skew）により、OAuth認可コードの有効期限判定がずれる
+
+**診断手順（最小）:**
+
+1. 発生時刻の前後で callback 失敗ログを抽出する
+   ```bash
+   docker compose logs api --since=30m | rg -n "invalid_grant|code has expired|callback"
+   ```
+2. APIコンテナとホストの現在時刻を比較する（秒差を確認）
+   ```bash
+   date -u
+   docker compose exec api date -u
+   ```
+3. NTP同期状態を確認する（self-host 環境）
+   ```bash
+   timedatectl status
+   ```
+4. プロバイダー側の認可コード発行時刻と、callback受信時刻の乖離を確認する
+   - 監査ログ/アクセスログの時刻がUTC基準で連続しているか
+   - 特定ノードだけ数十秒以上ずれていないか
+
+| 想定原因 | 観測シグナル | 対処 |
+| --- | --- | --- |
+| ホスト時刻が遅延/先行 | `date -u` でノード間に秒差がある | NTP再同期後にOAuthを再試行 |
+| コンテナ時刻が固定化 | ホスト更新後も `docker compose exec api date -u` が追従しない | コンテナ再作成（`docker compose up -d --force-recreate api`） |
+| 逆プロキシ/多段環境の遅延 | callback 到達までの遅延が長い | callback 経路を短縮し、リトライ実装を見直す |
+
+**補足:** OAuth導入時は [OAuth設定ガイド](../guides/oauth/index.md) のセルフホスト手順と併せて、時刻同期を初期チェック項目に含めてください。
+
+---
+
 <a id="auth-rate-limit-429"></a>
 
 ### `429 Too Many Requests`（認証レート制限）
