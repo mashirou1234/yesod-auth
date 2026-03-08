@@ -62,6 +62,18 @@ GET /api/v1/auth/google
 }
 ```
 
+### 未知 provider 入力時
+
+- 条件: サポート対象外の provider 名が入力された場合
+- 応答: `400 Bad Request`
+- 例:
+
+```json
+{
+  "detail": "Unsupported OAuth provider 'unknown'."
+}
+```
+
 ### 2. コールバック
 
 認証成功後、フロントエンドにリダイレクト：
