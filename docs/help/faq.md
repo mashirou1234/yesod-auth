@@ -38,6 +38,25 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+### OAuth secretを更新したら再起動は必要？
+
+必要です。YESOD Auth は起動時に `/run/secrets/*` を読み込むため、`secrets/*.txt` を更新した直後は、対象コンテナを再作成して新しい値を読み込ませてください。
+
+| 変更内容 | 再起動要否 | 実行コマンド |
+| --- | --- | --- |
+| `secrets/<provider>_client_id.txt` / `secrets/<provider>_client_secret.txt` を更新 | 必須 | `docker compose up -d --force-recreate api worker` |
+| `secrets/jwt_secret.txt` を更新 | 必須 | `docker compose up -d --force-recreate api worker` |
+| `.env` のみ更新（secretは未変更） | 必須 | `docker compose up -d --force-recreate api worker` |
+| ドキュメントのみ更新 | 不要 | なし |
+
+再起動後は次の 2 点を固定で確認します。
+
+1. `docker compose ps` で `api` と `worker` が `Up` になっていること
+2. `curl -fsS http://localhost:8000/health` が `{"status":"ok"}` を返すこと
+
+シークレットの配置方針は [インストールガイド: OAuth認証情報](../installation.md#oauth認証情報)、
+プロバイダー別の有効化手順は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト向け最短手順) を参照してください。
+
 ### 429（Too Many Requests）が出たときの確認手順は？
 
 認証レート制限の切り分け手順を [トラブルシューティング: 429 Too Many Requests](./troubleshooting.md#auth-rate-limit-429) にまとめています。  
