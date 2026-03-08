@@ -158,6 +158,22 @@ curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
 
 詳細な障害対応は [トラブルシューティング](../help/troubleshooting.md#署名検証に失敗する) も参照してください。
 
+## 署名鍵ローテーション最小手順
+
+`api/app/webhooks/signer.py` のとおり、送信署名は常に単一シークレットで生成されます。切替時は受信側を先に更新し、失敗時は旧鍵へ戻してください。
+
+1. 新しい署名鍵を作成し、受信側を「新旧どちらの鍵でも検証可能」な状態にしてからデプロイする。
+2. `secrets/webhook_secret_<endpoint>.txt`（または `WEBHOOK_SECRET_<endpoint>`）を新しい鍵へ更新し、`config/webhooks.yaml` の参照先が変わっていないことを確認する。
+3. `POST /api/v1/admin/webhooks/reload` を実行して設定を再読み込みし、テストイベントを1件送って受信側検証が通ることを確認する。
+4. 確認完了後、受信側の旧鍵受け入れ期間を終了し、運用鍵を新鍵に一本化する。
+
+### 切替失敗時の戻し手順
+
+1. 失敗を検知したら、シークレット値を旧鍵へ戻す。
+2. `POST /api/v1/admin/webhooks/reload` を再実行して旧鍵へ復帰する。
+3. 配信履歴（`GET /api/v1/admin/webhooks/deliveries`）と受信側ログで `hmac_mismatch` が解消したことを確認する。
+4. 原因（鍵配布遅延、参照先違い、時刻ずれなど）を修正してから再度ローテーションを実施する。
+
 ### 署名検証失敗時の監査ログ項目
 
 署名検証に失敗した場合は、再現性のある調査のために最低限以下を記録してください。
