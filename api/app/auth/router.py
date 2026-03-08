@@ -65,7 +65,14 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
 
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
-    client_id_field, client_secret_field = OAUTH_PROVIDER_CREDENTIAL_FIELDS[provider]
+    credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
+    if credential_fields is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{provider}'.",
+        )
+
+    client_id_field, client_secret_field = credential_fields
     client_id = getattr(settings, client_id_field, "")
     client_secret = getattr(settings, client_secret_field, "")
 

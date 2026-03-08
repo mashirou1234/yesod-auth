@@ -33,3 +33,12 @@ def test_oauth_provider_disabled_raises_503(monkeypatch, provider: str):
         f"OAuth provider '{provider}' is disabled. "
         f"Configure {client_id_field} and {client_secret_field}."
     )
+
+
+def test_oauth_unknown_provider_raises_400():
+    """Unknown provider input must return stable 400 contract."""
+    with pytest.raises(auth_router_module.HTTPException) as exc_info:
+        auth_router_module._ensure_provider_enabled("unknown")
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "Unsupported OAuth provider 'unknown'."
