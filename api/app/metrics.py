@@ -1,5 +1,8 @@
 """Prometheus metrics endpoint."""
 
+from collections import defaultdict
+from threading import Lock
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
@@ -8,6 +11,30 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 
 router = APIRouter(tags=["metrics"])
+_oauth_failure_counts: dict[tuple[str, str], int] = defaultdict(int)
+_oauth_failure_counts_lock = Lock()
+
+
+def record_oauth_failure_metric(provider: str, reason: str) -> None:
+    """Record OAuth failure counter grouped by provider and failure reason."""
+    with _oauth_failure_counts_lock:
+        _oauth_failure_counts[(provider, reason)] += 1
+
+
+def reset_oauth_failure_metrics() -> None:
+    """Reset OAuth failure counters. Used by tests for deterministic assertions."""
+    with _oauth_failure_counts_lock:
+        _oauth_failure_counts.clear()
+
+
+def render_oauth_failure_metrics_lines() -> list[str]:
+    """Render OAuth failure metric lines from in-memory counters."""
+    with _oauth_failure_counts_lock:
+        oauth_failure_snapshot = dict(_oauth_failure_counts)
+    return [
+        f'yesod_oauth_failures_total{{provider="{provider}",reason="{reason}"}} {count}'
+        for (provider, reason), count in sorted(oauth_failure_snapshot.items())
+    ]
 
 
 @router.get("/metrics", response_class=PlainTextResponse)
@@ -49,6 +76,8 @@ async def metrics(db: AsyncSession = Depends(get_db)):
     result = await db.execute(text("SELECT COUNT(*) FROM deleted_users"))
     deleted_users = result.scalar()
     metrics_output.append(f"yesod_deleted_users_pending {deleted_users}")
+
+    metrics_output.extend(render_oauth_failure_metrics_lines())
 
     # Login stats (last 24h) - only if audit schema exists
     try:

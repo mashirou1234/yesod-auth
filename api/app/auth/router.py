@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import AuditLogger, AuthEventType
 from app.config import get_settings
 from app.db.session import get_db
+from app.metrics import record_oauth_failure_metric
 from app.models import OAuthAccount, User
 from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
@@ -305,6 +306,7 @@ async def github_callback(
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "github":
+        record_oauth_failure_metric("github", "invalid_state")
         await AuditLogger.log_login(
             db, None, "github", False, ip_address, device_info, "Invalid state"
         )
@@ -316,6 +318,7 @@ async def github_callback(
     # Exchange code for tokens
     token_data = await GitHubOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
+        record_oauth_failure_metric("github", "code_exchange_failed")
         await AuditLogger.log_login(
             db, None, "github", False, ip_address, device_info, "Code exchange failed"
         )
@@ -324,6 +327,7 @@ async def github_callback(
     # Get user info
     user_info = await GitHubOAuth.get_user_info(token_data["access_token"])
     if not user_info:
+        record_oauth_failure_metric("github", "user_info_failed")
         await AuditLogger.log_login(
             db, None, "github", False, ip_address, device_info, "Failed to get user info"
         )

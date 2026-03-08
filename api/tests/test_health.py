@@ -3,6 +3,12 @@
 import pytest
 from httpx import AsyncClient
 
+from app.metrics import (
+    record_oauth_failure_metric,
+    render_oauth_failure_metrics_lines,
+    reset_oauth_failure_metrics,
+)
+
 
 @pytest.mark.asyncio
 async def test_root(client: AsyncClient):
@@ -37,3 +43,14 @@ async def test_openapi_schema(client: AsyncClient):
     schema = response.json()
     assert schema["info"]["title"] == "YESOD Auth"
     assert "paths" in schema
+
+
+@pytest.mark.asyncio
+async def test_metrics_include_oauth_failure_classification_counter(client: AsyncClient):
+    """OAuth failure counter should be exposed with provider/reason labels."""
+    reset_oauth_failure_metrics()
+    record_oauth_failure_metric("github", "invalid_state")
+    record_oauth_failure_metric("github", "invalid_state")
+    assert 'yesod_oauth_failures_total{provider="github",reason="invalid_state"} 2' in (
+        render_oauth_failure_metrics_lines()
+    )
