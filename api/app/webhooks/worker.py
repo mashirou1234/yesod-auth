@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
+MAX_RETRY_EXHAUSTED_LOG_KEY = "webhook_delivery_retry_exhausted"
 
 
 @dataclass
@@ -164,9 +165,13 @@ class WebhookWorker:
 
         if not result.success:
             logger.error(
-                "Webhook delivery to %s failed after %d attempts: %s",
+                "%s endpoint_id=%s event_id=%s attempts=%d max_attempts=%d http_status=%s error=%s",
+                MAX_RETRY_EXHAUSTED_LOG_KEY,
                 endpoint.id,
+                event.event_id,
                 result.attempt_count,
+                max_retries + 1,
+                result.http_status,
                 result.error_message,
             )
 

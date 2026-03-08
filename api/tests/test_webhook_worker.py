@@ -9,7 +9,11 @@ from hypothesis import strategies as st
 
 from app.webhooks.config import WebhookConfig, WebhookEndpoint, WebhookSettings
 from app.webhooks.event import WebhookEvent
-from app.webhooks.worker import DeliveryResult, WebhookWorker
+from app.webhooks.worker import (
+    MAX_RETRY_EXHAUSTED_LOG_KEY,
+    DeliveryResult,
+    WebhookWorker,
+)
 
 
 @pytest.fixture
@@ -178,6 +182,44 @@ class TestWebhookWorkerRetry:
             # Should succeed after retries
             assert result.success is True
             assert result.attempt_count == 3
+
+    @pytest.mark.asyncio
+    async def test_logs_retry_exhausted_with_key(
+        self,
+        caplog,
+        sample_endpoint,
+        sample_event,
+        sample_config,
+    ):
+        """再試行上限到達時は判別可能なログキーを出力する。"""
+        worker = WebhookWorker()
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server Error"
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=sample_config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            caplog.at_level("ERROR", logger="app.webhooks.worker"),
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            result = await worker._deliver_to_endpoint(sample_event, sample_endpoint)
+
+        assert result.success is False
+        assert result.attempt_count == 3
+        assert MAX_RETRY_EXHAUSTED_LOG_KEY in caplog.text
+        assert f"endpoint_id={sample_endpoint.id}" in caplog.text
+        assert f"event_id={sample_event.event_id}" in caplog.text
+        assert "attempts=3" in caplog.text
 
 
 class TestWebhookWorkerOrdering:
