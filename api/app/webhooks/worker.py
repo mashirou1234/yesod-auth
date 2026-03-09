@@ -123,6 +123,7 @@ class WebhookWorker:
         max_retries = config.settings.max_retries
         base_delay = config.settings.retry_base_delay_seconds
         timeout = config.settings.delivery_timeout_seconds
+        delivery_id = uuid.uuid4()
 
         result = DeliveryResult(success=False)
 
@@ -165,8 +166,12 @@ class WebhookWorker:
 
         if not result.success:
             logger.error(
-                "%s endpoint_id=%s event_id=%s attempts=%d max_attempts=%d http_status=%s error=%s",
+                (
+                    "%s delivery_id=%s endpoint_id=%s event_id=%s attempts=%d "
+                    "max_attempts=%d http_status=%s error=%s"
+                ),
                 MAX_RETRY_EXHAUSTED_LOG_KEY,
+                delivery_id,
                 endpoint.id,
                 event.event_id,
                 result.attempt_count,
@@ -176,7 +181,7 @@ class WebhookWorker:
             )
 
         # Log delivery to database
-        await self._log_delivery(event, endpoint, result)
+        await self._log_delivery(delivery_id, event, endpoint, result)
 
         return result
 
@@ -239,6 +244,7 @@ class WebhookWorker:
 
     async def _log_delivery(
         self,
+        delivery_id: uuid.UUID,
         event: WebhookEvent,
         endpoint: WebhookEndpoint,
         result: DeliveryResult,
@@ -252,7 +258,7 @@ class WebhookWorker:
 
             async with self._db_session_factory() as session:
                 delivery = WebhookDelivery(
-                    id=uuid.uuid4(),
+                    id=delivery_id,
                     event_id=event.event_id,
                     event_type=event.event_type,
                     endpoint_id=endpoint.id,
