@@ -68,21 +68,36 @@ sqlalchemy.exc.OperationalError: could not connect to server
 
 #### `state mismatch` 診断フロー
 
+0. ログ採取ウィンドウを統一する（推奨値）
+   ```bash
+   SINCE=30m
+   docker compose logs api --since="$SINCE" | rg -n "Invalid state|/auth/.*/callback"
+   docker compose logs valkey --since="$SINCE"
+   ```
+   - API/Valkey は同一 `--since` を使い、時系列比較を容易にする
+   - 例外調査で範囲を広げる場合も、両ログで同じ値にそろえる
 1. 発生時刻とリクエストを特定する（APIログ）
    ```bash
-   docker compose logs api --since=30m | rg "Invalid state|/auth/.*/callback"
+   docker compose logs api --since="$SINCE" | rg "Invalid state|/auth/.*/callback"
    ```
 2. `state` が一度だけ消費される前提を確認する（再送/二重callbackの有無）
    - 同一ブラウザ操作で callback が複数回呼ばれていないか
    - リバースプロキシや監視が callback URL を再実行していないか
 3. Valkey の接続状態を確認する（保存済みstateが即時消失していないか）
    ```bash
-   docker compose logs valkey --since=30m
+   docker compose logs valkey --since="$SINCE"
    ```
 4. OAuth開始URLとcallback URLの組み合わせを確認する（環境不一致の検出）
    - 開始: `GET /api/v1/auth/{provider}`
    - callback: `GET /api/v1/auth/{provider}/callback?code=...&state=...`
    - `API_URL` / `FRONTEND_URL` の環境差分を確認
+
+採取記録テンプレート（最低3項目）:
+
+- 発生時刻（UTC/JST）と調査ウィンドウ値（例: `SINCE=30m`）
+- provider 名（`github` / `google` など）と callback URL
+- `state` 再送有無（ブラウザ再送・プロキシ再試行・監視アクセス）
+- API/Valkey ログの該当行番号または抽出キーワード
 
 | 想定原因 | 観測シグナル | 対処 |
 | --- | --- | --- |
