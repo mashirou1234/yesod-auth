@@ -9,6 +9,7 @@ class WebhookSigner:
     """Signs webhook payloads for verification."""
 
     SIGNATURE_PREFIX = "sha256="
+    DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS = 300
 
     @staticmethod
     def sign(payload: str, secret: str, timestamp: int | None = None) -> tuple[str, int]:
@@ -42,6 +43,8 @@ class WebhookSigner:
         secret: str,
         timestamp: int,
         signature: str,
+        current_timestamp: int | None = None,
+        max_timestamp_skew_seconds: int = DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS,
     ) -> bool:
         """
         Verify a webhook signature.
@@ -51,10 +54,18 @@ class WebhookSigner:
             secret: The shared secret key
             timestamp: The timestamp from X-Webhook-Timestamp header
             signature: The signature from X-Webhook-Signature header
+            current_timestamp: The current Unix timestamp used for skew checks
+            max_timestamp_skew_seconds: Maximum allowed skew in seconds
 
         Returns:
             True if signature is valid, False otherwise
         """
+        if current_timestamp is None:
+            current_timestamp = int(time.time())
+
+        if abs(current_timestamp - timestamp) > max_timestamp_skew_seconds:
+            return False
+
         expected_signature, _ = WebhookSigner.sign(payload, secret, timestamp)
         return hmac.compare_digest(expected_signature, signature)
 
