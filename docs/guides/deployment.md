@@ -126,6 +126,19 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
 
 プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
 
+### 運用前提の整合チェック（必須）
+
+本番切替前に、次の3点を必ず同時に確認してください。
+
+1. `MOCK_OAUTH_ENABLED` の本番値が `0` であること
+   - 既定値は `0` ですが、`docker-compose.yml` の profile によって開発向け上書きが入るため、実行プロファイルごとに確認します
+   ```bash
+   docker compose --profile default config | rg -n "MOCK_OAUTH_ENABLED"
+   docker compose --profile full config | rg -n "MOCK_OAUTH_ENABLED"
+   ```
+2. 対象 provider の secret が最新値へ反映済みであること（`*_client_id` / `*_client_secret`）
+3. provider 管理画面の callback URL と実際の `/api/v1/auth/{provider}/callback` が一致していること
+
 ### 切替前チェック
 
 - redirect URI が現在の本番ドメインを向いていることを確認する
@@ -169,6 +182,21 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
 3. `curl https://api.your-domain.com/health` と `/api/v1/auth/{provider}` への到達を再確認
 
 ロールバック後の追加確認は「ロールバック時の最小確認項目」を参照してください。
+
+### docs 三点同期チェック（運用記録用）
+
+ローテーション手順を更新した場合は、次の3ドキュメントと導線が一致していることをレビュー記録に残してください。
+
+- `docs/help/faq.md`
+- `docs/installation.md`
+- `docs/help/troubleshooting.md`
+
+最小確認コマンド:
+
+```bash
+rg -n "MOCK_OAUTH_ENABLED|secret|callback|ローテーション" \
+  docs/guides/deployment.md docs/help/faq.md docs/installation.md docs/help/troubleshooting.md
+```
 
 ## ロールバック時の最小確認項目
 デプロイ直後に不具合が発生してロールバックした場合は、次の最小確認を順に実施してください。
