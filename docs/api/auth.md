@@ -242,6 +242,26 @@ Content-Type: application/json
 | 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
 | 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
 
+### `state mismatch` の最小診断例
+
+`GET /api/v1/auth/{provider}/callback` で `400 Invalid or expired state` が返った場合は、次の2コマンドで「再送」か「状態消失」かを先に切り分けます。
+
+```bash
+# 1) callback の重複実行有無を確認
+docker compose logs api --since=30m | rg -n "Invalid state|/api/v1/auth/.*/callback"
+
+# 2) state 保持先（Valkey）の異常有無を確認
+docker compose logs valkey --since=30m | rg -n "error|timeout|OOM|evicted|fail"
+```
+
+判定目安:
+
+- 同一時刻帯に callback ログが連続する: ブラウザ再送・プロキシ再試行を疑う
+- callback は1回だが Valkey 側に異常ログがある: state 保持の欠損を疑う
+- どちらも該当しない: `API_URL` / `FRONTEND_URL` の環境不一致を確認する
+
+詳細フローは [`トラブルシューティング: state mismatch 診断フロー`](../help/troubleshooting.md#state-mismatch-flow) を参照してください。
+
 !!! tip "維持ルール"
     ルータ変更時は `api/app/auth/router.py` の `HTTPException` と `@limiter.limit(...)` を更新し、本表も同時に更新してください。
 
