@@ -223,6 +223,32 @@ printf '%s\n' google_client_id google_client_secret discord_client_id discord_cl
 ls -1 secrets/*.txt 2>/dev/null | sed -E 's#^.*/##; s#\\.txt$##' | sort
 ```
 
+最短復旧コマンド（secret不足）:
+
+```bash
+# 1) まず不足している secret 名を抽出
+MISSING="$(docker compose --profile default up -d 2>&1 \
+  | rg -o 'secret [a-z0-9_]+ not found' \
+  | sed -E 's/^secret ([a-z0-9_]+) not found$/\\1/' \
+  | sort -u)"
+
+# 2) 不足分だけ secrets/<name>.txt を補完（雛形があればコピー）
+for name in $MISSING; do
+  [ -f "secrets/${name}.txt" ] || cp "secrets/${name}.txt.example" "secrets/${name}.txt"
+done
+
+# 3) jwt_secret は必須。未作成なら生成して再起動
+[ -s secrets/jwt_secret.txt ] || openssl rand -hex 32 > secrets/jwt_secret.txt
+docker compose --profile default up -d --force-recreate api
+docker compose --profile default ps
+```
+
+期待値:
+- `docker compose --profile default ps` で `api` が `Up`（または `running`）
+- `secret ... not found` が再発しない
+
+`invalid_client` が続く場合は、`secrets/*.txt` の値が実値であることを確認し、[`docs/help/troubleshooting.md` の `invalid_client` 手順](help/troubleshooting.md#invalid_client-or-401-from-provider-token-endpoint) を参照してください。
+
 対処:
 
 1. 不足している `<name>` について、`secrets/<name>.txt` を作成する
