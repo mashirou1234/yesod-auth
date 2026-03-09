@@ -84,6 +84,12 @@ POST /api/v1/admin/webhooks/reload
 }
 ```
 
+### 署名鍵ローテーション時の利用
+
+- `config/webhooks.yaml` が参照するシークレット値を切り替えた直後に `POST /api/v1/admin/webhooks/reload` を実行してください。
+- 切替後に署名検証失敗が増えた場合は、旧鍵へ戻して再度 `reload` することで復旧できます。
+- 詳細手順は [Webhook設定ガイドの署名鍵ローテーション最小手順](../guides/webhooks.md#署名鍵ローテーション最小手順) を参照してください。
+
 ---
 
 ## イベントタイプ
