@@ -47,13 +47,22 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` を確認
 3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で原因を切り分け
 
-## 導入者向けの読み進め方
+## 学習順ガイド（導入→API→運用）
 
-初回導入時は、次の順序で確認すると最短で環境を立ち上げられます。
+「まず動かす」「API仕様を確認する」「運用手順を固める」の順に進めると、オンボーディングと本番準備を並行しやすくなります。
 
-1. [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
-2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
-3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+1. 導入
+   - [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
+   - [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
+   - [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+2. API
+   - [認証API](api/auth.md): login / callback / refresh / logout の入出力を確認
+   - [ユーザーAPI](api/users.md): `/api/v1/users` 系の取得・更新フローを確認
+   - [Webhook API](api/webhooks.md): 署名検証と再送時の扱いを確認
+3. 運用
+   - [デプロイガイド](guides/deployment.md): デプロイと secrets ローテーション手順を確認
+   - [トラブルシューティング](help/troubleshooting.md): callback / state mismatch などの切り分け手順を確認
+   - [FAQ](help/faq.md): 導入後によくある確認事項を横断で参照
 
 リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
 
