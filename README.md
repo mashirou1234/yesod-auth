@@ -63,6 +63,8 @@ openssl rand -base64 24 > secrets/admin_password.txt
 chmod 600 secrets/*.txt
 ```
 
+初回導入で `secret ... not found` が出た場合は、[`docs/installation.md` の最短復旧コマンド](docs/installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を実行してください。
+
 #### Self-hosted secret layout example
 
 `docker-compose.yml` reads from `./secrets/*.txt`. For self-hosted deployments,

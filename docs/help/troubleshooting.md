@@ -18,6 +18,8 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 
 ## 起動時のエラー
 
+`secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
+
 ### `pg_cron`関連のエラー
 
 ```
