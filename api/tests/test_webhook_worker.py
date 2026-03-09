@@ -1,5 +1,6 @@
 """Tests for WebhookWorker."""
 
+import re
 import uuid
 from unittest.mock import AsyncMock, patch
 
@@ -216,10 +217,19 @@ class TestWebhookWorkerRetry:
 
         assert result.success is False
         assert result.attempt_count == 3
-        assert MAX_RETRY_EXHAUSTED_LOG_KEY in caplog.text
-        assert f"endpoint_id={sample_endpoint.id}" in caplog.text
-        assert f"event_id={sample_event.event_id}" in caplog.text
-        assert "attempts=3" in caplog.text
+        exhausted_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if MAX_RETRY_EXHAUSTED_LOG_KEY in record.getMessage()
+        )
+        delivery_id_match = re.search(r"delivery_id=([0-9a-f-]{36})", exhausted_log)
+
+        assert delivery_id_match is not None
+        assert uuid.UUID(delivery_id_match.group(1))
+        assert f"endpoint_id={sample_endpoint.id}" in exhausted_log
+        assert f"event_id={sample_event.event_id}" in exhausted_log
+        assert "attempts=3" in exhausted_log
+        assert "error=Server Error" in exhausted_log
 
 
 class TestWebhookWorkerOrdering:
