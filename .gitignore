@@ -30,6 +30,8 @@ logs/
 # Test
 .pytest_cache/
 .hypothesis/
+api/.hypothesis/constants/
+api/.hypothesis/unicode_data/
 .coverage
 htmlcov/
 
@@ -41,3 +43,7 @@ config/webhooks.yaml
 
 .codex-orch/
 /artifacts/
+artifacts/codex_last_message.md
+artifacts/knowledge/
+artifacts/orch_result.json
+artifacts/time_guard.json
