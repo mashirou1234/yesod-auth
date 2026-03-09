@@ -83,17 +83,27 @@ async def validate_refresh_token(
 ) -> RefreshToken | None:
     """Validate refresh token and return the record if valid."""
     token_hash = hash_refresh_token(token)
+    now = datetime.now(UTC)
 
     result = await db.execute(
         select(RefreshToken).where(
             and_(
                 RefreshToken.token_hash == token_hash,
                 RefreshToken.is_revoked.is_(False),
-                RefreshToken.expires_at > datetime.now(UTC),
             )
         )
     )
-    return result.scalar_one_or_none()
+    record = result.scalar_one_or_none()
+    if not record:
+        return None
+
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+
+    if expires_at <= now:
+        return None
+    return record
 
 
 async def rotate_refresh_token(

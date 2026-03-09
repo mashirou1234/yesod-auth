@@ -2,7 +2,7 @@
 
 import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import patch
+from unittest.mock import PropertyMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -15,7 +15,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
 from app.main import app
 from app.models.refresh_token import RefreshToken
-from app.models.user import User
+from app.models.user import User, UserEmail
+
+
+class FrozenDateTime(datetime):
+    """Controllable datetime replacement for token boundary tests."""
+
+    current = datetime(2026, 1, 1, tzinfo=UTC)
+
+    @classmethod
+    def now(cls, tz=None):
+        current = cls.current
+        if current.tzinfo is None:
+            current = current.replace(tzinfo=UTC)
+        if tz is None:
+            return current
+        return current.astimezone(tz)
 
 
 @pytest.fixture(autouse=True)
@@ -66,6 +81,85 @@ async def test_refresh_rejects_expired_token(client: AsyncClient, db_session: As
         "/api/v1/auth/refresh",
         json={"refresh_token": refresh_token},
     )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid or expired refresh token"}
+
+
+@pytest.mark.asyncio
+async def test_refresh_accepts_token_one_second_before_expiry(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """A token remains valid until just before its expiration boundary."""
+    user = User()
+    user.emails.append(
+        UserEmail(
+            email="refresh-boundary@example.com",
+            is_primary=True,
+        )
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    with (
+        patch("app.auth.tokens.datetime", FrozenDateTime),
+        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-boundary@example.com"),
+    ):
+        FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
+        refresh_token = await create_refresh_token(db_session, user.id)
+        token_hash = hash_refresh_token(refresh_token)
+        token_record = await db_session.scalar(
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+        )
+        assert token_record is not None
+
+        FrozenDateTime.current = token_record.expires_at - timedelta(seconds=1)
+        response = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["access_token"]
+    assert body["refresh_token"]
+    assert body["refresh_token"] != refresh_token
+
+
+@pytest.mark.asyncio
+async def test_refresh_rejects_token_at_exact_expiry_boundary(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """A token is invalid once current time reaches its expiration timestamp."""
+    user = User()
+    user.emails.append(
+        UserEmail(
+            email="refresh-expired-boundary@example.com",
+            is_primary=True,
+        )
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    with (
+        patch("app.auth.tokens.datetime", FrozenDateTime),
+        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-expired-boundary@example.com"),
+    ):
+        FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
+        refresh_token = await create_refresh_token(db_session, user.id)
+        token_hash = hash_refresh_token(refresh_token)
+        token_record = await db_session.scalar(
+            select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+        )
+        assert token_record is not None
+
+        FrozenDateTime.current = token_record.expires_at
+        response = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid or expired refresh token"}
