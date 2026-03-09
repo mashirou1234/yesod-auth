@@ -64,6 +64,27 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
    - [トラブルシューティング](help/troubleshooting.md): callback / state mismatch などの切り分け手順を確認
    - [FAQ](help/faq.md): 導入後によくある確認事項を横断で参照
 
+## 運用導線の同期チェック
+
+トップページの導線を更新したときは、次の 3 文書へのリンクと記述の整合をあわせて確認してください。
+
+- [インストール](installation.md): 導入前提と profile / secret の説明が最新か
+- [トラブルシューティング](help/troubleshooting.md): 障害切り分け導線が最新か
+- [FAQ](help/faq.md): 運用中によくある確認事項への導線が残っているか
+
+チェック手順:
+
+1. `docs/index.md` から上記 3 文書へ到達できることを確認する
+2. 3 文書の見出し・用語・導線がトップページの説明と矛盾しないことを確認する
+3. 三点同期チェックの結果を、更新を行った Issue または PR コメントへ日付付きで残す
+
+記録例:
+
+- [ ] installation を確認
+- [ ] troubleshooting を確認
+- [ ] faq を確認
+- 記録先: Issue / PR コメント
+
 リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
 
 OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
