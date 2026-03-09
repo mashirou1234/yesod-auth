@@ -75,6 +75,24 @@ OAuthプロバイダーを「有効化できているか」を、次の順序で
 6. 時刻同期を確認する（self-host）
    OAuth認可コードは短命なため、ホスト時刻のずれで `invalid_grant` が発生します。`timedatectl status` で NTP 同期状態を確認し、ずれがある場合は [clock skew 診断](../../help/troubleshooting.md#oauth-clock-skew) を参照してください。
 
+### provider切替時の確認フロー
+
+既存プロバイダー（例: Google）から別プロバイダー（例: GitHub）へ切り替えるときは、次の順で確認してください。
+
+1. 切替対象を1つに固定する
+   同時に複数プロバイダーを切り替えず、今回有効化する provider 名を1つ決めます。
+2. 新プロバイダーの secret 2点を追加する
+   `secrets/<provider>_client_id.txt` と `secrets/<provider>_client_secret.txt` を作成し、値を設定します。名称規約は [OAuth認証情報](../../installation.md#oauth-credentials) に合わせます。
+3. Compose 定義へ mount を追加する
+   `docker-compose.override.yml` で `api`（必要なら `api-ci` も）に対象 provider の secret を追加し、`docker compose config` で反映を確認します。
+4. callback URL を新プロバイダー管理画面へ反映する
+   `https://<api-domain>/api/v1/auth/<provider>/callback` を登録し、旧 provider の callback 設定と混在しないことを確認します。
+5. 新プロバイダー導線だけで疎通確認する
+   `GET /api/v1/auth/<provider>` から認可画面へ遷移できることを確認し、失敗時は [invalid_client 診断](../../help/troubleshooting.md#401-unauthorized--invalid_client) と [state mismatch 診断](../../help/troubleshooting.md#state-mismatch-flow) の順で切り分けます。
+
+!!! tip "旧プロバイダーの扱い"
+    旧プロバイダーを無効化する場合は、対応する secret mount を Compose から削除したうえで再起動し、`docker compose config --services` と API ログで不要 provider の導線が呼ばれていないことを確認してください。
+
 ### config / secrets の参照関係（要点）
 
 - アプリ設定は `api/app/config.py` の `read_secret()` で読み込みます。
