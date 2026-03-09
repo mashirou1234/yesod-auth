@@ -21,6 +21,16 @@ YESOD Authは3つのプロファイルを提供しています：
 | `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
 | `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
 
+### profile選択チェック表
+
+初回導入時は、用途に応じて次の表で profile を選択してください。実行前後に [profile整合確認手順](#profile整合確認手順) で定義との差分を確認すると安全です。
+
+| profile | この条件なら選ぶ | 最小確認コマンド |
+|---|---|---|
+| `default` | ローカルで API/Docs を最短で確認したい | `docker compose --profile default up -d`<br>`docker compose --profile default ps`<br>`curl -fsS http://localhost:8000/health` |
+| `full` | 管理画面 (`admin`) まで含めて導入確認したい | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full config --services` |
+| `ci` | CI 相当の軽量構成だけ確認したい | `docker compose --profile ci up -d`<br>`docker compose --profile ci config --services`<br>`docker compose --profile ci ps` |
+
 ## Docker起動前チェック項目
 
 `docker compose up` 実行前に、次の4項目を確認してください。
