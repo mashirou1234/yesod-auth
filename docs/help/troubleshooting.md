@@ -154,6 +154,29 @@ environment:
    ```
 3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
 
+#### invalid_client 再発防止チェック（デプロイ前後で毎回実施）
+
+次の 4 項目を上から順に実施し、すべて満たした場合のみ OAuth 設定変更を完了とします。
+
+1. 対象 provider の secret ファイルが 2 つとも存在することを確認する
+   ```bash
+   ls -l secrets/github_client_id.txt secrets/github_client_secret.txt
+   ```
+2. 変更後の Compose 定義に対象 secret が含まれることを確認する
+   ```bash
+   docker compose config | rg -n "github_client_id|github_client_secret"
+   ```
+3. API 再作成後に `invalid_client` が新規発生していないことを確認する
+   ```bash
+   docker compose up -d --force-recreate api
+   docker compose logs api --since=10m | rg -n "invalid_client|401"
+   ```
+4. callback URL が現在の公開 API URL と一致していることを provider 管理画面で確認する
+   - 形式: `https://<api-domain>/api/v1/auth/{provider}/callback`
+   - self-host 運用時の基準は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト運用チェックリスト) を参照
+
+上記チェックを実施しても再発する場合は、[インストール時の secret 不足診断](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を再実行し、secret 名と実ファイル名の不一致を先に解消してください。
+
 ---
 
 <a id="oauth-clock-skew"></a>
