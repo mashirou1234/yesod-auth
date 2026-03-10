@@ -1,6 +1,7 @@
 """Auth router with security enhancements."""
 
 import secrets
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -64,6 +65,19 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+def _get_request_id(request: Request) -> str:
+    """Extract request-id header or generate a fallback ID."""
+    request_id = request.headers.get("X-Request-Id")
+    if request_id:
+        return request_id
+    return str(uuid.uuid4())
+
+
+def _invalid_state_reason(request: Request) -> str:
+    """Build a fixed invalid-state reason format for audit logs."""
+    return f"Invalid state [request-id={_get_request_id(request)}]"
+
+
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
     credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
@@ -122,7 +136,7 @@ async def google_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "google":
         await AuditLogger.log_login(
-            db, None, "google", False, ip_address, device_info, "Invalid state"
+            db, None, "google", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -218,7 +232,7 @@ async def discord_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "discord":
         await AuditLogger.log_login(
-            db, None, "discord", False, ip_address, device_info, "Invalid state"
+            db, None, "discord", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -315,7 +329,7 @@ async def github_callback(
     if not state_data or state_data.get("provider") != "github":
         record_oauth_failure_metric("github", "invalid_state")
         await AuditLogger.log_login(
-            db, None, "github", False, ip_address, device_info, "Invalid state"
+            db, None, "github", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -412,7 +426,9 @@ async def x_callback(
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "x":
-        await AuditLogger.log_login(db, None, "x", False, ip_address, device_info, "Invalid state")
+        await AuditLogger.log_login(
+            db, None, "x", False, ip_address, device_info, _invalid_state_reason(request)
+        )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
@@ -511,7 +527,7 @@ async def linkedin_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "linkedin":
         await AuditLogger.log_login(
-            db, None, "linkedin", False, ip_address, device_info, "Invalid state"
+            db, None, "linkedin", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -607,7 +623,7 @@ async def facebook_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "facebook":
         await AuditLogger.log_login(
-            db, None, "facebook", False, ip_address, device_info, "Invalid state"
+            db, None, "facebook", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -704,7 +720,7 @@ async def slack_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "slack":
         await AuditLogger.log_login(
-            db, None, "slack", False, ip_address, device_info, "Invalid state"
+            db, None, "slack", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -801,7 +817,7 @@ async def twitch_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "twitch":
         await AuditLogger.log_login(
-            db, None, "twitch", False, ip_address, device_info, "Invalid state"
+            db, None, "twitch", False, ip_address, device_info, _invalid_state_reason(request)
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
