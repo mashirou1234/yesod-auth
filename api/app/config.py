@@ -4,6 +4,16 @@ import os
 from functools import lru_cache
 
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
+OAUTH_PROVIDER_CREDENTIAL_KEYS: tuple[tuple[str, str], ...] = (
+    ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
+    ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
+    ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
+    ("X_CLIENT_ID", "X_CLIENT_SECRET"),
+    ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
+    ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
+    ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
+    ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
+)
 
 
 def read_secret(name: str, default: str = "") -> str:
@@ -93,6 +103,18 @@ class Settings:
     _cors_origins, _cors_origins_using_default = resolve_cors_origins(os.getenv("CORS_ORIGINS"))
     CORS_ORIGINS: list[str] = _cors_origins
     CORS_ORIGINS_USING_DEFAULT: bool = _cors_origins_using_default
+
+    def __init__(self) -> None:
+        self._validate_oauth_provider_secrets()
+
+    def _validate_oauth_provider_secrets(self) -> None:
+        for client_id_key, client_secret_key in OAUTH_PROVIDER_CREDENTIAL_KEYS:
+            client_id = str(getattr(self, client_id_key, "")).strip()
+            client_secret = str(getattr(self, client_secret_key, "")).strip()
+            if client_id and not client_secret:
+                raise ValueError(
+                    f"OAuth provider secret is empty. Set non-empty value for {client_secret_key}."
+                )
 
 
 @lru_cache
