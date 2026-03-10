@@ -14,6 +14,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
 from app.main import app
+from app.metrics import (
+    render_oauth_rate_limit_burst_metrics_lines,
+    reset_oauth_rate_limit_burst_metrics,
+)
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserEmail
 
@@ -238,3 +242,39 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
     assert retry_after is not None
     assert retry_after.isdigit()
     assert int(retry_after) >= 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.enable_rate_limiter
+async def test_oauth_provider_rate_limit_records_burst_metric(client: AsyncClient):
+    """OAuth provider endpoint 429 should increment provider-level burst metric."""
+    reset_oauth_rate_limit_burst_metrics()
+    limiter = app.state.limiter
+    limit_item = RateLimitItemPerMinute(10, 1)
+    synthetic_limit = Limit(
+        limit=limit_item,
+        key_func=limiter._key_func,
+        scope=None,
+        per_method=False,
+        methods=None,
+        error_message=None,
+        exempt_when=None,
+        cost=1,
+        override_defaults=False,
+    )
+
+    def raise_rate_limit(request, endpoint_func=None, in_middleware=True):
+        request.state.view_rate_limit = (limit_item, ["test-client"])
+        raise RateLimitExceeded(synthetic_limit)
+
+    reset_at = int(time.time()) + 60
+    with (
+        patch.object(limiter, "_check_request_limit", side_effect=raise_rate_limit),
+        patch.object(limiter.limiter, "get_window_stats", return_value=(reset_at, 0)),
+    ):
+        response = await client.get("/api/v1/auth/google")
+
+    assert response.status_code == 429
+    assert 'yesod_oauth_rate_limit_burst_total{provider="google"} 1' in (
+        render_oauth_rate_limit_burst_metrics_lines()
+    )

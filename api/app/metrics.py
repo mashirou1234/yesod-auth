@@ -13,6 +13,8 @@ from app.db.session import get_db
 router = APIRouter(tags=["metrics"])
 _oauth_failure_counts: dict[tuple[str, str], int] = defaultdict(int)
 _oauth_failure_counts_lock = Lock()
+_oauth_rate_limit_burst_counts: dict[str, int] = defaultdict(int)
+_oauth_rate_limit_burst_counts_lock = Lock()
 
 
 def record_oauth_failure_metric(provider: str, reason: str) -> None:
@@ -34,6 +36,28 @@ def render_oauth_failure_metrics_lines() -> list[str]:
     return [
         f'yesod_oauth_failures_total{{provider="{provider}",reason="{reason}"}} {count}'
         for (provider, reason), count in sorted(oauth_failure_snapshot.items())
+    ]
+
+
+def record_oauth_rate_limit_burst_metric(provider: str) -> None:
+    """Record OAuth burst rate-limit events grouped by provider."""
+    with _oauth_rate_limit_burst_counts_lock:
+        _oauth_rate_limit_burst_counts[provider] += 1
+
+
+def reset_oauth_rate_limit_burst_metrics() -> None:
+    """Reset OAuth burst rate-limit counters. Used by tests for deterministic assertions."""
+    with _oauth_rate_limit_burst_counts_lock:
+        _oauth_rate_limit_burst_counts.clear()
+
+
+def render_oauth_rate_limit_burst_metrics_lines() -> list[str]:
+    """Render OAuth burst rate-limit metric lines from in-memory counters."""
+    with _oauth_rate_limit_burst_counts_lock:
+        oauth_rate_limit_snapshot = dict(_oauth_rate_limit_burst_counts)
+    return [
+        f'yesod_oauth_rate_limit_burst_total{{provider="{provider}"}} {count}'
+        for provider, count in sorted(oauth_rate_limit_snapshot.items())
     ]
 
 
@@ -78,6 +102,7 @@ async def metrics(db: AsyncSession = Depends(get_db)):
     metrics_output.append(f"yesod_deleted_users_pending {deleted_users}")
 
     metrics_output.extend(render_oauth_failure_metrics_lines())
+    metrics_output.extend(render_oauth_rate_limit_burst_metrics_lines())
 
     # Login stats (last 24h) - only if audit schema exists
     try:

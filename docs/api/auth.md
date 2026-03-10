@@ -25,6 +25,15 @@
 
 ---
 
+## レート制限メトリクス
+
+`GET /metrics` では OAuth 関連のレート制限を次のメトリクスで確認できます。
+
+- `yesod_oauth_rate_limit_burst_total{provider="<provider>"}`: provider 別に 429 が返った回数
+- `yesod_oauth_failures_total{provider="<provider>",reason="<reason>"}`: OAuth 処理失敗回数（既存）
+
+---
+
 ## 認可エラー方針（401 / 403）
 
 認証・認可に関するステータスコードは次の方針で使い分けます。
