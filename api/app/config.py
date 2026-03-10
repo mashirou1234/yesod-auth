@@ -46,6 +46,7 @@ class Settings:
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_LIFETIME_SECONDS: int = int(os.getenv("ACCESS_TOKEN_LIFETIME_SECONDS", "900"))
     REFRESH_TOKEN_LIFETIME_DAYS: int = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7"))
+    TOKEN_REFRESH_MAX_RETRIES: int = int(os.getenv("TOKEN_REFRESH_MAX_RETRIES", "3"))
 
     # OAuth State TTL (seconds)
     OAUTH_STATE_TTL: int = int(os.getenv("OAUTH_STATE_TTL", "300"))

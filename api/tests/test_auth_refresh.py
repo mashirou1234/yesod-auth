@@ -1,8 +1,10 @@
 """Refresh token endpoint tests."""
 
 import time
+import importlib
+from types import SimpleNamespace
 from datetime import UTC, datetime, timedelta
-from unittest.mock import PropertyMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -16,6 +18,8 @@ from app.auth.tokens import create_access_token, create_refresh_token, hash_refr
 from app.main import app
 from app.models.refresh_token import RefreshToken
 from app.models.user import User, UserEmail
+
+auth_router = importlib.import_module("app.auth.router")
 
 
 class FrozenDateTime(datetime):
@@ -238,3 +242,35 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
     assert retry_after is not None
     assert retry_after.isdigit()
     assert int(retry_after) >= 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("max_retries", "expected_attempts"),
+    [
+        (1, 2),
+        (3, 4),
+        (5, 6),
+    ],
+)
+async def test_refresh_retry_limit_is_configurable(monkeypatch, max_retries: int, expected_attempts: int):
+    rotate_mock = AsyncMock(side_effect=RuntimeError("temporary failure"))
+    monkeypatch.setattr(auth_router, "rotate_refresh_token", rotate_mock)
+    monkeypatch.setattr(auth_router.settings, "TOKEN_REFRESH_MAX_RETRIES", max_retries)
+
+    with pytest.raises(RuntimeError, match="temporary failure"):
+        await auth_router._rotate_refresh_token_with_retry(None, "token", None, None)
+
+    assert rotate_mock.await_count == expected_attempts
+
+
+@pytest.mark.asyncio
+async def test_refresh_retry_limit_uses_default_when_setting_missing(monkeypatch):
+    rotate_mock = AsyncMock(side_effect=RuntimeError("temporary failure"))
+    monkeypatch.setattr(auth_router, "rotate_refresh_token", rotate_mock)
+    monkeypatch.setattr(auth_router, "settings", SimpleNamespace())
+
+    with pytest.raises(RuntimeError, match="temporary failure"):
+        await auth_router._rotate_refresh_token_with_retry(None, "token", None, None)
+
+    assert rotate_mock.await_count == 4

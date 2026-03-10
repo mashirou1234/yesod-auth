@@ -64,6 +64,25 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+async def _rotate_refresh_token_with_retry(
+    db: AsyncSession,
+    refresh_token: str,
+    device_info: str | None,
+    ip_address: str | None,
+):
+    """Retry refresh token rotation on transient failures."""
+    max_retries = max(0, int(getattr(settings, "TOKEN_REFRESH_MAX_RETRIES", 3)))
+    last_error = None
+    for _attempt in range(max_retries + 1):
+        try:
+            return await rotate_refresh_token(db, refresh_token, device_info, ip_address)
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return None
+
+
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
     credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
@@ -874,7 +893,9 @@ async def refresh_tokens(
     """Refresh access token using refresh token (with rotation)."""
     device_info, ip_address = _get_client_info(request)
 
-    result = await rotate_refresh_token(db, body.refresh_token, device_info, ip_address)
+    result = await _rotate_refresh_token_with_retry(
+        db, body.refresh_token, device_info, ip_address
+    )
 
     if not result:
         await AuditLogger.log_event(

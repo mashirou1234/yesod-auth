@@ -95,6 +95,9 @@ curl -H "Authorization: Bearer <access_token>" \
 
 ## トークンリフレッシュ
 
+`/api/v1/auth/refresh` の内部再試行上限は `TOKEN_REFRESH_MAX_RETRIES`（既定: `3`）で設定できます。
+一時的な DB 障害などで refresh 処理が失敗した場合、この上限まで再試行します。
+
 ```bash
 POST /api/v1/auth/refresh
 Content-Type: application/json
