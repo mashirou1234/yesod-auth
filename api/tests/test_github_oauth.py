@@ -285,3 +285,24 @@ class TestGitHubOAuthCallback:
 
         assert response.status_code == 400
         assert response.json() == {"detail": "Invalid or expired state"}
+
+    @pytest.mark.asyncio
+    async def test_callback_mismatched_state_logs_request_id(self, client):
+        """State mismatch audit log must include request-id for traceability."""
+        with (
+            patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
+            patch(
+                "app.auth.router.OAuthStateStore.get_and_delete",
+                new=AsyncMock(return_value=None),
+            ),
+            patch("app.auth.router.AuditLogger.log_login", new=AsyncMock()) as mock_log_login,
+        ):
+            response = await client.get(
+                "/api/v1/auth/github/callback?code=test-code&state=unexpected-state",
+                headers={"X-Request-Id": "req-test-123"},
+            )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Invalid or expired state"}
+        assert mock_log_login.await_count == 1
+        assert mock_log_login.await_args.args[6] == "Invalid state [request-id=req-test-123]"
