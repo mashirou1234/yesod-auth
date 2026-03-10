@@ -64,9 +64,15 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+def _normalize_provider_name(provider: str) -> str:
+    """Normalize provider input to support case-insensitive resolution."""
+    return provider.strip().lower()
+
+
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
-    credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
+    normalized_provider = _normalize_provider_name(provider)
+    credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(normalized_provider)
     if credential_fields is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -83,7 +89,7 @@ def _ensure_provider_enabled(provider: str) -> None:
     raise HTTPException(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         detail=(
-            f"OAuth provider '{provider}' is disabled. "
+            f"OAuth provider '{normalized_provider}' is disabled. "
             f"Configure {client_id_field} and {client_secret_field}."
         ),
     )

@@ -42,3 +42,27 @@ def test_oauth_unknown_provider_raises_400():
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "Unsupported OAuth provider 'unknown'."
+
+
+@pytest.mark.parametrize("provider_variant", ["GitHub", "GITHUB", "gItHuB"])
+def test_oauth_provider_name_is_case_insensitive(monkeypatch, provider_variant: str):
+    """Provider name resolution should ignore letter case."""
+    monkeypatch.setattr(auth_router_module.settings, "GITHUB_CLIENT_ID", "")
+    monkeypatch.setattr(auth_router_module.settings, "GITHUB_CLIENT_SECRET", "")
+
+    with pytest.raises(auth_router_module.HTTPException) as exc_info:
+        auth_router_module._ensure_provider_enabled(provider_variant)
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail == (
+        "OAuth provider 'github' is disabled. "
+        "Configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET."
+    )
+
+
+def test_oauth_provider_case_variant_passes_when_credentials_exist(monkeypatch):
+    """Case variant should resolve to the same provider when configured."""
+    monkeypatch.setattr(auth_router_module.settings, "GITHUB_CLIENT_ID", "dummy-id")
+    monkeypatch.setattr(auth_router_module.settings, "GITHUB_CLIENT_SECRET", "dummy-secret")
+
+    auth_router_module._ensure_provider_enabled("GitHub")
