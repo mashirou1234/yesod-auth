@@ -101,4 +101,27 @@ async def test_sessions_list_rejects_limit_over_maximum(client: AsyncClient):
         headers={"Authorization": f"Bearer {token}"},
     )
 
-    assert response.status_code == 422
+    assert response.status_code == 400
+    assert response.json() == {
+        "detail": {
+            "code": "SESSIONS_LIMIT_EXCEEDED",
+            "message": "limit must be less than or equal to 1000",
+            "max_limit": 1000,
+        }
+    }
+
+
+@pytest.mark.asyncio
+async def test_sessions_list_accepts_limit_at_maximum(client: AsyncClient):
+    """Session list should accept limit at maximum boundary."""
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+
+    response = await client.get(
+        "/api/v1/sessions?limit=1000",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200

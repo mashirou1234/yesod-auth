@@ -34,6 +34,18 @@ curl -sS -H "Authorization: Bearer ${TOKEN}" \
 2. `.items | length` が指定した `limit` を超えない
 3. 同一トークンで `GET /api/v1/users/me` も継続して成功する
 
+上限超過時（`limit > 1000`）は `400 Bad Request` を返し、専用エラーコードと上限値を本文に含みます。
+
+```json
+{
+  "detail": {
+    "code": "SESSIONS_LIMIT_EXCEEDED",
+    "message": "limit must be less than or equal to 1000",
+    "max_limit": 1000
+  }
+}
+```
+
 !!! tip "切り分け導線"
     `limit=1/100` で期待どおりにならない場合は、[トラブルシューティングの確認手順](../help/troubleshooting.md#users-pagination-limit-check) を参照してください。
 
