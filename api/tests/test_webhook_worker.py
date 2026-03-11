@@ -147,6 +147,47 @@ class TestWebhookWorkerRetry:
             assert result.attempt_count == 1
 
     @pytest.mark.asyncio
+    async def test_no_retry_on_4xx_logs_signature_algorithm(
+        self,
+        caplog,
+        sample_endpoint,
+        sample_event,
+        sample_config,
+    ):
+        """4xx の失敗ログに署名アルゴリズム名を含める。"""
+        worker = WebhookWorker()
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 401
+        mock_response.text = "invalid signature"
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=sample_config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            caplog.at_level("WARNING", logger="app.webhooks.worker"),
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            result = await worker._deliver_to_endpoint(sample_event, sample_endpoint)
+
+        assert result.success is False
+        assert result.attempt_count == 1
+        assert result.signature_algorithm == "sha256"
+        client_error_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if "failed with client error" in record.getMessage()
+        )
+        assert "signature_algo=sha256" in client_error_log
+
+    @pytest.mark.asyncio
     async def test_retry_on_5xx(self, sample_endpoint, sample_event, sample_config):
         """Test that 5xx errors trigger retries."""
         worker = WebhookWorker()
@@ -229,6 +270,7 @@ class TestWebhookWorkerRetry:
         assert f"endpoint_id={sample_endpoint.id}" in exhausted_log
         assert f"event_id={sample_event.event_id}" in exhausted_log
         assert "attempts=3" in exhausted_log
+        assert "signature_algo=sha256" in exhausted_log
         assert "error=Server Error" in exhausted_log
 
 
