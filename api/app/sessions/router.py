@@ -14,15 +14,27 @@ from app.models import RefreshToken, User
 from .schemas import RevokeResponse, SessionListResponse, SessionResponse
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+SESSIONS_LIMIT_MAX = 1000
+SESSIONS_LIMIT_EXCEEDED_CODE = "SESSIONS_LIMIT_EXCEEDED"
 
 
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     current_user: User = Depends(get_current_user),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
+    limit: int = Query(100, ge=1, description="Maximum results"),
     db: AsyncSession = Depends(get_db),
 ):
     """List all active sessions for current user."""
+    if limit > SESSIONS_LIMIT_MAX:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": SESSIONS_LIMIT_EXCEEDED_CODE,
+                "message": f"limit must be less than or equal to {SESSIONS_LIMIT_MAX}",
+                "max_limit": SESSIONS_LIMIT_MAX,
+            },
+        )
+
     result = await db.execute(
         select(RefreshToken)
         .where(
