@@ -1,7 +1,9 @@
 """Auth router with security enhancements."""
 
+import logging
 import secrets
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -43,6 +45,7 @@ from .tokens import (
 
 settings = get_settings()
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
@@ -76,6 +79,58 @@ def _get_request_id(request: Request) -> str:
 def _invalid_state_reason(request: Request) -> str:
     """Build a fixed invalid-state reason format for audit logs."""
     return f"Invalid state [request-id={_get_request_id(request)}]"
+
+
+def _normalize_callback_url(url: str) -> str:
+    """Normalize callback URL by dropping only trailing slash and query/fragment."""
+    parsed = urlsplit(url)
+    path = parsed.path
+    if path.endswith("/") and path != "/":
+        path = path[:-1]
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def _build_oauth_redirect_uri(provider: str) -> str:
+    """Build canonical OAuth redirect URI for provider callback."""
+    return f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/auth/{provider}/callback"
+
+
+async def _validate_callback_url_or_raise(
+    *,
+    request: Request,
+    db: AsyncSession,
+    provider: str,
+    ip_address: str | None,
+    device_info: str | None,
+    expected_callback_url: str,
+) -> None:
+    """Validate callback URL with trailing-slash normalization."""
+    actual_callback_url = str(request.url.replace(query="", fragment=""))
+    normalized_expected = _normalize_callback_url(expected_callback_url)
+    normalized_actual = _normalize_callback_url(actual_callback_url)
+    if normalized_expected == normalized_actual:
+        if expected_callback_url != actual_callback_url:
+            logger.info(
+                "OAuth callback URL normalized for provider=%s expected=%s actual=%s",
+                provider,
+                expected_callback_url,
+                actual_callback_url,
+            )
+        return
+
+    logger.warning(
+        "OAuth callback URL mismatch for provider=%s expected=%s actual=%s normalized_expected=%s normalized_actual=%s",
+        provider,
+        expected_callback_url,
+        actual_callback_url,
+        normalized_expected,
+        normalized_actual,
+    )
+    record_oauth_failure_metric(provider, "callback_url_mismatch")
+    await AuditLogger.log_login(
+        db, None, provider, False, ip_address, device_info, "Callback URL mismatch"
+    )
+    raise HTTPException(status_code=400, detail="OAuth callback URL mismatch")
 
 
 def _ensure_provider_enabled(provider: str) -> None:
@@ -115,7 +170,7 @@ async def google_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "google", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    redirect_uri = _build_oauth_redirect_uri("google")
     authorize_url = GoogleOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -141,7 +196,15 @@ async def google_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    redirect_uri = _build_oauth_redirect_uri("google")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="google",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -211,7 +274,7 @@ async def discord_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "discord", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    redirect_uri = _build_oauth_redirect_uri("discord")
     authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -237,7 +300,15 @@ async def discord_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    redirect_uri = _build_oauth_redirect_uri("discord")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="discord",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -307,7 +378,7 @@ async def github_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "github", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    redirect_uri = _build_oauth_redirect_uri("github")
     authorize_url = GitHubOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -334,7 +405,15 @@ async def github_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    redirect_uri = _build_oauth_redirect_uri("github")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="github",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await GitHubOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -406,7 +485,7 @@ async def x_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "x", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    redirect_uri = _build_oauth_redirect_uri("x")
     authorize_url = XOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -432,7 +511,15 @@ async def x_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    redirect_uri = _build_oauth_redirect_uri("x")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="x",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await XOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -506,7 +593,7 @@ async def linkedin_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "linkedin", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    redirect_uri = _build_oauth_redirect_uri("linkedin")
     authorize_url = LinkedInOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -532,7 +619,15 @@ async def linkedin_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    redirect_uri = _build_oauth_redirect_uri("linkedin")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="linkedin",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await LinkedInOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -602,7 +697,7 @@ async def facebook_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "facebook", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    redirect_uri = _build_oauth_redirect_uri("facebook")
     authorize_url = FacebookOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -628,7 +723,15 @@ async def facebook_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    redirect_uri = _build_oauth_redirect_uri("facebook")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="facebook",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await FacebookOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -699,7 +802,7 @@ async def slack_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "slack", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    redirect_uri = _build_oauth_redirect_uri("slack")
     authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -725,7 +828,15 @@ async def slack_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    redirect_uri = _build_oauth_redirect_uri("slack")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="slack",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await SlackOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -796,7 +907,7 @@ async def twitch_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "twitch", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    redirect_uri = _build_oauth_redirect_uri("twitch")
     authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -822,7 +933,15 @@ async def twitch_callback(
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    redirect_uri = _build_oauth_redirect_uri("twitch")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="twitch",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await TwitchOAuth.exchange_code(code, redirect_uri, code_verifier)
