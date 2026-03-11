@@ -15,14 +15,28 @@ from app.models import User
 from .tokens import decode_access_token
 
 settings = get_settings()
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
+
+MISSING_BEARER_TOKEN_DETAIL = "Not authenticated"
+
+
+def _missing_bearer_token_exception() -> HTTPException:
+    """Return a fixed auth error for missing Authorization bearer token."""
+    return HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=MISSING_BEARER_TOKEN_DETAIL,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: AsyncSession = Depends(get_db),
 ) -> User:
     """Get the current authenticated user."""
+    if credentials is None:
+        raise _missing_bearer_token_exception()
+
     token = credentials.credentials
     payload = decode_access_token(token)
 
