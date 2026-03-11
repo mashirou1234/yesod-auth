@@ -8,7 +8,7 @@
 ## 前提条件
 
 - Docker & Docker Compose
-- Google Cloud ConsoleまたはDiscord Developer Portalのアカウント
+- 利用するOAuth providerの開発者アカウント（Google/Discord/GitHubなど）
 
 ## 1. リポジトリのクローン
 
@@ -29,6 +29,8 @@ cp secrets/jwt_secret.txt.example secrets/jwt_secret.txt
 ```
 
 各ファイルを編集して、OAuthプロバイダーから取得したクレデンシャルを設定します。
+
+providerごとの必須 secret 名は [OAuth設定ハブの一覧](guides/oauth/index.md#provider別必須環境変数一覧) を参照してください。
 
 !!! tip "provider追加時は先にチェック"
     新しい OAuth provider を追加する場合は、先に [OAuth provider追加時の事前チェック](installation.md#oauth-provider追加時の事前チェック) を実施してから secrets を作成してください。

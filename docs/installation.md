@@ -391,6 +391,7 @@ rg -n "REFRESH_TOKEN_LIFETIME_DAYS|/api/v1/auth/refresh|再ログイン" docs/in
 Docker Secretsまたは環境変数で設定：
 
 初回導入時は、設定後に [初回導入チェックリスト](getting-started.md#初回導入チェックリスト) を順に実行して動作確認してください。
+provider別の対応表は [OAuth設定ハブの一覧](guides/oauth/index.md#provider別必須環境変数一覧) を参照してください。
 
 | シークレット名 | 説明 |
 |---------------|------|
