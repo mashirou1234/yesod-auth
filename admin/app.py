@@ -5,9 +5,10 @@ import graphviz
 import hashlib
 import hmac
 import base64
+import logging
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from config import settings
+from config import settings, warn_if_session_cookie_samesite_unset
 from i18n import (
     Translator,
     SUPPORTED_LANGUAGES,
@@ -18,6 +19,7 @@ import valkey_client
 
 # Path to static icons directory
 ICONS_DIR = Path(__file__).parent / "static" / "icons"
+logger = logging.getLogger(__name__)
 
 
 def load_svg_icon(name: str) -> str:
@@ -33,6 +35,12 @@ st.set_page_config(
     page_title="YESOD Admin",
     page_icon="🔐",
     layout="wide",
+)
+
+warn_if_session_cookie_samesite_unset(
+    logger,
+    environment=settings.ENVIRONMENT,
+    session_cookie_samesite=settings.SESSION_COOKIE_SAMESITE,
 )
 
 
