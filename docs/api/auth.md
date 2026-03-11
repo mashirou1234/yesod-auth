@@ -31,6 +31,7 @@
 
 - `yesod_oauth_rate_limit_burst_total{provider="<provider>"}`: provider 別に 429 が返った回数
 - `yesod_oauth_failures_total{provider="<provider>",reason="<reason>"}`: OAuth 処理失敗回数（既存）
+  - `reason="unknown_error_code"`: provider callback で未知の OAuth error code を受けた回数（provider ラベル付き）
 
 ---
 
@@ -247,6 +248,7 @@ Content-Type: application/json
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
 |------|------|-----------|-----------|
 | 400 | `Invalid or expired state` | state 不一致/期限切れ | 認証フローを最初から再実行 |
+| 400 | `OAuth callback failed: <error_code>` | provider が `error` を返却 | provider 側設定とエラー内容を確認（未知コードは metrics 監視） |
 | 400 | `Failed to exchange code` | 認可コード交換失敗 | provider 設定・redirect URI を確認 |
 | 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
 | 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
