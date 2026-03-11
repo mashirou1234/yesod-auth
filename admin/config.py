@@ -1,5 +1,6 @@
 """Admin configuration."""
 import os
+from typing import Protocol
 
 
 def read_secret(name: str, default: str = "") -> str:
@@ -26,9 +27,32 @@ class Settings:
     
     # Session persistence (hours)
     SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
+    SESSION_COOKIE_SAMESITE: str = os.getenv("SESSION_COOKIE_SAMESITE", "").strip()
 
     # Default language (en, ja, fr, ko, de)
     DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "en")
 
 
 settings = Settings()
+
+
+class WarningLogger(Protocol):
+    def warning(self, msg: str, *args) -> None: ...
+
+
+def warn_if_session_cookie_samesite_unset(
+    logger: WarningLogger,
+    *,
+    environment: str,
+    session_cookie_samesite: str,
+) -> bool:
+    """Emit warning when SameSite is not configured for admin session cookie."""
+    if session_cookie_samesite.strip():
+        return False
+
+    env_name = environment.strip() or "production"
+    logger.warning(
+        "SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=%s)",
+        env_name,
+    )
+    return True
