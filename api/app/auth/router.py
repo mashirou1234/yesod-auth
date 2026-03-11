@@ -59,6 +59,17 @@ OAUTH_PROVIDER_CREDENTIAL_FIELDS = {
     "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
     "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
 }
+KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
+    "access_denied",
+    "invalid_request",
+    "invalid_client",
+    "invalid_grant",
+    "unauthorized_client",
+    "unsupported_grant_type",
+    "invalid_scope",
+    "server_error",
+    "temporarily_unavailable",
+}
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -93,6 +104,13 @@ def _normalize_callback_url(url: str) -> str:
 def _build_oauth_redirect_uri(provider: str) -> str:
     """Build canonical OAuth redirect URI for provider callback."""
     return f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/auth/{provider}/callback"
+
+
+def _record_unknown_oauth_error_code_metric(provider: str, error_code: str) -> None:
+    """Record metric only when provider returned an unclassified OAuth error code."""
+    normalized_error_code = error_code.strip().lower()
+    if normalized_error_code and normalized_error_code not in KNOWN_OAUTH_CALLBACK_ERROR_CODES:
+        record_oauth_failure_metric(provider, "unknown_error_code")
 
 
 async def _validate_callback_url_or_raise(
@@ -388,12 +406,23 @@ async def github_login(request: Request):
 @limiter.limit("10/minute")
 async def github_callback(
     request: Request,
-    code: str,
-    state: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback."""
     device_info, ip_address = _get_client_info(request)
+
+    if error:
+        _record_unknown_oauth_error_code_metric("github", error)
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, f"OAuth callback failed: {error}"
+        )
+        raise HTTPException(status_code=400, detail=f"OAuth callback failed: {error}")
+
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state")
 
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)

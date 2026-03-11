@@ -306,3 +306,35 @@ class TestGitHubOAuthCallback:
         assert response.json() == {"detail": "Invalid or expired state"}
         assert mock_log_login.await_count == 1
         assert mock_log_login.await_args.args[6] == "Invalid state [request-id=req-test-123]"
+
+    @pytest.mark.asyncio
+    async def test_callback_unknown_error_code_records_metric(self, client):
+        """Unknown OAuth error code should increment dedicated classification metric."""
+        with (
+            patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
+            patch("app.auth.router.record_oauth_failure_metric") as mock_metric,
+            patch("app.auth.router.AuditLogger.log_login", new=AsyncMock()) as mock_log_login,
+        ):
+            response = await client.get("/api/v1/auth/github/callback?error=provider_outage&state=s1")
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "OAuth callback failed: provider_outage"}
+        mock_metric.assert_called_once_with("github", "unknown_error_code")
+        assert mock_log_login.await_count == 1
+        assert mock_log_login.await_args.args[6] == "OAuth callback failed: provider_outage"
+
+    @pytest.mark.asyncio
+    async def test_callback_known_error_code_does_not_record_unknown_metric(self, client):
+        """Known OAuth error code should not be counted as unknown classification."""
+        with (
+            patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
+            patch("app.auth.router.record_oauth_failure_metric") as mock_metric,
+            patch("app.auth.router.AuditLogger.log_login", new=AsyncMock()) as mock_log_login,
+        ):
+            response = await client.get("/api/v1/auth/github/callback?error=access_denied&state=s1")
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "OAuth callback failed: access_denied"}
+        mock_metric.assert_not_called()
+        assert mock_log_login.await_count == 1
+        assert mock_log_login.await_args.args[6] == "OAuth callback failed: access_denied"
