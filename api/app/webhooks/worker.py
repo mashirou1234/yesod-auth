@@ -36,6 +36,7 @@ class DeliveryResult:
     error_message: str | None = None
     latency_ms: int | None = None
     attempt_count: int = 1
+    signature_algorithm: str | None = None
 
 
 class WebhookWorker:
@@ -158,9 +159,13 @@ class WebhookWorker:
             # Don't retry on 4xx errors (client errors)
             if result.http_status and 400 <= result.http_status < 500:
                 logger.warning(
-                    "Webhook delivery to %s failed with client error %d, not retrying",
+                    (
+                        "Webhook delivery to %s failed with client error %d, not retrying "
+                        "(signature_algo=%s)"
+                    ),
                     endpoint.id,
                     result.http_status,
+                    result.signature_algorithm,
                 )
                 break
 
@@ -168,7 +173,7 @@ class WebhookWorker:
             logger.error(
                 (
                     "%s delivery_id=%s endpoint_id=%s event_id=%s attempts=%d "
-                    "max_attempts=%d http_status=%s error=%s"
+                    "max_attempts=%d signature_algo=%s http_status=%s error=%s"
                 ),
                 MAX_RETRY_EXHAUSTED_LOG_KEY,
                 delivery_id,
@@ -176,6 +181,7 @@ class WebhookWorker:
                 event.event_id,
                 result.attempt_count,
                 max_retries + 1,
+                result.signature_algorithm,
                 result.http_status,
                 result.error_message,
             )
@@ -204,6 +210,7 @@ class WebhookWorker:
             event.event_type,
             endpoint.id,
         )
+        signature_algorithm = WebhookSigner.SIGNATURE_PREFIX.removesuffix("=")
 
         start_time = time.time()
 
@@ -222,6 +229,7 @@ class WebhookWorker:
                     success=True,
                     http_status=response.status_code,
                     latency_ms=latency_ms,
+                    signature_algorithm=signature_algorithm,
                 )
             else:
                 return DeliveryResult(
@@ -229,17 +237,20 @@ class WebhookWorker:
                     http_status=response.status_code,
                     error_message=response.text[:500] if response.text else None,
                     latency_ms=latency_ms,
+                    signature_algorithm=signature_algorithm,
                 )
 
         except httpx.TimeoutException:
             return DeliveryResult(
                 success=False,
                 error_message="Request timeout",
+                signature_algorithm=signature_algorithm,
             )
         except httpx.RequestError as e:
             return DeliveryResult(
                 success=False,
                 error_message=str(e)[:500],
+                signature_algorithm=signature_algorithm,
             )
 
     async def _log_delivery(
