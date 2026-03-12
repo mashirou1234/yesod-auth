@@ -76,9 +76,9 @@ def _get_request_id(request: Request) -> str:
     return str(uuid.uuid4())
 
 
-def _invalid_state_reason(request: Request) -> str:
+def _invalid_state_reason(request: Request, provider: str) -> str:
     """Build a fixed invalid-state reason format for audit logs."""
-    return f"Invalid state [request-id={_get_request_id(request)}]"
+    return f"Invalid state [provider={provider}] [request-id={_get_request_id(request)}]"
 
 
 def _normalize_callback_url(url: str) -> str:
@@ -191,7 +191,13 @@ async def google_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "google":
         await AuditLogger.log_login(
-            db, None, "google", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "google",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "google"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -295,7 +301,13 @@ async def discord_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "discord":
         await AuditLogger.log_login(
-            db, None, "discord", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "discord",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "discord"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -400,7 +412,13 @@ async def github_callback(
     if not state_data or state_data.get("provider") != "github":
         record_oauth_failure_metric("github", "invalid_state")
         await AuditLogger.log_login(
-            db, None, "github", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "github",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "github"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -506,7 +524,13 @@ async def x_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "x":
         await AuditLogger.log_login(
-            db, None, "x", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "x",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "x"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -614,7 +638,13 @@ async def linkedin_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "linkedin":
         await AuditLogger.log_login(
-            db, None, "linkedin", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "linkedin",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "linkedin"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -718,7 +748,13 @@ async def facebook_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "facebook":
         await AuditLogger.log_login(
-            db, None, "facebook", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "facebook",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "facebook"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -823,7 +859,13 @@ async def slack_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "slack":
         await AuditLogger.log_login(
-            db, None, "slack", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "slack",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "slack"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
@@ -928,7 +970,13 @@ async def twitch_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "twitch":
         await AuditLogger.log_login(
-            db, None, "twitch", False, ip_address, device_info, _invalid_state_reason(request)
+            db,
+            None,
+            "twitch",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "twitch"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
