@@ -359,6 +359,41 @@ docker compose up -d --build
 
 `read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
 
+### profile別の環境変数優先順位
+
+`MOCK_OAUTH_ENABLED` はアプリ既定値 `0` ですが、Compose 運用では profile ごとに環境変数で上書きされます。  
+本番誤設定を避けるため、profile 別に以下を固定値として扱ってください。
+
+| profile | Compose上の期待値 | 実行時の期待値 | 根拠 |
+| --- | --- | --- | --- |
+| `default` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `full` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `ci` | `MOCK_OAUTH_ENABLED=1` が `api-ci.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api-ci.profiles: ci`) |
+
+確認コマンド（default/full/ci の3点を毎回実施）:
+
+```bash
+docker compose --profile default config | rg -n "MOCK_OAUTH_ENABLED"
+docker compose --profile full config | rg -n "MOCK_OAUTH_ENABLED"
+docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
+```
+
+判定:
+
+- `default`/`full`/`ci` すべてで `MOCK_OAUTH_ENABLED=1` が見えること
+- Compose を使わずアプリを単体起動する場合は既定値 `0` になること（`api/app/config.py`）
+
+### 受け入れ基準チェックリスト（MOCK_OAUTH_ENABLED / profile差分）
+
+1. 上記の profile 比較表で、アプリ既定値 `0` と Compose profile 上書き `1` を 1 表で確認できる
+2. default/full/ci の `docker compose config` 実行結果で期待値に一致する
+3. 利用する provider の secrets（`<provider>_client_id` / `<provider>_client_secret`）が揃っている
+4. provider 管理画面の callback URL と `GET /api/v1/auth/{provider}/callback` が一致している
+5. FAQ / installation / troubleshooting の3点同期を確認する  
+   - FAQ: [Mock OAuthから本番OAuthへ切り替える最小確認は？](./help/faq.md#mock-oauthから本番oauthへ切り替える最小確認は)  
+   - Installation: [profile別の環境変数優先順位](#profile別の環境変数優先順位)  
+   - Troubleshooting: [401 Unauthorized / invalid_client](./help/troubleshooting.md#401-unauthorized--invalid_client)
+
 ## リフレッシュトークン運用時の注意
 
 `/api/v1/auth/refresh` は「アクセストークンの延命」ではなく「ローテーションを伴う再発行」です。導入時は次の3点を必ず満たしてください。
