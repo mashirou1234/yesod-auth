@@ -100,6 +100,23 @@ organization制限が必要な場合は、`read:org`スコープとコールバ�
 切り分け手順は [トラブルシューティング: state mismatch 診断フロー](./troubleshooting.md#state-mismatch-flow) と [トラブルシューティング: 401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client) を参照してください。  
 前提の設定差分は [インストール: profile別の環境変数優先順位](../installation.md#profile別の環境変数優先順位) を参照してください。
 
+### 複数providerを有効化するときの順序チェックは？
+
+複数 provider を導入するときは、次の順で確認すると取りこぼしを防げます。
+
+1. profile を先に固定する（`default` / `full` / `ci` のどれで起動するかを決める）
+2. 実際に有効化する provider 分だけ `secrets/<provider>_client_id.txt` / `secrets/<provider>_client_secret.txt` を用意する
+3. provider 管理画面の callback URL を `https://<api-domain>/api/v1/auth/<provider>/callback` に一致させる
+4. `GET /api/v1/auth/<provider>` の開始と callback を同じ環境（同一 host/scheme）で通す
+
+導線は次の順で参照してください。
+
+- インストール: [OAuth認証情報](../installation.md#oauth認証情報)
+- クイックスタート: [2.5 コールバックURLの検証](../getting-started.md#25-コールバックurlの検証)
+- トラブルシューティング: [401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client)
+
+受け入れ時は、FAQ / installation / troubleshooting の3点同期（手順・用語・リンク先）が保たれていることを確認してください。
+
 ### ローカルでテストするには？
 
 ```bash
