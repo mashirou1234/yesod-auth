@@ -40,6 +40,7 @@ class WebhookSettings:
 
     max_retries: int = 5
     retry_base_delay_seconds: int = 2
+    retry_max_delay_seconds: int = 60
     delivery_timeout_seconds: int = 30
     log_retention_days: int = 30
 
@@ -92,6 +93,7 @@ class WebhookConfigLoader:
         settings = WebhookSettings(
             max_retries=settings_data.get("max_retries", 5),
             retry_base_delay_seconds=settings_data.get("retry_base_delay_seconds", 2),
+            retry_max_delay_seconds=settings_data.get("retry_max_delay_seconds", 60),
             delivery_timeout_seconds=settings_data.get("delivery_timeout_seconds", 30),
             log_retention_days=settings_data.get("log_retention_days", 30),
         )

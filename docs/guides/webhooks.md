@@ -35,6 +35,7 @@ endpoints:
 settings:
   max_retries: 5
   retry_base_delay_seconds: 2
+  retry_max_delay_seconds: 60
   delivery_timeout_seconds: 30
 ```
 

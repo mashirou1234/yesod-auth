@@ -57,5 +57,6 @@ endpoints:
 settings:
   max_retries: 5                    # Maximum delivery retry attempts
   retry_base_delay_seconds: 2       # Base delay for exponential backoff
+  retry_max_delay_seconds: 60       # Maximum delay cap for exponential backoff
   delivery_timeout_seconds: 30      # HTTP request timeout
   log_retention_days: 30            # How long to keep delivery logs
