@@ -354,3 +354,50 @@ class TestWebhookConfigValidation:
                 assert len(endpoints) == 0
         finally:
             config_path.unlink()
+
+    def test_retry_max_delay_setting_defaults_and_override(self):
+        """retry_max_delay_seconds は既定値と設定値の両方を反映する。"""
+        default_config = {
+            "endpoints": [
+                {
+                    "id": "default-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ]
+        }
+        override_config = {
+            "endpoints": [
+                {
+                    "id": "override-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_max_delay_seconds": 7,
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f_default:
+            yaml.dump(default_config, f_default)
+            default_path = Path(f_default.name)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f_override:
+            yaml.dump(override_config, f_override)
+            override_path = Path(f_override.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", default_path):
+                WebhookConfigLoader._config = None
+                result_default = WebhookConfigLoader.load()
+            assert result_default.settings.retry_max_delay_seconds == 60
+
+            with patch.object(config_module, "CONFIG_PATH", override_path):
+                WebhookConfigLoader._config = None
+                result_override = WebhookConfigLoader.load()
+            assert result_override.settings.retry_max_delay_seconds == 7
+        finally:
+            default_path.unlink()
+            override_path.unlink()

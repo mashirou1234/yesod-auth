@@ -123,6 +123,7 @@ class WebhookWorker:
         config = WebhookConfigLoader.get_config()
         max_retries = config.settings.max_retries
         base_delay = config.settings.retry_base_delay_seconds
+        max_delay = config.settings.retry_max_delay_seconds
         timeout = config.settings.delivery_timeout_seconds
         delivery_id = uuid.uuid4()
 
@@ -133,13 +134,19 @@ class WebhookWorker:
 
             if attempt > 0:
                 # Exponential backoff
-                delay = base_delay * (2 ** (attempt - 1))
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                delay = min(raw_delay, max_delay)
                 logger.info(
-                    "Retrying webhook delivery to %s (attempt %d/%d) after %ds",
+                    (
+                        "Retrying webhook delivery to %s (attempt %d/%d) after %ds "
+                        "(raw_delay=%ds, max_delay=%ds)"
+                    ),
                     endpoint.id,
                     attempt + 1,
                     max_retries + 1,
                     delay,
+                    raw_delay,
+                    max_delay,
                 )
                 await asyncio.sleep(delay)
 
