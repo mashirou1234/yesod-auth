@@ -50,6 +50,16 @@
 
 ## OAuth認証フロー
 
+<a id="callback-url-spec"></a>
+
+### callback URL 仕様（全provider共通）
+
+- callback path は `GET /api/v1/auth/{provider}/callback`
+- provider 管理画面に登録する URL 形式は `https://<api-domain>/api/v1/auth/<provider>/callback`
+- `http/https`・ホスト名・ポート・パス・末尾スラッシュまで完全一致が必要
+
+`redirect_uri_mismatch` を最短で確認する手順は [クイックスタート](../getting-started.md#25-redirect_uri_mismatch-の最短確認5ステップ) を参照してください。失敗時の切り分けは [トラブルシューティング](../help/troubleshooting.md#認証エラー) へ接続してください。
+
 ### 1. 認証開始
 
 ユーザーを認証エンドポイントにリダイレクト：
