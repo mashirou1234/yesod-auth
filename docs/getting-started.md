@@ -49,9 +49,9 @@ providerごとの必須 secret 名は [OAuth設定ハブの一覧](guides/oauth/
 - [Discord OAuth ガイド](guides/oauth/discord.md)
 - [GitHub OAuth ガイド](guides/oauth/github.md)
 
-## 2.5 コールバックURLの検証
+## 2.5 `redirect_uri_mismatch` の最短確認（5ステップ）
 
-OAuth導入時は、実装前に「登録したコールバックURL」と「実際にYESOD Authが受けるURL」が一致することを確認します。
+OAuth 導入時は、実装前に「provider 管理画面の callback URL」と「YESOD Auth が受ける URL」が一致することをこの手順だけで確認します。
 
 ### 基本ルール
 
@@ -60,13 +60,25 @@ OAuth導入時は、実装前に「登録したコールバックURL」と「実
 - 末尾スラッシュを付けない（`.../callback/` は不可）
 - `provider` は実際に有効化したものだけ登録する
 
-### 検証チェックリスト
+### 最短確認手順（5ステップ）
 
-1. API公開URLを決める（例: `https://api.example.com`）
-2. プロバイダーごとに callback URL を作る（例: `https://api.example.com/api/v1/auth/google/callback`）
-3. OAuthプロバイダー管理画面の設定値と、`docs/api/auth.md` のパス仕様が一致することを確認する
-4. リバースプロキシ利用時は `X-Forwarded-Proto=https` が正しく渡る構成にする
-5. ログイン実行後、`Invalid state` や `redirect_uri_mismatch` が出ないことを確認する
+1. 公開 API URL を固定する（例: `https://api.example.com`）
+2. callback URL を組み立てる（例: `https://api.example.com/api/v1/auth/google/callback`）
+3. provider 管理画面の callback 設定値と、[認証APIの callback パス仕様](api/auth.md#callback-url-spec) が一致することを確認する
+4. リバースプロキシ利用時は `X-Forwarded-Proto=https` が API へ渡ることを確認する
+5. ログインを1回実行し、`redirect_uri_mismatch` または `Invalid or expired state` が出ないことを確認する
+
+失敗時は次の順で参照してください。
+
+- `redirect_uri_mismatch` / `invalid_client`: [トラブルシューティング: 401 Unauthorized / invalid_client](help/troubleshooting.md#401-unauthorized--invalid_client)
+- `Invalid or expired state`: [トラブルシューティング: state mismatch 診断フロー](help/troubleshooting.md#state-mismatch-flow)
+- profile や secret 前提の再確認: [インストール](installation.md#oauth認証情報)
+
+### FAQ / installation / troubleshooting 同期チェック（受け入れ基準）
+
+- [FAQ の本番OAuth切替手順](help/faq.md#mock-oauthから本番oauthへ切り替える最小確認は) にある callback 確認手順と矛盾がない
+- [インストールの OAuth 認証情報](installation.md#oauth認証情報) と callback 前提（URL 形式・provider 単位）が一致している
+- [トラブルシューティング](help/troubleshooting.md#認証エラー) への参照導線が残っている
 
 ## 3. 起動
 
