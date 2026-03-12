@@ -11,20 +11,10 @@ from slowapi.util import get_remote_address
 
 from app.config import get_settings
 from app.metrics import record_oauth_rate_limit_burst_metric
+from app.oauth_providers import OAUTH_PROVIDER_ORDER
 
 settings = get_settings()
-SUPPORTED_OAUTH_PROVIDERS = frozenset(
-    {
-        "google",
-        "discord",
-        "github",
-        "x",
-        "linkedin",
-        "facebook",
-        "slack",
-        "twitch",
-    }
-)
+SUPPORTED_OAUTH_PROVIDERS = frozenset(OAUTH_PROVIDER_ORDER)
 
 # Create limiter instance
 limiter = Limiter(

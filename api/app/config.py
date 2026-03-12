@@ -3,17 +3,9 @@
 import os
 from functools import lru_cache
 
+from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_KEYS
+
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
-OAUTH_PROVIDER_CREDENTIAL_KEYS: tuple[tuple[str, str], ...] = (
-    ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
-    ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
-    ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
-    ("X_CLIENT_ID", "X_CLIENT_SECRET"),
-    ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
-    ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
-    ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
-    ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
-)
 
 
 def read_secret(name: str, default: str = "") -> str:
