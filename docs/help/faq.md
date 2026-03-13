@@ -57,6 +57,20 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 シークレットの配置方針は [インストールガイド: OAuth認証情報](../installation.md#oauth認証情報)、
 プロバイダー別の有効化手順は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト向け最短手順) を参照してください。
 
+<a id="oauth-secret-permission-recovery"></a>
+
+### OAuth secret の権限不備を最短で復旧するには？
+
+次の順に実施してください（症状→確認→復旧）。
+
+1. `docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"` で症状を確認する
+2. Linux: `stat -c '%n %a %U:%G' secrets/*.txt` / macOS: `stat -f '%N %Lp %Su:%Sg' secrets/*.txt` で権限と所有者を確認する
+3. `chmod 600 secrets/*.txt` と `sudo chown "$(id -un):$(id -gn)" secrets/*.txt` で復旧する
+4. `docker compose up -d --force-recreate api worker` 後に `curl -fsS http://localhost:8000/health` を確認する
+
+詳細手順は [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./troubleshooting.md#secrets-permission-recovery) を参照してください。  
+受け入れ時は FAQ / installation / troubleshooting の3点で、コマンドと手順順が一致していることを確認してください。
+
 ### 429（Too Many Requests）が出たときの確認手順は？
 
 認証レート制限の切り分け手順を [トラブルシューティング: 429 Too Many Requests](./troubleshooting.md#auth-rate-limit-429) にまとめています。  

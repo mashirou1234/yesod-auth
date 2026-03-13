@@ -179,6 +179,55 @@ environment:
 
 ---
 
+<a id="secrets-permission-recovery"></a>
+
+### secrets 権限不備で `Permission denied` が出る
+
+**症状:** `docker compose up -d` 実行時に `permission denied` が出て起動できない。`/run/secrets/*` の読み込みエラーが API ログに残る。
+
+**確認手順（Linux/macOS）:**
+
+1. 対象 secret の所有者とパーミッションを確認する
+   ```bash
+   ls -l secrets/*.txt
+   ```
+2. Linux の詳細確認
+   ```bash
+   stat -c '%n %a %U:%G' secrets/*.txt
+   ```
+3. macOS の詳細確認
+   ```bash
+   stat -f '%N %Lp %Su:%Sg' secrets/*.txt
+   ```
+
+**復旧手順:**
+
+1. パーミッションを `600` に戻す
+   ```bash
+   chmod 600 secrets/*.txt
+   ```
+2. 所有者が現在ユーザーでない場合は修正する（Linux/macOS 共通）
+   ```bash
+   sudo chown \"$(id -un):$(id -gn)\" secrets/*.txt
+   ```
+3. API を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate api worker
+   ```
+4. 再確認する
+   ```bash
+   docker compose logs --tail=100 api | rg -n \"permission denied|/run/secrets|invalid_client\"
+   curl -fsS http://localhost:8000/health
+   ```
+
+**受け入れ時の三点同期チェック:**
+
+1. FAQ: [OAuth secret の権限不備を最短で復旧するには？](./faq.md#oauth-secret-の権限不備を最短で復旧するには) の手順順序と一致していること
+2. Installation: [OAuth secret ファイル権限の復旧手順](../installation.md#oauth-secret-ファイル権限の復旧手順) のコマンドと一致していること
+3. 本節（troubleshooting）では症状→確認→復旧の順序になっていること
+
+---
+
 <a id="oauth-clock-skew"></a>
 
 ### OAuth callback で `invalid_grant` が断続的に発生する（clock skew）

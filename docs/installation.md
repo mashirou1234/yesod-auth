@@ -249,6 +249,30 @@ docker compose --profile default ps
 
 `invalid_client` が続く場合は、`secrets/*.txt` の値が実値であることを確認し、[`docs/help/troubleshooting.md` の `invalid_client` 手順](help/troubleshooting.md#invalid_client-or-401-from-provider-token-endpoint) を参照してください。
 
+### OAuth secret ファイル権限の復旧手順
+
+`permission denied` で起動に失敗する場合は、次の順で復旧してください。
+
+1. 症状確認
+   ```bash
+   docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"
+   ```
+2. 権限確認（Linux/macOS）
+   ```bash
+   # Linux
+   stat -c '%n %a %U:%G' secrets/*.txt
+   # macOS
+   stat -f '%N %Lp %Su:%Sg' secrets/*.txt
+   ```
+3. 復旧
+   ```bash
+   chmod 600 secrets/*.txt
+   sudo chown "$(id -un):$(id -gn)" secrets/*.txt
+   docker compose up -d --force-recreate api worker
+   ```
+
+詳細な切り分けは [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery) を参照してください。
+
 対処:
 
 1. 不足している `<name>` について、`secrets/<name>.txt` を作成する
@@ -390,9 +414,9 @@ docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
 3. 利用する provider の secrets（`<provider>_client_id` / `<provider>_client_secret`）が揃っている
 4. provider 管理画面の callback URL と `GET /api/v1/auth/{provider}/callback` が一致している
 5. FAQ / installation / troubleshooting の3点同期を確認する  
-   - FAQ: [Mock OAuthから本番OAuthへ切り替える最小確認は？](./help/faq.md#mock-oauthから本番oauthへ切り替える最小確認は)  
+   - FAQ: [OAuth secret の権限不備を最短で復旧するには？](./help/faq.md#oauth-secret-の権限不備を最短で復旧するには)  
    - Installation: [profile別の環境変数優先順位](#profile別の環境変数優先順位)  
-   - Troubleshooting: [401 Unauthorized / invalid_client](./help/troubleshooting.md#401-unauthorized--invalid_client)
+   - Troubleshooting: [secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery)
 
 ## リフレッシュトークン運用時の注意
 
