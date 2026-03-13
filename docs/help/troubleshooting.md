@@ -20,6 +20,62 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 
 `secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
 
+### secrets ファイル権限不備で起動に失敗する
+
+**症状:**
+
+- `docker compose up -d` 実行時に `Permission denied` が出る
+- `api` コンテナだけ再起動を繰り返す
+- `docker compose logs api` で `/run/secrets/...` の読み取り失敗が出る
+
+**確認（Linux / macOS）:**
+
+1. 対象 secret の権限と所有者を確認する
+
+```bash
+# Linux
+stat -c '%a %U:%G %n' secrets/*.txt
+
+# macOS
+stat -f '%Sp %Su:%Sg %N' secrets/*.txt
+```
+
+2. 実行ユーザーと所有者が一致しているか確認する
+
+```bash
+id -un
+id -gn
+ls -l secrets/*.txt
+```
+
+**復旧:**
+
+1. secret ファイル権限を `600` に統一する
+   ```bash
+   chmod 600 secrets/*.txt
+   ```
+2. 所有者を実行ユーザーへ合わせる（必要時のみ）
+   ```bash
+   chown "$(id -un)":"$(id -gn)" secrets/*.txt
+   ```
+3. コンテナを再作成して再確認する
+   ```bash
+   docker compose up -d --force-recreate api
+   docker compose ps
+   docker compose logs api --since=10m | rg -n "Permission denied|/run/secrets"
+   ```
+
+期待値:
+
+- `docker compose ps` で `api` が `Up`（または `running`）
+- `Permission denied` と `/run/secrets` 読み取り失敗が再発しない
+
+### FAQ / installation / troubleshooting 三点同期チェック（受け入れ基準）
+
+- FAQ: [OAuth secretを更新したら再起動は必要？](./faq.md#oauth-secretを更新したら再起動は必要)
+- Installation: [セルフホスト向け秘密情報配置例](../installation.md#セルフホスト向け秘密情報配置例)
+- Troubleshooting: 本節（`secrets ファイル権限不備で起動に失敗する`）の手順と矛盾がないこと
+
 ### `pg_cron`関連のエラー
 
 ```
