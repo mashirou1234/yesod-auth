@@ -77,13 +77,15 @@ docker compose --profile default up -d
 ### 管理画面付き
 
 `full` プロファイルは「設定」「起動」「確認」の順で実施してください。
+profile 差分の前提は [profile選択チェック表](#profile選択チェック表) で先に確認してください。
 
 #### 1. 設定
 
-1. 管理画面向けシークレットを用意する（必須）
+1. 管理画面向けシークレットを用意する（必須・空ファイル禁止）
 
 ```bash
 ls -l secrets/admin_password.txt
+test -s secrets/admin_password.txt && echo "admin_password: OK" || (echo "admin_password が未作成または空です" >&2; exit 1)
 ```
 
 2. 管理画面向け環境変数の確認観点
@@ -119,8 +121,17 @@ docker compose --profile full config --services
 #### 代表的な失敗例
 
 - 症状: `admin` サービスが起動失敗する / ログインできない
-- 原因例: `secrets/admin_password.txt` 未作成、または想定外の値
-- 対処: `secrets/admin_password.txt` を作成・更新して `docker compose --profile full up -d` を再実行
+- 原因例: `secrets/admin_password.txt` 未作成、空ファイル、または想定外の値
+- 対処: `secrets/admin_password.txt` を作成・更新し、`test -s secrets/admin_password.txt` で非空を確認してから `docker compose --profile full up -d` を再実行
+
+#### 受け入れ基準チェックリスト（full profile / admin_password）
+
+1. `full` プロファイル手順に `admin_password` の非空チェック（`test -s`）が含まれている
+2. 未設定時の症状（起動失敗/ログイン失敗）と復旧手順が同じ節に記載されている
+3. FAQ / installation / troubleshooting の3点同期を確認できる  
+   - FAQ: [どのsecretを必須で用意すべき？](./help/faq.md#どのsecretを必須で用意すべき)  
+   - Installation: [管理画面付き](#管理画面付き)  
+   - Troubleshooting: [認証エラー](./help/troubleshooting.md#認証エラー)
 
 ### CI相当
 
