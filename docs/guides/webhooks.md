@@ -216,6 +216,42 @@ curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
 
 HTTP 4xx エラーはリトライしません（クライアントエラーのため）。
 
+### 再試行設定の調整早見表
+
+`config/webhooks.yaml` の `settings` は、まず下表の初期値から開始し、配信履歴と受信側負荷を見ながら1項目ずつ調整します。
+
+| 設定キー | 推奨初期値 | 値を上げる判断 | 値を下げる判断 |
+|---------|------------|----------------|----------------|
+| `max_retries` | `5` | 受信側の瞬断が数分単位で起こり、最終成功率を優先したい | 失敗イベントの陳腐化を避けたい、重複通知コストを抑えたい |
+| `retry_base_delay_seconds` | `2` | 受信側が過負荷で 429/タイムアウトを返し、初回再送を遅らせたい | 一時失敗の復旧が速く、早期再送で成功率を上げたい |
+| `retry_max_delay_seconds` | `60` | 長時間障害時の再送スパイクを抑えたい | 障害復旧後の反映遅延を短くしたい |
+| `delivery_timeout_seconds` | `30` | 外部サービス応答が遅く、成功応答まで待機が必要 | ハング検知を早め、ワーカー詰まりを防ぎたい |
+
+調整の基本手順:
+1. `GET /api/v1/admin/webhooks/deliveries` で失敗率と復旧までの時間を確認する。
+2. 1回の変更で1項目だけ更新し、`POST /api/v1/admin/webhooks/reload` 後に30分以上観測する。
+3. 失敗率・遅延・重複受信のどれを最適化するかを先に決め、目的に対応する設定だけ変更する。
+
+### 配信失敗時のログ確認項目
+
+再試行設定の見直し前に、最低でも次の項目を同一 `request_id` 単位で確認してください。
+
+| 項目 | 例 | 見るポイント |
+|------|----|--------------|
+| `webhook_id` | `my-service` | どの送信先だけ失敗しているか |
+| `event_type` | `user.deleted` | 特定イベントに偏りがないか |
+| `status_code` | `429` / `500` / `timeout` | 受信側負荷か送信側障害かの切り分け |
+| `attempt` | `3/5` | 何回目で失敗しているか（上限到達の有無） |
+| `next_retry_at` | `2026-03-14T10:15:30Z` | バックオフが期待どおり計算されているか |
+| `request_id` | `req-7f9d...` | APIログ・受信側ログを突合できるか |
+
+```bash
+# 直近30分の webhook 関連ログを確認
+docker compose logs api --since=30m | rg "webhook|delivery|retry|timeout|request_id"
+```
+
+詳細な切り分け手順は [トラブルシューティング: Webhook](../help/troubleshooting.md#webhook) を参照してください。
+
 ## 管理API
 
 ### エンドポイント一覧
