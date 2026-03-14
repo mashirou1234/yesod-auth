@@ -8,16 +8,44 @@
    ```bash
    docker compose --profile default ps
    ```
-2. ヘルスチェック
-   ```bash
-   curl -fsS http://localhost:8000/health
-   ```
-3. APIドキュメント
-   ブラウザで `http://localhost:8000/docs` を開く
-4. 必須 secrets
+2. 必須 secrets
    ```bash
    ls -1 secrets/{google_client_id,google_client_secret,discord_client_id,discord_client_secret,jwt_secret}.txt
    ```
+
+## 1. 初回3点確認順（固定）
+
+初回起動失敗時は、必ず次の順番で確認してください。
+
+1. `/health`
+   ```bash
+   curl -fsS http://localhost:8000/health
+   ```
+2. `/docs`
+   ```bash
+   curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+   ```
+3. `/metrics`
+   ```bash
+   curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/metrics
+   ```
+
+## 2. 結果別の次アクション（次に読む文書）
+
+| 確認結果 | 次アクション | 次に読む文書 |
+| --- | --- | --- |
+| `/health` が失敗 | コンテナ状態と依存サービス（db/valkey）ログを確認 | [トラブルシューティング: 認証エラー](troubleshooting.md#認証エラー) |
+| `/health` は成功、`/docs` が失敗 | API 起動オプションと公開ポート設定を確認 | [インストール](../installation.md) |
+| `/docs` は成功、`/metrics` が失敗 | メトリクス収集設定と API ルータ有効化を確認 | [トラブルシューティング](troubleshooting.md) |
+| 3点すべて成功、OAuth 開始で失敗 | provider 設定と callback URL を確認 | [クイックスタート](../getting-started.md#oauth-callback失敗時の確認順) |
+
+## 3. 文書同期チェック（受け入れ基準）
+
+このページを更新したら、以下 3 点が矛盾しないことを確認します。
+
+1. [FAQ](faq.md)
+2. [インストール](../installation.md)
+3. [トラブルシューティング](troubleshooting.md)
 
 ## 症状1: `/health` が失敗する
 
