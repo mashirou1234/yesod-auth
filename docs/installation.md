@@ -31,6 +31,20 @@ YESOD Authは3つのプロファイルを提供しています：
 | `full` | 管理画面 (`admin`) まで含めて導入確認したい | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full config --services` |
 | `ci` | CI 相当の軽量構成だけ確認したい | `docker compose --profile ci up -d`<br>`docker compose --profile ci config --services`<br>`docker compose --profile ci ps` |
 
+### provider 未設定時の最短スキップ手順
+
+OAuth provider をまだ一部用意できていない場合は、次の手順で初回確認を進めます。
+
+1. `default` profile で起動し、Mock OAuth で疎通確認する
+2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
+3. 未設定 provider は `GET /api/v1/auth/<provider>` を呼ばず、先に health/docs 到達確認を完了する
+4. OAuth 設定完了後に provider の secret を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+
+再開ポイント:
+- 起動確認の継続: [docker compose利用時の最小確認手順](#docker-compose利用時の最小確認手順)
+- 実 OAuth の再開: [クイックスタート: Mock OAuthから実OAuthへ切り替える最小チェック](./getting-started.md#mock-oauthから実oauthへ切り替える最小チェック)
+- 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
+
 ## Docker起動前チェック項目
 
 `docker compose up` 実行前に、次の4項目を確認してください。

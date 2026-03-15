@@ -123,6 +123,22 @@ environment:
   - MOCK_OAUTH_ENABLED=1
 ```
 
+<a id="provider-未設定のまま認証導線を実行した"></a>
+
+### provider 未設定のまま認証導線を実行した
+
+**症状:** `GET /api/v1/auth/<provider>` 実行時に `invalid_client` や secret 読み込みエラーが発生する。
+
+**最短対応:**
+
+1. 未設定 provider の導線呼び出しを一度止める
+2. `curl -fsS http://localhost:8000/health` と `curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs` で起動確認を先に完了する
+3. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+
+再開ポイント:
+- [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+
 ---
 
 ### `401 Unauthorized` / `invalid_client`
