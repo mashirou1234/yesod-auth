@@ -2,7 +2,7 @@
 
 import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import PropertyMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -203,6 +203,49 @@ async def test_refresh_rejects_revoked_session_token(
     )
     assert refresh_response.status_code == 401
     assert refresh_response.json() == {"detail": "Invalid or expired refresh token"}
+
+
+@pytest.mark.asyncio
+async def test_refresh_reuse_logs_revoked_token_status(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Reusing a rotated refresh token should log token_status=revoked."""
+    user = User()
+    user.emails.append(
+        UserEmail(
+            email="refresh-reuse@example.com",
+            is_primary=True,
+        )
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    refresh_token = await create_refresh_token(db_session, user.id)
+    with (
+        patch("app.auth.router.AuditLogger.log_event", new=AsyncMock()) as mock_log_event,
+        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-reuse@example.com"),
+    ):
+        first_refresh = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+        assert first_refresh.status_code == 200
+
+        second_refresh = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+
+    assert second_refresh.status_code == 401
+    assert second_refresh.json() == {"detail": "Invalid or expired refresh token"}
+    assert mock_log_event.await_count == 2
+    failed_call = mock_log_event.await_args_list[1]
+    assert failed_call.args[2] is None
+    assert failed_call.args[3] == {
+        "reason": "Invalid or expired token",
+        "token_status": "revoked",
+    }
 
 
 @pytest.mark.asyncio

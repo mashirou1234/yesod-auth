@@ -132,6 +132,33 @@ async def rotate_refresh_token(
     return new_token, old_record.user_id
 
 
+async def classify_refresh_token_failure(
+    db: AsyncSession,
+    token: str,
+) -> str:
+    """Classify why refresh token validation failed for audit details."""
+    token_hash = hash_refresh_token(token)
+    now = datetime.now(UTC)
+
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        return "not_found"
+
+    if record.is_revoked:
+        return "revoked"
+
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if expires_at <= now:
+        return "expired"
+
+    return "unknown"
+
+
 async def revoke_refresh_token(db: AsyncSession, token: str) -> bool:
     """Revoke a specific refresh token."""
     record = await validate_refresh_token(db, token)
