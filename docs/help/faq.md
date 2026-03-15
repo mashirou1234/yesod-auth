@@ -38,6 +38,17 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+### provider 未設定のまま初回導入を進めてもよい？
+
+可能です。次の順で進めると最短で起動確認できます。
+
+1. `default` profile で起動し、`jwt_secret` と有効化する provider 分だけ先に設定する
+2. 未設定 provider の認証導線は呼ばず、`/health` と `/docs` の到達確認を先に完了する
+3. OAuth 設定がそろった時点で `docker compose --profile default up -d --force-recreate api` を実行して再開する
+
+再開ポイントは [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順) を参照してください。  
+導線全体は [インストール](../installation.md#provider-未設定時の最短スキップ手順) と [トラブルシューティング](./troubleshooting.md#provider-未設定のまま認証導線を実行した) で同期しています。
+
 ### OAuth secretを更新したら再起動は必要？
 
 必要です。YESOD Auth は起動時に `/run/secrets/*` を読み込むため、`secrets/*.txt` を更新した直後は、対象コンテナを再作成して新しい値を読み込ませてください。

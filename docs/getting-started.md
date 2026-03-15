@@ -40,6 +40,27 @@ providerごとの必須 secret 名は [OAuth設定ハブの一覧](guides/oauth/
     openssl rand -base64 32 > secrets/jwt_secret.txt
     ```
 
+### provider 未設定時の最短スキップ手順
+
+未設定の provider がある場合でも、初回起動確認は中断せずに進められます。
+
+1. 起動対象を `default` profile に固定する（Mock OAuth 前提）
+2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
+3. 未設定 provider は触らず、[3. 起動](#3-起動) と [4. 動作確認](#4-動作確認) まで先に完了させる
+4. 実 OAuth を使うタイミングで、対象 provider の `*_client_id` / `*_client_secret` を追加して再起動する
+
+再開ポイント:
+- 起動確認を先に進める場合は [4. 動作確認](#4-動作確認)
+- 実 OAuth を再開する場合は [Mock OAuthから実OAuthへ切り替える最小チェック](#mock-oauthから実oauthへ切り替える最小チェック)
+- 失敗時の切り分けは [トラブルシューティング](help/troubleshooting.md#provider-未設定のまま認証導線を実行した) を参照
+
+### FAQ / installation / troubleshooting 同期チェックコマンド
+
+```bash
+rg -n "provider 未設定時の最短スキップ手順|再開ポイント" \
+  docs/getting-started.md docs/installation.md docs/help/faq.md docs/help/troubleshooting.md
+```
+
 ### OAuthガイドへの導線
 
 クイックスタートで起動確認した後、利用するプロバイダーの設定を進めてください。
