@@ -33,6 +33,22 @@ class SessionCookieSameSiteWarningTests(unittest.TestCase):
         self.assertFalse(warned)
         logger.warning.assert_not_called()
 
+    def test_warns_when_samesite_none_and_secure_is_false(self) -> None:
+        logger = Mock()
+
+        warned = warn_if_session_cookie_samesite_unset(
+            logger,
+            environment="staging",
+            session_cookie_samesite="None",
+            session_cookie_secure=False,
+        )
+
+        self.assertTrue(warned)
+        logger.warning.assert_called_once_with(
+            "SESSION_COOKIE_SAMESITE=None requires SESSION_COOKIE_SECURE=true for admin session cookie (environment=%s)",
+            "staging",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

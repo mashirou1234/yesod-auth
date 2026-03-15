@@ -27,6 +27,14 @@ class Settings:
     
     # Session persistence (hours)
     SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
+    # SameSite(None) is only valid when Secure=true.
+    SESSION_COOKIE_SECURE: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    # Empty means "use framework default" and emit a warning for visibility.
     SESSION_COOKIE_SAMESITE: str = os.getenv("SESSION_COOKIE_SAMESITE", "").strip()
 
     # Default language (en, ja, fr, ko, de)
@@ -45,14 +53,23 @@ def warn_if_session_cookie_samesite_unset(
     *,
     environment: str,
     session_cookie_samesite: str,
+    session_cookie_secure: bool = True,
 ) -> bool:
-    """Emit warning when SameSite is not configured for admin session cookie."""
-    if session_cookie_samesite.strip():
-        return False
-
     env_name = environment.strip() or "production"
-    logger.warning(
-        "SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=%s)",
-        env_name,
-    )
-    return True
+    samesite = session_cookie_samesite.strip().lower()
+
+    if not samesite:
+        logger.warning(
+            "SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=%s)",
+            env_name,
+        )
+        return True
+
+    if samesite == "none" and not session_cookie_secure:
+        logger.warning(
+            "SESSION_COOKIE_SAMESITE=None requires SESSION_COOKIE_SECURE=true for admin session cookie (environment=%s)",
+            env_name,
+        )
+        return True
+
+    return False
