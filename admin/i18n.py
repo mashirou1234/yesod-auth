@@ -1,5 +1,6 @@
 """Internationalization (i18n) support for admin dashboard."""
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ DEFAULT_LANGUAGE = "en"
 
 # Cache for loaded translations
 _translations_cache: dict[str, dict] = {}
+logger = logging.getLogger(__name__)
 
 
 def _resolve_language(lang: str) -> str:
@@ -24,6 +26,12 @@ def _resolve_language(lang: str) -> str:
     normalized = (lang or "").strip().lower()
     if normalized in SUPPORTED_LANGUAGES:
         return normalized
+    if normalized:
+        logger.warning(
+            "Unsupported locale '%s' requested. Falling back to '%s'.",
+            normalized,
+            DEFAULT_LANGUAGE,
+        )
     return DEFAULT_LANGUAGE
 
 
