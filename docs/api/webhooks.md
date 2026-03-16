@@ -123,3 +123,16 @@ POST /api/v1/admin/webhooks/reload
 3. 1回目のみ業務処理が実行され、2回目は重複としてスキップされることを確認する
 
 詳細な設定方法は[Webhook設定ガイド](../guides/webhooks.md)を参照してください。
+
+---
+
+## 受信側の署名検証エラーコード
+
+Webhook 受信側で署名検証を実装する場合は、次のエラー分類を推奨します。
+
+| code | 説明 |
+|------|------|
+| `missing_signature_header` | `X-Webhook-Signature` ヘッダが欠落または空 |
+| `invalid_signature` | 署名値が不正（改ざん・秘密鍵不一致など） |
+
+`missing_signature_header` と `invalid_signature` を分離すると、送信側設定ミスと改ざん検知を即時に切り分けできます。
