@@ -1,5 +1,6 @@
 """Tests for GitHub OAuth implementation."""
 
+import logging
 from unittest.mock import AsyncMock, patch
 from urllib.parse import parse_qs, urlparse
 
@@ -134,6 +135,32 @@ class TestGitHubOAuthExchangeCode:
             )
 
             assert result is None
+
+    @pytest.mark.asyncio
+    async def test_exchange_code_failure_logs_normalized_redirect_uri(self, respx_mock, caplog):
+        """redirect_uri 不一致調査向けに正規化前後の診断ログを残す。"""
+        respx_mock.post("https://github.com/login/oauth/access_token").mock(
+            return_value=httpx.Response(
+                400,
+                text='{"error":"redirect_uri_mismatch","code":"secret-code"}',
+            )
+        )
+
+        with patch("app.auth.oauth.settings") as mock_settings:
+            mock_settings.GITHUB_CLIENT_ID = "test-client-id"
+            mock_settings.GITHUB_CLIENT_SECRET = "test-client-secret"
+            with caplog.at_level(logging.DEBUG, logger="app.auth.oauth"):
+                result = await GitHubOAuth.exchange_code(
+                    code="invalid-code",
+                    redirect_uri="HTTPS://EXAMPLE.COM:443/api/v1/auth/github/callback/?code=abcdef123456",
+                )
+
+        assert result is None
+        logs = "\n".join(caplog.messages)
+        assert "redirect_uri_raw=https://EXAMPLE.COM:443/api/v1/auth/github/callback/?code=abcd%2A%2A%2A" in logs
+        assert "redirect_uri_normalized=https://example.com/api/v1/auth/github/callback?code=abcd%2A%2A%2A" in logs
+        assert "redirect_uri_changed=True" in logs
+        assert '"code":"***"' in logs
 
 
 class TestGitHubOAuthUserInfo:

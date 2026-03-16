@@ -139,6 +139,30 @@ environment:
 
 ---
 
+### `redirect_uri_mismatch`（正規化差分の診断）
+
+**症状:** OAuth callback が `400` で失敗し、provider 側の `redirect_uri_mismatch` が疑われる
+
+**確認手順:**
+
+1. API ログで code exchange 失敗ログを抽出
+   ```bash
+   docker compose logs api --since=30m | rg -n "OAuth code exchange failed|redirect_uri_mismatch"
+   ```
+2. 次のログ項目を比較
+   - `redirect_uri_raw`: 実際に送信した URI（機密値はマスク）
+   - `redirect_uri_normalized`: スキーム/ホスト小文字化、既定ポート除去、query 整列後の URI（機密値はマスク）
+   - `redirect_uri_changed`: 正規化前後で差分があったか
+3. provider 側設定の callback URI と `redirect_uri_normalized` を突き合わせる
+
+| 観測シグナル | 主な原因 | 対処 |
+| --- | --- | --- |
+| `redirect_uri_changed=True` かつ provider 設定と不一致 | スキーム/ポート/末尾スラッシュ差異 | provider 設定と `API_URL` を一致させる |
+| `provider_error` に `redirect_uri_mismatch` を含む | callback URL の登録漏れ | provider 側に callback URI を追加 |
+| `provider_error` が `invalid_client` へ遷移 | credentials 不整合 | `client_id` / `client_secret` を再確認 |
+
+---
+
 <a id="auth-rate-limit-429"></a>
 
 ### `429 Too Many Requests`（認証レート制限）

@@ -1,10 +1,110 @@
 """OAuth provider implementations."""
 
+import logging
+import re
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+
 import httpx
 
 from app.config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+_SENSITIVE_QUERY_KEYS = (
+    "token",
+    "secret",
+    "code",
+    "state",
+    "nonce",
+    "signature",
+    "sig",
+    "key",
+)
+
+
+def _mask_value(value: str, keep_prefix: int = 4) -> str:
+    if not value:
+        return ""
+    if len(value) <= keep_prefix:
+        return "*" * len(value)
+    return f"{value[:keep_prefix]}***"
+
+
+def _mask_query_value(key: str, value: str) -> str:
+    lowered = key.lower()
+    if any(marker in lowered for marker in _SENSITIVE_QUERY_KEYS):
+        return _mask_value(value)
+    return value
+
+
+def _normalize_redirect_uri(redirect_uri: str) -> str:
+    candidate = redirect_uri.strip()
+    if not candidate:
+        return candidate
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return candidate
+
+    scheme = parsed.scheme.lower()
+    host = (parsed.hostname or "").lower()
+    port = parsed.port
+    if port and not ((scheme == "http" and port == 80) or (scheme == "https" and port == 443)):
+        netloc = f"{host}:{port}"
+    else:
+        netloc = host
+
+    path = parsed.path or "/"
+    if path != "/":
+        path = path.rstrip("/")
+    query = urlencode(sorted(parse_qsl(parsed.query, keep_blank_values=True)), doseq=True)
+    return urlunsplit((scheme, netloc, path, query, ""))
+
+
+def _mask_redirect_uri_for_log(redirect_uri: str) -> str:
+    if not redirect_uri:
+        return ""
+    try:
+        parsed = urlsplit(redirect_uri)
+    except ValueError:
+        return _mask_value(redirect_uri)
+    masked_query = urlencode(
+        [(k, _mask_query_value(k, v)) for k, v in parse_qsl(parsed.query, keep_blank_values=True)],
+        doseq=True,
+    )
+    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, masked_query, ""))
+
+
+def _sanitize_error_snippet(text: str | None) -> str:
+    if not text:
+        return ""
+    compact = " ".join(text.split())
+    compact = re.sub(
+        r"(?i)(client_secret|access_token|refresh_token|id_token|code)=([^&\s]+)",
+        r"\1=***",
+        compact,
+    )
+    compact = re.sub(
+        r'(?i)"(client_secret|access_token|refresh_token|id_token|code)"\s*:\s*"[^"]+"',
+        r'"\1":"***"',
+        compact,
+    )
+    return compact[:240]
+
+
+def _log_exchange_failure(provider: str, status_code: int, response_text: str, redirect_uri: str) -> None:
+    normalized_uri = _normalize_redirect_uri(redirect_uri)
+    logger.debug(
+        "OAuth code exchange failed provider=%s status_code=%s redirect_uri_raw=%s "
+        "redirect_uri_normalized=%s redirect_uri_changed=%s provider_error=%s",
+        provider,
+        status_code,
+        _mask_redirect_uri_for_log(redirect_uri),
+        _mask_redirect_uri_for_log(normalized_uri),
+        normalized_uri != redirect_uri.strip(),
+        _sanitize_error_snippet(response_text),
+    )
 
 
 class GoogleOAuth:
@@ -60,6 +160,7 @@ class GoogleOAuth:
             response = await client.post(cls.TOKEN_URL, data=data)
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("google", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -129,6 +230,7 @@ class GitHubOAuth:
             )
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("github", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -240,6 +342,7 @@ class DiscordOAuth:
             )
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("discord", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -318,6 +421,7 @@ class XOAuth:
             )
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("x", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -390,6 +494,7 @@ class LinkedInOAuth:
             )
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("linkedin", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -454,6 +559,7 @@ class FacebookOAuth:
             response = await client.get(cls.TOKEN_URL, params=params)
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("facebook", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -538,6 +644,7 @@ class SlackOAuth:
                 resp_data = response.json()
                 if resp_data.get("ok"):
                     return resp_data
+            _log_exchange_failure("slack", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
@@ -615,6 +722,7 @@ class TwitchOAuth:
             )
             if response.status_code == 200:
                 return response.json()
+            _log_exchange_failure("twitch", response.status_code, response.text, redirect_uri)
             return None
 
     @classmethod
