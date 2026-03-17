@@ -12,6 +12,27 @@ def read_secret(name: str, default: str = "") -> str:
     return os.getenv(name.upper(), default)
 
 
+def read_bounded_float_env(
+    name: str,
+    *,
+    default: float,
+    minimum: float,
+    maximum: float,
+) -> float:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a float value") from exc
+
+    if value < minimum or value > maximum:
+        raise ValueError(f"{name} must be between {minimum} and {maximum}")
+    return value
+
+
 class Settings:
     # Use sync driver (psycopg2) for Streamlit
     DATABASE_URL: str = os.getenv(
@@ -19,6 +40,12 @@ class Settings:
         "postgresql://yesod_user:yesod_password@localhost:5432/yesod"
     )
     VALKEY_URL: str = os.getenv("VALKEY_URL", "redis://localhost:6379/0")
+    VALKEY_RECONNECT_WAIT_SECONDS: float = read_bounded_float_env(
+        "VALKEY_RECONNECT_WAIT_SECONDS",
+        default=0.2,
+        minimum=0.05,
+        maximum=30.0,
+    )
     ADMIN_USER: str = os.getenv("ADMIN_USER", "admin")
     ADMIN_PASSWORD: str = read_secret("admin_password", "admin")
     
