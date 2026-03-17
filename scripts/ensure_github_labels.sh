@@ -6,7 +6,33 @@ if ! command -v gh >/dev/null 2>&1; then
   exit 1
 fi
 
-repo="${1:-${GH_REPO:-}}"
+dry_run=0
+repo=""
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    -*)
+      echo "Unknown option: $1" >&2
+      echo "Usage: $0 [--dry-run] [owner/repo]" >&2
+      exit 1
+      ;;
+    *)
+      if [[ -n "${repo}" ]]; then
+        echo "Too many positional arguments." >&2
+        echo "Usage: $0 [--dry-run] [owner/repo]" >&2
+        exit 1
+      fi
+      repo="$1"
+      shift
+      ;;
+  esac
+done
+
+repo="${repo:-${GH_REPO:-}}"
 if [[ -z "${repo}" ]]; then
   repo="$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null || true)"
 fi
@@ -26,17 +52,25 @@ ensure_label() {
   local description="$3"
 
   if grep -Fxq "${name}" <<<"${existing_labels}"; then
-    gh label edit "${name}" \
-      --repo "${repo}" \
-      --color "${color}" \
-      --description "${description}" >/dev/null
-    echo "updated: ${name}"
+    if [[ "${dry_run}" -eq 1 ]]; then
+      echo "would update: ${name}"
+    else
+      gh label edit "${name}" \
+        --repo "${repo}" \
+        --color "${color}" \
+        --description "${description}" >/dev/null
+      echo "updated: ${name}"
+    fi
   else
-    gh label create "${name}" \
-      --repo "${repo}" \
-      --color "${color}" \
-      --description "${description}" >/dev/null
-    echo "created: ${name}"
+    if [[ "${dry_run}" -eq 1 ]]; then
+      echo "would create: ${name}"
+    else
+      gh label create "${name}" \
+        --repo "${repo}" \
+        --color "${color}" \
+        --description "${description}" >/dev/null
+      echo "created: ${name}"
+    fi
   fi
 }
 

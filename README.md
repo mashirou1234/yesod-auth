@@ -408,6 +408,8 @@ This repository includes GitHub Actions workflows for automatic PR approval and 
 
 ```bash
 ./scripts/ensure_github_labels.sh
+# dry-run only (no write):
+./scripts/ensure_github_labels.sh --dry-run
 ```
 
 This script ensures the repository keeps the labels used by Codex / codex-orch automation:
