@@ -33,6 +33,32 @@ ERROR: extension "pg_cron" is not available
 
 ---
 
+### `SESSION_EXPIRY_HOURS` が不正値
+
+**症状:** 管理画面のセッション期限設定が反映されず、起動ログに警告が出る。
+
+警告メッセージ:
+
+```
+SESSION_EXPIRY_HOURS is invalid ('<value>'); using default value 24
+```
+
+**原因:** `SESSION_EXPIRY_HOURS` に整数以外、または 0 以下の値が設定されている。
+
+**解決策:**
+
+1. `SESSION_EXPIRY_HOURS` を 1 以上の整数に修正する
+2. 管理画面コンテナを再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
+3. 反映確認
+   ```bash
+   docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid"
+   ```
+
+---
+
 ### データベース接続エラー
 
 ```
