@@ -1,6 +1,7 @@
 """Prometheus metrics endpoint."""
 
 from collections import defaultdict
+import re
 from threading import Lock
 
 from fastapi import APIRouter, Depends
@@ -15,12 +16,28 @@ _oauth_failure_counts: dict[tuple[str, str], int] = defaultdict(int)
 _oauth_failure_counts_lock = Lock()
 _oauth_rate_limit_burst_counts: dict[str, int] = defaultdict(int)
 _oauth_rate_limit_burst_counts_lock = Lock()
+_KNOWN_OAUTH_FAILURE_REASONS = {
+    "callback_url_mismatch",
+    "code_exchange_failed",
+    "invalid_state",
+    "unknown_error_code",
+    "user_info_failed",
+}
+
+
+def _normalize_oauth_failure_reason(reason: str) -> str:
+    """Normalize OAuth callback failure reasons for stable metric cardinality."""
+    normalized = re.sub(r"[^a-z0-9]+", "_", reason.strip().lower()).strip("_")
+    if normalized in _KNOWN_OAUTH_FAILURE_REASONS:
+        return normalized
+    return "unknown"
 
 
 def record_oauth_failure_metric(provider: str, reason: str) -> None:
     """Record OAuth failure counter grouped by provider and failure reason."""
+    normalized_reason = _normalize_oauth_failure_reason(reason)
     with _oauth_failure_counts_lock:
-        _oauth_failure_counts[(provider, reason)] += 1
+        _oauth_failure_counts[(provider, normalized_reason)] += 1
 
 
 def reset_oauth_failure_metrics() -> None:
