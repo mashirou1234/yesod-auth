@@ -198,6 +198,7 @@ curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
 - `missing_timestamp_header`
 - `timestamp_skew`
 - `invalid_signature_format`
+- `unsupported_signature_algorithm`
 - `hmac_mismatch`
 - `replay_detected`
 
