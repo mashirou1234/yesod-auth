@@ -1,6 +1,9 @@
 """Admin configuration."""
+import logging
 import os
 from typing import Protocol
+
+logger = logging.getLogger(__name__)
 
 
 def read_secret(name: str, default: str = "") -> str:
@@ -33,6 +36,30 @@ def read_bounded_float_env(
     return value
 
 
+def read_session_expiry_hours_env(
+    name: str = "SESSION_EXPIRY_HOURS",
+    *,
+    default: int = 24,
+) -> int:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    try:
+        value = int(raw)
+        if value <= 0:
+            raise ValueError("must be positive")
+    except ValueError:
+        logger.warning(
+            "%s is invalid (%r); using default value %d",
+            name,
+            raw,
+            default,
+        )
+        return default
+    return value
+
+
 class Settings:
     # Use sync driver (psycopg2) for Streamlit
     DATABASE_URL: str = os.getenv(
@@ -53,7 +80,7 @@ class Settings:
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "")
     
     # Session persistence (hours)
-    SESSION_EXPIRY_HOURS: int = int(os.getenv("SESSION_EXPIRY_HOURS", "24"))
+    SESSION_EXPIRY_HOURS: int = read_session_expiry_hours_env()
     # SameSite(None) is only valid when Secure=true.
     SESSION_COOKIE_SECURE: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in (
         "1",
