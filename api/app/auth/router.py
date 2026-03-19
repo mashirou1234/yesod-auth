@@ -59,6 +59,7 @@ OAUTH_PROVIDER_CREDENTIAL_FIELDS = {
     "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
     "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
 }
+SUPPORTED_OAUTH_PROVIDERS = tuple(OAUTH_PROVIDER_CREDENTIAL_FIELDS.keys())
 KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
     "access_denied",
     "invalid_request",
@@ -70,6 +71,22 @@ KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
     "server_error",
     "temporarily_unavailable",
 }
+
+
+def _normalize_oauth_provider(provider: str) -> str:
+    """Normalize provider input for stable validation."""
+    return provider.strip().lower()
+
+
+def _validate_supported_oauth_provider(provider: str) -> str:
+    """Return normalized provider or raise stable 400 contract."""
+    normalized_provider = _normalize_oauth_provider(provider)
+    if normalized_provider not in OAUTH_PROVIDER_CREDENTIAL_FIELDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{normalized_provider}'.",
+        )
+    return normalized_provider
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -153,12 +170,9 @@ async def _validate_callback_url_or_raise(
 
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
+    provider = _validate_supported_oauth_provider(provider)
     credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
-    if credential_fields is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider '{provider}'.",
-        )
+    assert credential_fields is not None
 
     client_id_field, client_secret_field = credential_fields
     client_id = getattr(settings, client_id_field, "")
@@ -1181,20 +1195,7 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in [
-        "google",
-        "discord",
-        "github",
-        "x",
-        "linkedin",
-        "facebook",
-        "slack",
-        "twitch",
-    ]:
-        raise HTTPException(
-            status_code=400,
-            detail="Provider must be 'google', 'discord', 'github', 'x', 'linkedin', 'facebook', 'slack', or 'twitch'",
-        )
+    provider = _validate_supported_oauth_provider(provider)
 
     device_info, ip_address = _get_client_info(request)
     mock_user = get_mock_user(user)

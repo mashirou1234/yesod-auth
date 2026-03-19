@@ -303,6 +303,15 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 
 **利用可能なプロバイダー:** `google`, `github`, `discord`, `x`, `linkedin`, `facebook`, `slack`, `twitch`
 
+- `provider` は小文字正規化して判定（例: `GitHub` は `github` と同義）
+- サポート外 provider は `400 Bad Request` と固定文言を返却
+
+```json
+{
+  "detail": "Unsupported OAuth provider 'unknown'."
+}
+```
+
 ### ユーザー一覧
 
 ```bash
