@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.models import RefreshToken
 
 settings = get_settings()
+ACCESS_TOKEN_HEADER_KID = "local-hs256"
 
 
 def create_access_token(user_id: str, email: str) -> str:
@@ -24,7 +25,12 @@ def create_access_token(user_id: str, email: str) -> str:
         "exp": expire,
         "type": "access",
     }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+        headers={"kid": ACCESS_TOKEN_HEADER_KID},
+    )
 
 
 def decode_access_token(token: str) -> dict | None:
