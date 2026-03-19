@@ -105,6 +105,17 @@ organization制限が必要な場合は、`read:org`スコープとコールバ�
 
 運用メモとして、分類時は「発生時刻」「対象エンドポイント」「利用プロバイダー（mock/google/github等）」をセットで記録すると再現調査が容易です。
 
+### sync-from-provider の 400/404 は何を意味する？
+
+`POST /api/v1/users/me/sync-from-provider` の主な失敗は次の 3 種類です。
+
+1. `400 Unsupported provider`: `provider` が `google` / `discord` 以外
+2. `404 No <provider> account linked`: 指定 provider の連携がない
+3. `400 No provider info stored ...`: provider 連携はあるが保存済みプロフィール情報がない
+
+API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。  
+切り分け手順は [トラブルシューティング: sync-from-provider で 400/404 が返る](./troubleshooting.md#sync-from-provider-errors) を参照してください。
+
 ---
 
 ## 開発

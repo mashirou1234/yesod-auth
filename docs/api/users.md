@@ -155,6 +155,12 @@ POST /api/v1/users/me/sync-from-provider?provider=google
 Authorization: Bearer <access_token>
 ```
 
+**前提条件**
+
+1. `provider` は `google` または `discord` のみ指定可能
+2. 指定した `provider` の OAuth 連携が、実行ユーザーに紐づいていること
+3. `provider_display_name` / `provider_avatar_url` のいずれかが保存済みであること
+
 **成功レスポンス (`200 OK`)**
 
 ```json
@@ -164,6 +170,42 @@ Authorization: Bearer <access_token>
   "updated_fields": ["display_name", "avatar_url"],
   "display_name": "Provider User",
   "avatar_url": "https://example.com/provider-user.png"
+}
+```
+
+**入力不正 (`400 Bad Request`: 未対応 provider)**
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=github
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "detail": "Unsupported provider"
+}
+```
+
+**未連携 (`404 Not Found`)**
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=discord
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "detail": "No discord account linked"
+}
+```
+
+**保存情報なし (`400 Bad Request`)**
+
+指定した provider は連携済みでも、保存済みプロフィール情報がない場合は `400` を返します。
+
+```json
+{
+  "detail": "No provider info stored for google. Try re-logging in with google."
 }
 ```
 
@@ -180,3 +222,7 @@ Authorization: Bearer <access_token>
   }
 }
 ```
+
+!!! tip "三点同期の確認導線"
+    FAQ は [sync-from-provider の 400/404 の意味](../help/faq.md#sync-from-provider-の-400404-は何を意味する)、
+    障害対応は [sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors) を参照してください。
