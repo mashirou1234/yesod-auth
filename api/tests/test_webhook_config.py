@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -401,3 +402,32 @@ class TestWebhookConfigValidation:
         finally:
             default_path.unlink()
             override_path.unlink()
+
+    @pytest.mark.parametrize("invalid_backoff_ms", [0, -1])
+    def test_retry_backoff_ms_non_positive_raises_startup_error(self, invalid_backoff_ms: int):
+        """retry_backoff_ms が 0 以下なら起動時に設定エラーとする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_backoff_ms": invalid_backoff_ms,
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                with pytest.raises(ValueError, match="settings\\.retry_backoff_ms"):
+                    WebhookConfigLoader.load()
+        finally:
+            config_path.unlink()

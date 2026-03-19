@@ -90,6 +90,7 @@ class WebhookConfigLoader:
                 logger.warning("Skipping invalid endpoint: %s", e)
 
         settings_data = raw_config.get("settings", {})
+        cls._validate_settings(settings_data)
         settings = WebhookSettings(
             max_retries=settings_data.get("max_retries", 5),
             retry_base_delay_seconds=settings_data.get("retry_base_delay_seconds", 2),
@@ -109,6 +110,16 @@ class WebhookConfigLoader:
             CONFIG_PATH,
         )
         return cls._config
+
+    @classmethod
+    def _validate_settings(cls, settings_data: dict[str, Any]) -> None:
+        """Validate webhook settings before applying them."""
+        retry_backoff_ms = settings_data.get("retry_backoff_ms")
+        if retry_backoff_ms is None:
+            return
+
+        if not isinstance(retry_backoff_ms, int) or retry_backoff_ms <= 0:
+            raise ValueError("settings.retry_backoff_ms must be a positive integer")
 
     @classmethod
     def reload(cls) -> WebhookConfig:
