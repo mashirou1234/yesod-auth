@@ -12,6 +12,7 @@ from slowapi.wrappers import Limit
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.rate_limit import MISSING_OAUTH_PROVIDER_KEY
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
 from app.main import app
 from app.metrics import (
@@ -209,6 +210,7 @@ async def test_refresh_rejects_revoked_session_token(
 @pytest.mark.enable_rate_limiter
 async def test_refresh_rate_limited_response_includes_retry_after_header(client: AsyncClient):
     """Rate limited refresh response should include Retry-After header."""
+    reset_oauth_rate_limit_burst_metrics()
     limiter = app.state.limiter
     limit_item = RateLimitItemPerMinute(30, 1)
     synthetic_limit = Limit(
@@ -242,6 +244,10 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
     assert retry_after is not None
     assert retry_after.isdigit()
     assert int(retry_after) >= 0
+    assert (
+        f'yesod_oauth_rate_limit_burst_total{{provider="{MISSING_OAUTH_PROVIDER_KEY}"}} 1'
+        in render_oauth_rate_limit_burst_metrics_lines()
+    )
 
 
 @pytest.mark.asyncio
@@ -277,4 +283,8 @@ async def test_oauth_provider_rate_limit_records_burst_metric(client: AsyncClien
     assert response.status_code == 429
     assert 'yesod_oauth_rate_limit_burst_total{provider="google"} 1' in (
         render_oauth_rate_limit_burst_metrics_lines()
+    )
+    assert (
+        f'yesod_oauth_rate_limit_burst_total{{provider="{MISSING_OAUTH_PROVIDER_KEY}"}} 1'
+        not in render_oauth_rate_limit_burst_metrics_lines()
     )
