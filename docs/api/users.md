@@ -7,6 +7,7 @@
 | GET | `/api/v1/users/me` | 現在のユーザー情報 |
 | PATCH | `/api/v1/users/me` | プロフィール更新 |
 | DELETE | `/api/v1/users/me` | アカウント削除 |
+| POST | `/api/v1/users/me/sync-from-provider?provider=<name>` | OAuth プロバイダ情報からプロフィール復元 |
 
 ---
 
@@ -144,3 +145,38 @@ Authorization: Bearer <access_token>
 
 !!! note "Webhookイベント"
     アカウント削除時に`user.deleted`イベントが発火します。
+
+---
+
+## プロバイダ情報からプロフィール復元
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=google
+Authorization: Bearer <access_token>
+```
+
+**成功レスポンス (`200 OK`)**
+
+```json
+{
+  "message": "Profile synced from google",
+  "provider": "google",
+  "updated_fields": ["display_name", "avatar_url"],
+  "display_name": "Provider User",
+  "avatar_url": "https://example.com/provider-user.png"
+}
+```
+
+**競合レスポンス (`409 Conflict`)**
+
+ローカルのプロフィール値とプロバイダ保持値が衝突する場合は、`detail.code` と `detail.message` を固定した契約で返します。
+
+```json
+{
+  "detail": {
+    "code": "SYNC_FROM_PROVIDER_CONFLICT",
+    "message": "Local profile already has different values. Clear conflicting fields before syncing from provider.",
+    "conflicting_fields": ["display_name", "avatar_url"]
+  }
+}
+```
