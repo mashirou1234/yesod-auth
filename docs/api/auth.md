@@ -30,6 +30,7 @@
 `GET /metrics` では OAuth 関連のレート制限を次のメトリクスで確認できます。
 
 - `yesod_oauth_rate_limit_burst_total{provider="<provider>"}`: provider 別に 429 が返った回数
+  - provider をパスから特定できない場合は `provider="missing_provider"` で集計
 - `yesod_oauth_failures_total{provider="<provider>",reason="<reason>"}`: OAuth 処理失敗回数（既存）
   - `reason="unknown_error_code"`: provider callback で未知の OAuth error code を受けた回数（provider ラベル付き）
 
