@@ -164,6 +164,7 @@ environment:
 再開ポイント:
 - [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
 - [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+- [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](./faq.md#mock-oauthから実oauthへ切り替える最小確認は)
 
 ---
 
