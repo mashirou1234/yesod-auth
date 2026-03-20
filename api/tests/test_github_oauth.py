@@ -288,7 +288,7 @@ class TestGitHubOAuthCallback:
 
     @pytest.mark.asyncio
     async def test_callback_mismatched_state_logs_request_id(self, client):
-        """State mismatch audit log must include request-id for traceability."""
+        """State mismatch audit log must include provider and request-id."""
         with (
             patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
             patch(
@@ -305,7 +305,10 @@ class TestGitHubOAuthCallback:
         assert response.status_code == 400
         assert response.json() == {"detail": "Invalid or expired state"}
         assert mock_log_login.await_count == 1
-        assert mock_log_login.await_args.args[6] == "Invalid state [request-id=req-test-123]"
+        assert (
+            mock_log_login.await_args.args[6]
+            == "Invalid state [provider=github] [request-id=req-test-123]"
+        )
 
     @pytest.mark.asyncio
     async def test_callback_unknown_error_code_records_metric(self, client):
