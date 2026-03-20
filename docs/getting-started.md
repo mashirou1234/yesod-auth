@@ -97,7 +97,7 @@ OAuth 導入時は、実装前に「provider 管理画面の callback URL」と�
 
 ### FAQ / installation / troubleshooting 同期チェック（受け入れ基準）
 
-- [FAQ の本番OAuth切替手順](help/faq.md#mock-oauthから本番oauthへ切り替える最小確認は) にある callback 確認手順と矛盾がない
+- [FAQ の実OAuth切替手順](help/faq.md#mock-oauthから実oauthへ切り替える最小確認は) にある callback 確認手順と矛盾がない
 - [インストールの OAuth 認証情報](installation.md#oauth認証情報) と callback 前提（URL 形式・provider 単位）が一致している
 - [トラブルシューティング](help/troubleshooting.md#認証エラー) への参照導線が残っている
 
@@ -228,6 +228,11 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 
 `invalid_client` や `redirect_uri_mismatch` が出る場合は
 [トラブルシューティング](help/troubleshooting.md) を参照してください。
+
+再開ポイント:
+- [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](help/faq.md#mock-oauthから実oauthへ切り替える最小確認は)
+- [インストール: provider 未設定時の最短スキップ手順](installation.md#provider-未設定時の最短スキップ手順)
+- [トラブルシューティング: provider 未設定のまま認証導線を実行した](help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
 
 ### セッション失効時の再ログイン手順
 
