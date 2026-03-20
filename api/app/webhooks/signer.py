@@ -15,6 +15,30 @@ class SignatureVerificationResult:
     message: str | None = None
 
 
+class WebhookSignatureError(ValueError):
+    """Base class for webhook signature validation errors."""
+
+    error_code = "invalid_signature"
+
+
+class MissingWebhookSignatureError(WebhookSignatureError):
+    """Raised when signature header is missing."""
+
+    error_code = "missing_signature_header"
+
+    def __init__(self):
+        super().__init__("Missing required X-Webhook-Signature header")
+
+
+class InvalidWebhookSignatureError(WebhookSignatureError):
+    """Raised when signature verification fails."""
+
+    error_code = "invalid_signature"
+
+    def __init__(self):
+        super().__init__("Webhook signature verification failed")
+
+
 class WebhookSigner:
     """Signs webhook payloads for verification."""
 
@@ -129,6 +153,25 @@ class WebhookSigner:
             )
 
         return SignatureVerificationResult(ok=True)
+
+    @staticmethod
+    def verify_or_raise(
+        payload: str,
+        secret: str,
+        timestamp: int,
+        signature: str | None,
+    ) -> None:
+        """
+        Verify signature and raise a classified error when verification fails.
+
+        Raises:
+            MissingWebhookSignatureError: Signature header is missing/empty
+            InvalidWebhookSignatureError: Signature value does not match payload
+        """
+        if signature is None or not signature.strip():
+            raise MissingWebhookSignatureError()
+        if not WebhookSigner.verify(payload, secret, timestamp, signature):
+            raise InvalidWebhookSignatureError()
 
     @staticmethod
     def get_headers(payload: str, secret: str, event_type: str, webhook_id: str) -> dict[str, str]:

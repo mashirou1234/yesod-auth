@@ -7,7 +7,11 @@ import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from app.webhooks.signer import WebhookSigner
+from app.webhooks.signer import (
+    InvalidWebhookSignatureError,
+    MissingWebhookSignatureError,
+    WebhookSigner,
+)
 
 # Strategies for generating test data
 payloads = st.builds(
@@ -240,3 +244,21 @@ class TestWebhookSigner:
         assert headers["X-Webhook-Timestamp"].isdigit()
         assert headers["X-Webhook-Event"] == event_type
         assert headers["X-Webhook-ID"] == webhook_id
+
+    def test_verify_or_raise_reports_missing_signature_header(self):
+        """Missing signature header should raise a dedicated error."""
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+
+        with pytest.raises(MissingWebhookSignatureError) as exc_info:
+            WebhookSigner.verify_or_raise(payload, "test-secret-key", 1705297800, None)
+
+        assert exc_info.value.error_code == "missing_signature_header"
+
+    def test_verify_or_raise_reports_invalid_signature_separately(self):
+        """Invalid signature should stay distinct from missing-header error."""
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+
+        with pytest.raises(InvalidWebhookSignatureError) as exc_info:
+            WebhookSigner.verify_or_raise(payload, "test-secret-key", 1705297800, "sha256=deadbeef")
+
+        assert exc_info.value.error_code == "invalid_signature"

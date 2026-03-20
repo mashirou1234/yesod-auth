@@ -145,3 +145,10 @@ POST /api/v1/admin/webhooks/reload
 | `unsupported_signature_algorithm` | 未対応の署名方式が指定された（例: `sha1`） |
 | `hmac_mismatch` | 署名がペイロードと一致しない |
 | `replay_detected` | リプレイ攻撃が疑われる |
+
+アプリ内の `WebhookSigner.verify_or_raise()` を使う場合は、例外分類は次の 2 つに丸められます。
+
+| code | 説明 |
+|------|------|
+| `missing_signature_header` | `X-Webhook-Signature` ヘッダが欠落または空 |
+| `invalid_signature` | 署名検証に失敗した |
