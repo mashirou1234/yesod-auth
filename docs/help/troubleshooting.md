@@ -246,6 +246,30 @@ environment:
 
 ---
 
+<a id="sync-from-provider-errors"></a>
+
+### sync-from-provider で 400/404 が返る
+
+対象: `POST /api/v1/users/me/sync-from-provider?provider=<name>`
+
+| ステータス | 代表メッセージ | 主な原因 | 直近の対処 |
+| --- | --- | --- | --- |
+| 400 | `Unsupported provider` | `provider` が `google` / `discord` 以外 | `provider` を `google` か `discord` に修正 |
+| 404 | `No <provider> account linked` | 指定 provider の連携がない | 当該 provider で再ログインして連携を作成 |
+| 400 | `No provider info stored for <provider>...` | 連携はあるが保存済みプロフィール情報が空 | 同 provider で再ログインし、プロフィール情報を再取得 |
+
+確認コマンド例:
+
+```bash
+TOKEN="<access_token>"
+curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me/sync-from-provider?provider=discord" | jq
+```
+
+契約の最新版は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。
+
+---
+
 <a id="secrets-permission-recovery"></a>
 
 ### secrets 権限不備で `Permission denied` が出る
