@@ -15,6 +15,7 @@ from app.oauth_providers import OAUTH_PROVIDER_ORDER
 
 settings = get_settings()
 SUPPORTED_OAUTH_PROVIDERS = frozenset(OAUTH_PROVIDER_ORDER)
+MISSING_OAUTH_PROVIDER_KEY = "missing_provider"
 
 # Create limiter instance
 limiter = Limiter(
@@ -42,12 +43,22 @@ def extract_oauth_provider_from_path(path: str) -> str | None:
     return None
 
 
+def resolve_oauth_provider_metric_key(path: str) -> str | None:
+    """Resolve provider metric key with stable fallback for auth paths."""
+    provider = extract_oauth_provider_from_path(path)
+    if provider is not None:
+        return provider
+    if path.startswith("/api/v1/auth/"):
+        return MISSING_OAUTH_PROVIDER_KEY
+    return None
+
+
 async def oauth_rate_limit_exceeded_handler(
     request: Request,
     exc: RateLimitExceeded,
 ) -> Response:
     """Record provider-level burst rate-limit metric before returning 429."""
-    provider = extract_oauth_provider_from_path(request.url.path)
+    provider = resolve_oauth_provider_metric_key(request.url.path)
     if provider is not None:
         record_oauth_rate_limit_burst_metric(provider)
 

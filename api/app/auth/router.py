@@ -41,6 +41,7 @@ from .schemas import (
     TokenPairResponse,
 )
 from .tokens import (
+    classify_refresh_token_failure,
     create_access_token,
     create_refresh_token,
     revoke_refresh_token,
@@ -64,6 +65,33 @@ def _log_provider_registry_order() -> None:
 
 
 _log_provider_registry_order()
+KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
+    "access_denied",
+    "invalid_request",
+    "invalid_client",
+    "invalid_grant",
+    "unauthorized_client",
+    "unsupported_grant_type",
+    "invalid_scope",
+    "server_error",
+    "temporarily_unavailable",
+}
+
+
+def _normalize_oauth_provider(provider: str) -> str:
+    """Normalize provider input for stable validation."""
+    return provider.strip().lower()
+
+
+def _validate_supported_oauth_provider(provider: str) -> str:
+    """Return normalized provider or raise stable 400 contract."""
+    normalized_provider = _normalize_oauth_provider(provider)
+    if normalized_provider not in OAUTH_PROVIDER_CREDENTIAL_FIELDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{normalized_provider}'.",
+        )
+    return normalized_provider
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -98,6 +126,13 @@ def _normalize_callback_url(url: str) -> str:
 def _build_oauth_redirect_uri(provider: str) -> str:
     """Build canonical OAuth redirect URI for provider callback."""
     return f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/auth/{provider}/callback"
+
+
+def _record_unknown_oauth_error_code_metric(provider: str, error_code: str) -> None:
+    """Record metric only when provider returned an unclassified OAuth error code."""
+    normalized_error_code = error_code.strip().lower()
+    if normalized_error_code and normalized_error_code not in KNOWN_OAUTH_CALLBACK_ERROR_CODES:
+        record_oauth_failure_metric(provider, "unknown_error_code")
 
 
 async def _validate_callback_url_or_raise(
@@ -140,12 +175,9 @@ async def _validate_callback_url_or_raise(
 
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
+    provider = _validate_supported_oauth_provider(provider)
     credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
-    if credential_fields is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider '{provider}'.",
-        )
+    assert credential_fields is not None
 
     client_id_field, client_secret_field = credential_fields
     client_id = getattr(settings, client_id_field, "")
@@ -393,12 +425,23 @@ async def github_login(request: Request):
 @limiter.limit("10/minute")
 async def github_callback(
     request: Request,
-    code: str,
-    state: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback."""
     device_info, ip_address = _get_client_info(request)
+
+    if error:
+        _record_unknown_oauth_error_code_metric("github", error)
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, f"OAuth callback failed: {error}"
+        )
+        raise HTTPException(status_code=400, detail=f"OAuth callback failed: {error}")
+
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state")
 
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
@@ -1017,11 +1060,12 @@ async def refresh_tokens(
     result = await rotate_refresh_token(db, body.refresh_token, device_info, ip_address)
 
     if not result:
+        token_status = await classify_refresh_token_failure(db, body.refresh_token)
         await AuditLogger.log_event(
             db,
             AuthEventType.TOKEN_REFRESH_FAILED,
             None,
-            {"reason": "Invalid or expired token"},
+            {"reason": "Invalid or expired token", "token_status": token_status},
             ip_address,
             device_info,
         )
@@ -1157,12 +1201,7 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in OAUTH_PROVIDER_ORDER:
-        provider_choices = "', '".join(OAUTH_PROVIDER_ORDER[:-1])
-        raise HTTPException(
-            status_code=400,
-            detail=f"Provider must be '{provider_choices}', or '{OAUTH_PROVIDER_ORDER[-1]}'",
-        )
+    provider = _validate_supported_oauth_provider(provider)
 
     device_info, ip_address = _get_client_info(request)
     mock_user = get_mock_user(user)

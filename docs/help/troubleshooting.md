@@ -33,6 +33,56 @@ ERROR: extension "pg_cron" is not available
 
 ---
 
+### `SESSION_EXPIRY_HOURS` が不正値
+
+**症状:** 管理画面のセッション期限設定が反映されず、起動ログに警告が出る。
+
+警告メッセージ:
+
+```
+SESSION_EXPIRY_HOURS is invalid ('<value>'); using default value 24
+```
+
+**原因:** `SESSION_EXPIRY_HOURS` に整数以外、または 0 以下の値が設定されている。
+
+**解決策:**
+
+1. `SESSION_EXPIRY_HOURS` を 1 以上の整数に修正する
+2. 管理画面コンテナを再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
+3. 反映確認
+   ```bash
+   docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid"
+   ```
+
+---
+
+### `SESSION_COOKIE_SAMESITE` が空文字/未知値
+
+**症状:** admin 起動時に `SESSION_COOKIE_SAMESITE` の警告が出る。
+
+警告メッセージ例:
+
+```
+SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=<env>)
+SESSION_COOKIE_SAMESITE='<value>' is unsupported; falling back to framework default (environment=<env>)
+```
+
+**原因:** `SESSION_COOKIE_SAMESITE` が未設定（空文字）、または `Lax`/`Strict`/`None` 以外の値。
+
+**解決策:**
+
+1. `SESSION_COOKIE_SAMESITE` を `Lax` / `Strict` / `None` のいずれかに修正する
+2. `None` を使う場合は `SESSION_COOKIE_SECURE=true` を同時に設定する
+3. admin を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
+
+---
+
 ### データベース接続エラー
 
 ```
@@ -123,6 +173,23 @@ environment:
   - MOCK_OAUTH_ENABLED=1
 ```
 
+<a id="provider-未設定のまま認証導線を実行した"></a>
+
+### provider 未設定のまま認証導線を実行した
+
+**症状:** `GET /api/v1/auth/<provider>` 実行時に `invalid_client` や secret 読み込みエラーが発生する。
+
+**最短対応:**
+
+1. 未設定 provider の導線呼び出しを一度止める
+2. `curl -fsS http://localhost:8000/health` と `curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs` で起動確認を先に完了する
+3. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+
+再開ポイント:
+- [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+- [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](./faq.md#mock-oauthから実oauthへ切り替える最小確認は)
+
 ---
 
 ### `401 Unauthorized` / `invalid_client`
@@ -176,6 +243,79 @@ environment:
    - self-host 運用時の基準は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト運用チェックリスト) を参照
 
 上記チェックを実施しても再発する場合は、[インストール時の secret 不足診断](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を再実行し、secret 名と実ファイル名の不一致を先に解消してください。
+
+---
+
+<a id="sync-from-provider-errors"></a>
+
+### sync-from-provider で 400/404 が返る
+
+対象: `POST /api/v1/users/me/sync-from-provider?provider=<name>`
+
+| ステータス | 代表メッセージ | 主な原因 | 直近の対処 |
+| --- | --- | --- | --- |
+| 400 | `Unsupported provider` | `provider` が `google` / `discord` 以外 | `provider` を `google` か `discord` に修正 |
+| 404 | `No <provider> account linked` | 指定 provider の連携がない | 当該 provider で再ログインして連携を作成 |
+| 400 | `No provider info stored for <provider>...` | 連携はあるが保存済みプロフィール情報が空 | 同 provider で再ログインし、プロフィール情報を再取得 |
+
+確認コマンド例:
+
+```bash
+TOKEN="<access_token>"
+curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me/sync-from-provider?provider=discord" | jq
+```
+
+契約の最新版は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。
+
+---
+
+<a id="secrets-permission-recovery"></a>
+
+### secrets 権限不備で `Permission denied` が出る
+
+**症状:** `docker compose up -d` 実行時に `permission denied` が出て起動できない。`/run/secrets/*` の読み込みエラーが API ログに残る。
+
+**確認手順（Linux/macOS）:**
+
+1. 対象 secret の所有者とパーミッションを確認する
+   ```bash
+   ls -l secrets/*.txt
+   ```
+2. Linux の詳細確認
+   ```bash
+   stat -c '%n %a %U:%G' secrets/*.txt
+   ```
+3. macOS の詳細確認
+   ```bash
+   stat -f '%N %Lp %Su:%Sg' secrets/*.txt
+   ```
+
+**復旧手順:**
+
+1. パーミッションを `600` に戻す
+   ```bash
+   chmod 600 secrets/*.txt
+   ```
+2. 所有者が現在ユーザーでない場合は修正する（Linux/macOS 共通）
+   ```bash
+   sudo chown \"$(id -un):$(id -gn)\" secrets/*.txt
+   ```
+3. API を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate api worker
+   ```
+4. 再確認する
+   ```bash
+   docker compose logs --tail=100 api | rg -n \"permission denied|/run/secrets|invalid_client\"
+   curl -fsS http://localhost:8000/health
+   ```
+
+**受け入れ時の三点同期チェック:**
+
+1. FAQ: [OAuth secret の権限不備を最短で復旧するには？](./faq.md#oauth-secret-の権限不備を最短で復旧するには) の手順順序と一致していること
+2. Installation: [OAuth secret ファイル権限の復旧手順](../installation.md#oauth-secret-ファイル権限の復旧手順) のコマンドと一致していること
+3. 本節（troubleshooting）では症状→確認→復旧の順序になっていること
 
 ---
 
@@ -364,6 +504,11 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
      - "user.created"  # 正しい
      - "user_created"  # 間違い
    ```
+
+4. 起動時に `settings.retry_*` エラーが出る場合は設定値の関係を確認
+   - `settings.retry_base_delay_seconds` と `settings.retry_max_delay_seconds` は非負整数
+   - `settings.retry_max_delay_seconds >= settings.retry_base_delay_seconds`
+   - `settings.retry_backoff_ms` を配列で指定する場合は「非負・単調増加（ms）」にする
 
 ---
 

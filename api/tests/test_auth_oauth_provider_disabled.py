@@ -31,3 +31,12 @@ def test_oauth_unknown_provider_raises_400():
 
     assert exc_info.value.status_code == 400
     assert exc_info.value.detail == "Unsupported OAuth provider 'unknown'."
+
+
+def test_oauth_unknown_provider_normalizes_case_before_400():
+    """Unknown mixed-case provider input should keep stable detail."""
+    with pytest.raises(auth_router_module.HTTPException) as exc_info:
+        auth_router_module._ensure_provider_enabled("UnKnown")
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "Unsupported OAuth provider 'unknown'."

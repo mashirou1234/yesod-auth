@@ -41,6 +41,7 @@ warn_if_session_cookie_samesite_unset(
     logger,
     environment=settings.ENVIRONMENT,
     session_cookie_samesite=settings.SESSION_COOKIE_SAMESITE,
+    session_cookie_secure=settings.SESSION_COOKIE_SECURE,
 )
 
 
