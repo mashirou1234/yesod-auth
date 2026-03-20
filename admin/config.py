@@ -6,6 +6,9 @@ from typing import Protocol
 logger = logging.getLogger(__name__)
 
 
+SUPPORTED_SESSION_COOKIE_SAMESITE = {"lax", "strict", "none"}
+
+
 def read_secret(name: str, default: str = "") -> str:
     """Read secret from Docker secrets or environment variable."""
     secret_path = f"/run/secrets/{name}"
@@ -60,6 +63,13 @@ def read_session_expiry_hours_env(
     return value
 
 
+def normalize_session_cookie_samesite(value: str) -> str:
+    normalized = value.strip().lower()
+    if normalized in SUPPORTED_SESSION_COOKIE_SAMESITE:
+        return normalized
+    return ""
+
+
 class Settings:
     # Use sync driver (psycopg2) for Streamlit
     DATABASE_URL: str = os.getenv(
@@ -88,8 +98,10 @@ class Settings:
         "yes",
         "on",
     )
-    # Empty means "use framework default" and emit a warning for visibility.
-    SESSION_COOKIE_SAMESITE: str = os.getenv("SESSION_COOKIE_SAMESITE", "").strip()
+    # Empty/unknown means "use framework default" and emit a warning for visibility.
+    SESSION_COOKIE_SAMESITE: str = normalize_session_cookie_samesite(
+        os.getenv("SESSION_COOKIE_SAMESITE", "")
+    )
 
     # Default language (en, ja, fr, ko, de)
     DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "en")
@@ -110,7 +122,16 @@ def warn_if_session_cookie_samesite_unset(
     session_cookie_secure: bool = True,
 ) -> bool:
     env_name = environment.strip() or "production"
-    samesite = session_cookie_samesite.strip().lower()
+    raw_samesite = session_cookie_samesite.strip()
+    samesite = normalize_session_cookie_samesite(raw_samesite)
+
+    if raw_samesite and not samesite:
+        logger.warning(
+            "SESSION_COOKIE_SAMESITE=%r is unsupported; falling back to framework default (environment=%s)",
+            raw_samesite,
+            env_name,
+        )
+        return True
 
     if not samesite:
         logger.warning(

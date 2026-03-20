@@ -21,17 +21,19 @@ class SessionCookieSameSiteWarningTests(unittest.TestCase):
             "staging",
         )
 
-    def test_does_not_warn_when_samesite_is_set(self) -> None:
-        logger = Mock()
+    def test_does_not_warn_for_supported_samesite_values(self) -> None:
+        for value in ("lax", "Strict", "NONE"):
+            with self.subTest(value=value):
+                logger = Mock()
 
-        warned = warn_if_session_cookie_samesite_unset(
-            logger,
-            environment="staging",
-            session_cookie_samesite="lax",
-        )
+                warned = warn_if_session_cookie_samesite_unset(
+                    logger,
+                    environment="staging",
+                    session_cookie_samesite=value,
+                )
 
-        self.assertFalse(warned)
-        logger.warning.assert_not_called()
+                self.assertFalse(warned)
+                logger.warning.assert_not_called()
 
     def test_warns_when_samesite_none_and_secure_is_false(self) -> None:
         logger = Mock()
@@ -46,6 +48,22 @@ class SessionCookieSameSiteWarningTests(unittest.TestCase):
         self.assertTrue(warned)
         logger.warning.assert_called_once_with(
             "SESSION_COOKIE_SAMESITE=None requires SESSION_COOKIE_SECURE=true for admin session cookie (environment=%s)",
+            "staging",
+        )
+
+    def test_warns_and_falls_back_when_samesite_is_unknown(self) -> None:
+        logger = Mock()
+
+        warned = warn_if_session_cookie_samesite_unset(
+            logger,
+            environment="staging",
+            session_cookie_samesite="cross-site",
+        )
+
+        self.assertTrue(warned)
+        logger.warning.assert_called_once_with(
+            "SESSION_COOKIE_SAMESITE=%r is unsupported; falling back to framework default (environment=%s)",
+            "cross-site",
             "staging",
         )
 
