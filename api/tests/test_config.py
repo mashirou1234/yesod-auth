@@ -1,5 +1,8 @@
 """Tests for configuration helpers."""
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
@@ -95,6 +98,23 @@ def test_parse_bool_env_raises_clear_error_on_invalid_value(monkeypatch):
 def test_resolve_cors_origins_raises_when_empty_element_is_present():
     with pytest.raises(ValueError, match="CORS_ORIGINS"):
         resolve_cors_origins("https://example.com, ,https://admin.example.com")
+
+
+def test_config_import_fails_fast_when_cors_origins_contains_empty_element():
+    env = os.environ.copy()
+    env["CORS_ORIGINS"] = "https://example.com, ,https://admin.example.com"
+
+    result = subprocess.run(
+        [sys.executable, "-c", "import app.config"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(Path(__file__).resolve().parents[1]),
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "CORS_ORIGINS contains empty element" in (result.stderr + result.stdout)
 
 
 def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monkeypatch):
