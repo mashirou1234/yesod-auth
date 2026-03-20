@@ -25,6 +25,17 @@
 
 ---
 
+## レート制限メトリクス
+
+`GET /metrics` では OAuth 関連のレート制限を次のメトリクスで確認できます。
+
+- `yesod_oauth_rate_limit_burst_total{provider="<provider>"}`: provider 別に 429 が返った回数
+  - provider をパスから特定できない場合は `provider="missing_provider"` で集計
+- `yesod_oauth_failures_total{provider="<provider>",reason="<reason>"}`: OAuth 処理失敗回数（既存）
+  - `reason="unknown_error_code"`: provider callback で未知の OAuth error code を受けた回数（provider ラベル付き）
+
+---
+
 ## 認可エラー方針（401 / 403）
 
 認証・認可に関するステータスコードは次の方針で使い分けます。
@@ -39,6 +50,16 @@
 ---
 
 ## OAuth認証フロー
+
+<a id="callback-url-spec"></a>
+
+### callback URL 仕様（全provider共通）
+
+- callback path は `GET /api/v1/auth/{provider}/callback`
+- provider 管理画面に登録する URL 形式は `https://<api-domain>/api/v1/auth/<provider>/callback`
+- `http/https`・ホスト名・ポート・パス・末尾スラッシュまで完全一致が必要
+
+`redirect_uri_mismatch` を最短で確認する手順は [クイックスタート](../getting-started.md#25-redirect_uri_mismatch-の最短確認5ステップ) を参照してください。失敗時の切り分けは [トラブルシューティング](../help/troubleshooting.md#認証エラー) へ接続してください。
 
 ### 1. 認証開始
 
@@ -241,6 +262,7 @@ Content-Type: application/json
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
 |------|------|-----------|-----------|
 | 400 | `Invalid or expired state` | state 不一致/期限切れ | 認証フローを最初から再実行 |
+| 400 | `OAuth callback failed: <error_code>` | provider が `error` を返却 | provider 側設定とエラー内容を確認（未知コードは metrics 監視） |
 | 400 | `Failed to exchange code` | 認可コード交換失敗 | provider 設定・redirect URI を確認 |
 | 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
 | 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
@@ -283,6 +305,15 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 **利用可能なユーザー:** `alice`, `bob`, `charlie`
 
 **利用可能なプロバイダー:** `google`, `github`, `discord`, `x`, `linkedin`, `facebook`, `slack`, `twitch`
+
+- `provider` は小文字正規化して判定（例: `GitHub` は `github` と同義）
+- サポート外 provider は `400 Bad Request` と固定文言を返却
+
+```json
+{
+  "detail": "Unsupported OAuth provider 'unknown'."
+}
+```
 
 ### ユーザー一覧
 

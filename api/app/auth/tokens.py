@@ -13,6 +13,7 @@ from app.config import get_settings
 from app.models import RefreshToken
 
 settings = get_settings()
+ACCESS_TOKEN_HEADER_KID = "local-hs256"
 
 
 def create_access_token(user_id: str, email: str) -> str:
@@ -24,7 +25,12 @@ def create_access_token(user_id: str, email: str) -> str:
         "exp": expire,
         "type": "access",
     }
-    return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
+    return jwt.encode(
+        payload,
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+        headers={"kid": ACCESS_TOKEN_HEADER_KID},
+    )
 
 
 def decode_access_token(token: str) -> dict | None:
@@ -130,6 +136,33 @@ async def rotate_refresh_token(
     )
 
     return new_token, old_record.user_id
+
+
+async def classify_refresh_token_failure(
+    db: AsyncSession,
+    token: str,
+) -> str:
+    """Classify why refresh token validation failed for audit details."""
+    token_hash = hash_refresh_token(token)
+    now = datetime.now(UTC)
+
+    result = await db.execute(
+        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
+    )
+    record = result.scalar_one_or_none()
+    if not record:
+        return "not_found"
+
+    if record.is_revoked:
+        return "revoked"
+
+    expires_at = record.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if expires_at <= now:
+        return "expired"
+
+    return "unknown"
 
 
 async def revoke_refresh_token(db: AsyncSession, token: str) -> bool:

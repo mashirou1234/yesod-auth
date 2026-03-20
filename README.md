@@ -403,6 +403,19 @@ This repository includes GitHub Actions workflows for automatic PR approval and 
 1. Enable `Allow auto-merge` in repository settings
 2. Configure branch protection for `main`/`master` with required status checks
 3. Register your CI checks (including external CI like Woodpecker) as required checks
+4. Keep `PR Auto Approve` and `PR Auto Merge` workflows enabled in GitHub Actions
+5. Bootstrap Codex labels when setting up the repository:
+
+```bash
+./scripts/ensure_github_labels.sh
+# dry-run only (no write):
+./scripts/ensure_github_labels.sh --dry-run
+```
+
+This script ensures the repository keeps the labels used by Codex / codex-orch automation:
+`codex`, `codex-automation`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened`.
+
+If a pull request was opened while the auto-approve / auto-merge workflows were disabled, enabling the workflows later does not retroactively register auto-merge for that PR. In that case, reopen/synchronize the PR or enable auto-merge manually.
 
 With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
 

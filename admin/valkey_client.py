@@ -14,8 +14,7 @@ def run_async(coro):
 
 
 async def _get_oauth_states() -> list[dict]:
-    client = redis.from_url(settings.VALKEY_URL, decode_responses=True)
-    try:
+    async def _read(client) -> list[dict]:
         keys = await client.keys("oauth_state:*")
         states = []
         for key in keys:
@@ -29,13 +28,12 @@ async def _get_oauth_states() -> list[dict]:
                 "ttl_seconds": ttl,
             })
         return states
-    finally:
-        await client.close()
+
+    return await _execute_with_single_retry(_read)
 
 
 async def _get_rate_limit_info() -> list[dict]:
-    client = redis.from_url(settings.VALKEY_URL, decode_responses=True)
-    try:
+    async def _read(client) -> list[dict]:
         keys = await client.keys("LIMITER:*")
         limits = []
         for key in keys:
@@ -47,8 +45,21 @@ async def _get_rate_limit_info() -> list[dict]:
                 "ttl_seconds": ttl,
             })
         return limits
-    finally:
-        await client.close()
+
+    return await _execute_with_single_retry(_read)
+
+
+async def _execute_with_single_retry(operation):
+    for attempt in range(2):
+        client = redis.from_url(settings.VALKEY_URL, decode_responses=True)
+        try:
+            return await operation(client)
+        except (redis.ConnectionError, redis.TimeoutError):
+            if attempt == 1:
+                raise
+            await asyncio.sleep(settings.VALKEY_RECONNECT_WAIT_SECONDS)
+        finally:
+            await client.close()
 
 
 def get_oauth_states() -> list[dict]:

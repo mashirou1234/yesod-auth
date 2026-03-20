@@ -8,6 +8,7 @@ import yaml
 
 from app.config import (
     DEFAULT_CORS_ORIGINS,
+    Settings,
     read_secret,
     resolve_cors_origins,
 )
@@ -47,7 +48,7 @@ def test_resolve_cors_origins_uses_default_when_unset():
 
 
 def test_resolve_cors_origins_uses_default_when_blank():
-    origins, using_default = resolve_cors_origins(" , ")
+    origins, using_default = resolve_cors_origins("   ")
 
     assert origins == DEFAULT_CORS_ORIGINS.split(",")
     assert using_default is True
@@ -58,6 +59,30 @@ def test_resolve_cors_origins_uses_env_value_when_set():
 
     assert origins == ["https://example.com", "https://admin.example.com"]
     assert using_default is False
+
+
+def test_resolve_cors_origins_raises_when_empty_element_is_present():
+    with pytest.raises(ValueError, match="CORS_ORIGINS"):
+        resolve_cors_origins("https://example.com, ,https://admin.example.com")
+
+
+def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "")
+
+    with pytest.raises(
+        ValueError, match="GITHUB_CLIENT_SECRET"
+    ):
+        Settings()
+
+
+def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
+
+    settings = Settings()
+
+    assert settings.GITHUB_CLIENT_SECRET == "github-client-secret"
 
 
 def _load_compose_services() -> dict:
