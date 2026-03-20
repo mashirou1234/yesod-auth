@@ -15,6 +15,25 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 | [Slack](slack.md) | - | ✅ | ✅ | |
 | [Twitch](twitch.md) | - | ✅ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
 
+## provider別必須環境変数一覧
+
+実OAuthで必要なのは、`jwt_secret` と「有効化して使う provider 分の `*_client_id` / `*_client_secret`」だけです。
+`MOCK_OAUTH_ENABLED=1` はローカル疎通用であり、実運用では `MOCK_OAUTH_ENABLED=0` を使用します。
+
+| provider | 必須 secret 名 | 環境変数名（secret未使用時） | 個別ガイド |
+|---|---|---|---|
+| Google | `google_client_id` / `google_client_secret` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [google.md](google.md) |
+| GitHub | `github_client_id` / `github_client_secret` | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | [github.md](github.md) |
+| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | [discord.md](discord.md) |
+| X (Twitter) | `x_client_id` / `x_client_secret` | `X_CLIENT_ID` / `X_CLIENT_SECRET` | [x.md](x.md) |
+| LinkedIn | `linkedin_client_id` / `linkedin_client_secret` | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | [linkedin.md](linkedin.md) |
+| Facebook | `facebook_client_id` / `facebook_client_secret` | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | [facebook.md](facebook.md) |
+| Slack | `slack_client_id` / `slack_client_secret` | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | [slack.md](slack.md) |
+| Twitch | `twitch_client_id` / `twitch_client_secret` | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [twitch.md](twitch.md) |
+
+一覧の定義元は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) です。
+クイックスタートでの初回導入順は [getting-started](../../getting-started.md#2-シークレットファイルの作成) を参照してください。
+
 ### PKCEについて
 
 PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防ぐためのセキュリティ拡張です。

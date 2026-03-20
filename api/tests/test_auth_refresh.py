@@ -2,7 +2,7 @@
 
 import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import PropertyMock, patch
+from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
 from httpx import AsyncClient
@@ -12,6 +12,7 @@ from slowapi.wrappers import Limit
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.rate_limit import MISSING_OAUTH_PROVIDER_KEY
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
 from app.main import app
 from app.metrics import (
@@ -206,9 +207,53 @@ async def test_refresh_rejects_revoked_session_token(
 
 
 @pytest.mark.asyncio
+async def test_refresh_reuse_logs_revoked_token_status(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Reusing a rotated refresh token should log token_status=revoked."""
+    user = User()
+    user.emails.append(
+        UserEmail(
+            email="refresh-reuse@example.com",
+            is_primary=True,
+        )
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    refresh_token = await create_refresh_token(db_session, user.id)
+    with (
+        patch("app.auth.router.AuditLogger.log_event", new=AsyncMock()) as mock_log_event,
+        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-reuse@example.com"),
+    ):
+        first_refresh = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+        assert first_refresh.status_code == 200
+
+        second_refresh = await client.post(
+            "/api/v1/auth/refresh",
+            json={"refresh_token": refresh_token},
+        )
+
+    assert second_refresh.status_code == 401
+    assert second_refresh.json() == {"detail": "Invalid or expired refresh token"}
+    assert mock_log_event.await_count == 2
+    failed_call = mock_log_event.await_args_list[1]
+    assert failed_call.args[2] is None
+    assert failed_call.args[3] == {
+        "reason": "Invalid or expired token",
+        "token_status": "revoked",
+    }
+
+
+@pytest.mark.asyncio
 @pytest.mark.enable_rate_limiter
 async def test_refresh_rate_limited_response_includes_retry_after_header(client: AsyncClient):
     """Rate limited refresh response should include Retry-After header."""
+    reset_oauth_rate_limit_burst_metrics()
     limiter = app.state.limiter
     limit_item = RateLimitItemPerMinute(30, 1)
     synthetic_limit = Limit(
@@ -242,6 +287,10 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
     assert retry_after is not None
     assert retry_after.isdigit()
     assert int(retry_after) >= 0
+    assert (
+        f'yesod_oauth_rate_limit_burst_total{{provider="{MISSING_OAUTH_PROVIDER_KEY}"}} 1'
+        in render_oauth_rate_limit_burst_metrics_lines()
+    )
 
 
 @pytest.mark.asyncio
@@ -277,4 +326,8 @@ async def test_oauth_provider_rate_limit_records_burst_metric(client: AsyncClien
     assert response.status_code == 429
     assert 'yesod_oauth_rate_limit_burst_total{provider="google"} 1' in (
         render_oauth_rate_limit_burst_metrics_lines()
+    )
+    assert (
+        f'yesod_oauth_rate_limit_burst_total{{provider="{MISSING_OAUTH_PROVIDER_KEY}"}} 1'
+        not in render_oauth_rate_limit_burst_metrics_lines()
     )

@@ -30,9 +30,12 @@ def resolve_cors_origins(raw_value: str | None) -> tuple[list[str], bool]:
     if raw_value is None or not raw_value.strip():
         return DEFAULT_CORS_ORIGINS.split(","), True
 
-    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
-    if not origins:
-        return DEFAULT_CORS_ORIGINS.split(","), True
+    origins = [origin.strip() for origin in raw_value.split(",")]
+    if any(not origin for origin in origins):
+        raise ValueError(
+            "CORS_ORIGINS contains empty element. "
+            "Set non-empty comma-separated values for CORS_ORIGINS."
+        )
     return origins, False
 
 

@@ -54,3 +54,21 @@ async def test_metrics_include_oauth_failure_classification_counter(client: Asyn
     assert 'yesod_oauth_failures_total{provider="github",reason="invalid_state"} 2' in (
         render_oauth_failure_metrics_lines()
     )
+
+
+def test_metrics_normalize_known_oauth_failure_reason():
+    """Known reasons should remain backward-compatible after normalization."""
+    reset_oauth_failure_metrics()
+    record_oauth_failure_metric("github", "invalid-state")
+    assert 'yesod_oauth_failures_total{provider="github",reason="invalid_state"} 1' in (
+        render_oauth_failure_metrics_lines()
+    )
+
+
+def test_metrics_aggregate_unknown_oauth_failure_reason():
+    """Unknown reasons should be aggregated into `unknown`."""
+    reset_oauth_failure_metrics()
+    record_oauth_failure_metric("github", "provider returned weird error")
+    assert 'yesod_oauth_failures_total{provider="github",reason="unknown"} 1' in (
+        render_oauth_failure_metrics_lines()
+    )
