@@ -59,6 +59,30 @@ SESSION_EXPIRY_HOURS is invalid ('<value>'); using default value 24
 
 ---
 
+### `SESSION_COOKIE_SAMESITE` が空文字/未知値
+
+**症状:** admin 起動時に `SESSION_COOKIE_SAMESITE` の警告が出る。
+
+警告メッセージ例:
+
+```
+SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=<env>)
+SESSION_COOKIE_SAMESITE='<value>' is unsupported; falling back to framework default (environment=<env>)
+```
+
+**原因:** `SESSION_COOKIE_SAMESITE` が未設定（空文字）、または `Lax`/`Strict`/`None` 以外の値。
+
+**解決策:**
+
+1. `SESSION_COOKIE_SAMESITE` を `Lax` / `Strict` / `None` のいずれかに修正する
+2. `None` を使う場合は `SESSION_COOKIE_SECURE=true` を同時に設定する
+3. admin を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
+
+---
+
 ### データベース接続エラー
 
 ```
