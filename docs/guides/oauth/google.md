@@ -32,6 +32,21 @@ echo "your-client-id" > secrets/google_client_id.txt
 echo "your-client-secret" > secrets/google_client_secret.txt
 ```
 
+## 4.1 検証環境と本番環境の差分（Google向け）
+
+Google OAuth は「同じ provider」でも、検証環境と本番環境で登録値を分けて管理すると事故を減らせます。
+
+| 観点 | 検証環境（staging / localhost） | 本番環境（production） |
+|------|----------------------------------|------------------------|
+| Redirect URI | `http://localhost:8000/api/v1/auth/google/callback` または `https://stg.<domain>/api/v1/auth/google/callback` | `https://<domain>/api/v1/auth/google/callback` |
+| OAuth同意画面の公開状態 | Testing（検証ユーザーのみ） | In production（一般ユーザー向け） |
+| テストユーザー | Google Cloud Console の Test users に開発メンバーを登録 | 原則不要（一般公開時） |
+| クライアントID/Secret | 検証用を発行して `secrets/google_client_*.txt` に設定 | 本番用を別発行し、デプロイ先の secret に設定 |
+| API URL / CORS | `API_URL` と `FRONTEND_URL` を検証ドメインに合わせる | `API_URL` と `FRONTEND_URL` を本番ドメインに合わせる |
+
+!!! warning "混在防止"
+    検証用クライアントで本番URLを許可したり、本番クライアントを検証環境へ流用しないでください。`redirect_uri_mismatch` と意図しないログイン失敗の主因になります。
+
 ## 5. `redirect_uri_mismatch` の切り分け
 
 Google 側で `Error 400: redirect_uri_mismatch` が表示された場合は、以下を順に確認します。

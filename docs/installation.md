@@ -21,6 +21,31 @@ YESOD Authは3つのプロファイルを提供しています：
 | `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
 | `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
 
+### profile選択チェック表
+
+初回導入時は、用途に応じて次の表で profile を選択してください。実行前後に [profile整合確認手順](#profile整合確認手順) で定義との差分を確認すると安全です。
+
+| profile | この条件なら選ぶ | 最小確認コマンド |
+|---|---|---|
+| `default` | ローカルで API/Docs を最短で確認したい | `docker compose --profile default up -d`<br>`docker compose --profile default ps`<br>`curl -fsS http://localhost:8000/health` |
+| `full` | 管理画面 (`admin`) まで含めて導入確認したい | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full config --services` |
+| `ci` | CI 相当の軽量構成だけ確認したい | `docker compose --profile ci up -d`<br>`docker compose --profile ci config --services`<br>`docker compose --profile ci ps` |
+
+### provider 未設定時の最短スキップ手順
+
+OAuth provider をまだ一部用意できていない場合は、次の手順で初回確認を進めます。
+
+1. `default` profile で起動し、Mock OAuth で疎通確認する
+2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
+3. 未設定 provider は `GET /api/v1/auth/<provider>` を呼ばず、先に health/docs 到達確認を完了する
+4. OAuth 設定完了後に provider の secret を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+
+再開ポイント:
+- 起動確認の継続: [docker compose利用時の最小確認手順](#docker-compose利用時の最小確認手順)
+- 実 OAuth の再開: [クイックスタート: Mock OAuthから実OAuthへ切り替える最小チェック](./getting-started.md#mock-oauthから実oauthへ切り替える最小チェック)
+- 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
+- FAQ での要点確認: [Mock OAuthから実OAuthへ切り替える最小確認は？](./help/faq.md#mock-oauthから実oauthへ切り替える最小確認は)
+
 ## Docker起動前チェック項目
 
 `docker compose up` 実行前に、次の4項目を確認してください。
@@ -67,13 +92,15 @@ docker compose --profile default up -d
 ### 管理画面付き
 
 `full` プロファイルは「設定」「起動」「確認」の順で実施してください。
+profile 差分の前提は [profile選択チェック表](#profile選択チェック表) で先に確認してください。
 
 #### 1. 設定
 
-1. 管理画面向けシークレットを用意する（必須）
+1. 管理画面向けシークレットを用意する（必須・空ファイル禁止）
 
 ```bash
 ls -l secrets/admin_password.txt
+test -s secrets/admin_password.txt && echo "admin_password: OK" || (echo "admin_password が未作成または空です" >&2; exit 1)
 ```
 
 2. 管理画面向け環境変数の確認観点
@@ -109,8 +136,17 @@ docker compose --profile full config --services
 #### 代表的な失敗例
 
 - 症状: `admin` サービスが起動失敗する / ログインできない
-- 原因例: `secrets/admin_password.txt` 未作成、または想定外の値
-- 対処: `secrets/admin_password.txt` を作成・更新して `docker compose --profile full up -d` を再実行
+- 原因例: `secrets/admin_password.txt` 未作成、空ファイル、または想定外の値
+- 対処: `secrets/admin_password.txt` を作成・更新し、`test -s secrets/admin_password.txt` で非空を確認してから `docker compose --profile full up -d` を再実行
+
+#### 受け入れ基準チェックリスト（full profile / admin_password）
+
+1. `full` プロファイル手順に `admin_password` の非空チェック（`test -s`）が含まれている
+2. 未設定時の症状（起動失敗/ログイン失敗）と復旧手順が同じ節に記載されている
+3. FAQ / installation / troubleshooting の3点同期を確認できる  
+   - FAQ: [どのsecretを必須で用意すべき？](./help/faq.md#どのsecretを必須で用意すべき)  
+   - Installation: [管理画面付き](#管理画面付き)  
+   - Troubleshooting: [認証エラー](./help/troubleshooting.md#認証エラー)
 
 ### CI相当
 
@@ -212,6 +248,56 @@ docker compose --profile default up -d 2>&1 | rg -n "secret .* not found|CreateC
 printf '%s\n' google_client_id google_client_secret discord_client_id discord_client_secret jwt_secret
 ls -1 secrets/*.txt 2>/dev/null | sed -E 's#^.*/##; s#\\.txt$##' | sort
 ```
+
+最短復旧コマンド（secret不足）:
+
+```bash
+# 1) まず不足している secret 名を抽出
+MISSING="$(docker compose --profile default up -d 2>&1 \
+  | rg -o 'secret [a-z0-9_]+ not found' \
+  | sed -E 's/^secret ([a-z0-9_]+) not found$/\\1/' \
+  | sort -u)"
+
+# 2) 不足分だけ secrets/<name>.txt を補完（雛形があればコピー）
+for name in $MISSING; do
+  [ -f "secrets/${name}.txt" ] || cp "secrets/${name}.txt.example" "secrets/${name}.txt"
+done
+
+# 3) jwt_secret は必須。未作成なら生成して再起動
+[ -s secrets/jwt_secret.txt ] || openssl rand -hex 32 > secrets/jwt_secret.txt
+docker compose --profile default up -d --force-recreate api
+docker compose --profile default ps
+```
+
+期待値:
+- `docker compose --profile default ps` で `api` が `Up`（または `running`）
+- `secret ... not found` が再発しない
+
+`invalid_client` が続く場合は、`secrets/*.txt` の値が実値であることを確認し、[`docs/help/troubleshooting.md` の `invalid_client` 手順](help/troubleshooting.md#invalid_client-or-401-from-provider-token-endpoint) を参照してください。
+
+### OAuth secret ファイル権限の復旧手順
+
+`permission denied` で起動に失敗する場合は、次の順で復旧してください。
+
+1. 症状確認
+   ```bash
+   docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"
+   ```
+2. 権限確認（Linux/macOS）
+   ```bash
+   # Linux
+   stat -c '%n %a %U:%G' secrets/*.txt
+   # macOS
+   stat -f '%N %Lp %Su:%Sg' secrets/*.txt
+   ```
+3. 復旧
+   ```bash
+   chmod 600 secrets/*.txt
+   sudo chown "$(id -un):$(id -gn)" secrets/*.txt
+   docker compose up -d --force-recreate api worker
+   ```
+
+詳細な切り分けは [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery) を参照してください。
 
 対処:
 
@@ -323,6 +409,41 @@ docker compose up -d --build
 
 `read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
 
+### profile別の環境変数優先順位
+
+`MOCK_OAUTH_ENABLED` はアプリ既定値 `0` ですが、Compose 運用では profile ごとに環境変数で上書きされます。  
+本番誤設定を避けるため、profile 別に以下を固定値として扱ってください。
+
+| profile | Compose上の期待値 | 実行時の期待値 | 根拠 |
+| --- | --- | --- | --- |
+| `default` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `full` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `ci` | `MOCK_OAUTH_ENABLED=1` が `api-ci.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api-ci.profiles: ci`) |
+
+確認コマンド（default/full/ci の3点を毎回実施）:
+
+```bash
+docker compose --profile default config | rg -n "MOCK_OAUTH_ENABLED"
+docker compose --profile full config | rg -n "MOCK_OAUTH_ENABLED"
+docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
+```
+
+判定:
+
+- `default`/`full`/`ci` すべてで `MOCK_OAUTH_ENABLED=1` が見えること
+- Compose を使わずアプリを単体起動する場合は既定値 `0` になること（`api/app/config.py`）
+
+### 受け入れ基準チェックリスト（MOCK_OAUTH_ENABLED / profile差分）
+
+1. 上記の profile 比較表で、アプリ既定値 `0` と Compose profile 上書き `1` を 1 表で確認できる
+2. default/full/ci の `docker compose config` 実行結果で期待値に一致する
+3. 利用する provider の secrets（`<provider>_client_id` / `<provider>_client_secret`）が揃っている
+4. provider 管理画面の callback URL と `GET /api/v1/auth/{provider}/callback` が一致している
+5. FAQ / installation / troubleshooting の3点同期を確認する  
+   - FAQ: [OAuth secret の権限不備を最短で復旧するには？](./help/faq.md#oauth-secret-の権限不備を最短で復旧するには)  
+   - Installation: [profile別の環境変数優先順位](#profile別の環境変数優先順位)  
+   - Troubleshooting: [secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery)
+
 ## リフレッシュトークン運用時の注意
 
 `/api/v1/auth/refresh` は「アクセストークンの延命」ではなく「ローテーションを伴う再発行」です。導入時は次の3点を必ず満たしてください。
@@ -355,6 +476,7 @@ rg -n "REFRESH_TOKEN_LIFETIME_DAYS|/api/v1/auth/refresh|再ログイン" docs/in
 Docker Secretsまたは環境変数で設定：
 
 初回導入時は、設定後に [初回導入チェックリスト](getting-started.md#初回導入チェックリスト) を順に実行して動作確認してください。
+provider別の対応表は [OAuth設定ハブの一覧](guides/oauth/index.md#provider別必須環境変数一覧) を参照してください。
 
 | シークレット名 | 説明 |
 |---------------|------|

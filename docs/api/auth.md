@@ -25,6 +25,17 @@
 
 ---
 
+## レート制限メトリクス
+
+`GET /metrics` では OAuth 関連のレート制限を次のメトリクスで確認できます。
+
+- `yesod_oauth_rate_limit_burst_total{provider="<provider>"}`: provider 別に 429 が返った回数
+  - provider をパスから特定できない場合は `provider="missing_provider"` で集計
+- `yesod_oauth_failures_total{provider="<provider>",reason="<reason>"}`: OAuth 処理失敗回数（既存）
+  - `reason="unknown_error_code"`: provider callback で未知の OAuth error code を受けた回数（provider ラベル付き）
+
+---
+
 ## 認可エラー方針（401 / 403）
 
 認証・認可に関するステータスコードは次の方針で使い分けます。
@@ -39,6 +50,16 @@
 ---
 
 ## OAuth認証フロー
+
+<a id="callback-url-spec"></a>
+
+### callback URL 仕様（全provider共通）
+
+- callback path は `GET /api/v1/auth/{provider}/callback`
+- provider 管理画面に登録する URL 形式は `https://<api-domain>/api/v1/auth/<provider>/callback`
+- `http/https`・ホスト名・ポート・パス・末尾スラッシュまで完全一致が必要
+
+`redirect_uri_mismatch` を最短で確認する手順は [クイックスタート](../getting-started.md#25-redirect_uri_mismatch-の最短確認5ステップ) を参照してください。失敗時の切り分けは [トラブルシューティング](../help/troubleshooting.md#認証エラー) へ接続してください。
 
 ### 1. 認証開始
 
@@ -62,6 +83,18 @@ GET /api/v1/auth/google
 }
 ```
 
+### 未知 provider 入力時
+
+- 条件: サポート対象外の provider 名が入力された場合
+- 応答: `400 Bad Request`
+- 例:
+
+```json
+{
+  "detail": "Unsupported OAuth provider 'unknown'."
+}
+```
+
 ### 2. コールバック
 
 認証成功後、フロントエンドにリダイレクト：
@@ -82,6 +115,9 @@ curl -H "Authorization: Bearer <access_token>" \
 ---
 
 ## トークンリフレッシュ
+
+`/api/v1/auth/refresh` の内部再試行上限は `TOKEN_REFRESH_MAX_RETRIES`（既定: `3`）で設定できます。
+一時的な DB 障害などで refresh 処理が失敗した場合、この上限まで再試行します。
 
 ```bash
 POST /api/v1/auth/refresh
@@ -146,6 +182,31 @@ Content-Type: application/json
 
 `api/app/auth/router.py` の実装定義に合わせた運用向け一覧です。
 
+## エラーレスポンスの trace id 付与方針
+
+障害調査で「利用者のエラー応答」と「APIログ」を突き合わせやすくするため、認証APIのエラーレスポンスには trace id を付与する方針で運用します。
+
+- 対象: `4xx` / `5xx` のエラーレスポンス（`/refresh`・`/logout`・OAuth callback を含む）
+- 返却形式: レスポンスヘッダー `X-Trace-Id` と JSON ボディ `trace_id` に同一値を設定
+- 値の形式: UUID または同等の十分な一意性を持つ文字列
+- 生成ルール: upstream（Ingress/Proxy）から request id が渡される場合はそれを優先し、ない場合は API 側で生成
+- セキュリティ: `trace_id` にユーザー識別子・メールアドレス・トークンなどの機微情報を含めない
+
+例（`401 Unauthorized`）:
+
+```json
+{
+  "detail": "Could not validate credentials",
+  "trace_id": "8b3f76c7-6d50-4f22-90f6-e4d8d7275d89"
+}
+```
+
+運用メモ:
+
+- 問い合わせ対応時は、利用者から `trace_id` と発生時刻（UTC/JST）をセットで受領する
+- 既存クライアント互換のため、`detail` の意味は維持し、`trace_id` は追加情報として扱う
+- 本節は「方針」定義です。実装を変更した場合は、この章と実装を同時に更新してください
+
 ### POST `/api/v1/auth/refresh`
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
@@ -156,6 +217,21 @@ Content-Type: application/json
 | 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
 | 429 | レート制限超過 | `/refresh` の短時間連続呼び出し | 間隔を空けて再試行（バックオフ推奨） |
 
+例（型不一致による入力不正 / `422 Unprocessable Entity`）:
+
+```json
+{
+  "detail": [
+    {
+      "type": "string_type",
+      "loc": ["body", "refresh_token"],
+      "msg": "Input should be a valid string",
+      "input": 12345
+    }
+  ]
+}
+```
+
 ### POST `/api/v1/auth/logout`
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
@@ -164,14 +240,52 @@ Content-Type: application/json
 | 401 | 認証失敗 | `Authorization` ヘッダ欠落/無効 | 有効な Bearer トークンで再実行 |
 | 422 | リクエスト検証エラー | `refresh_token` 未指定/型不正 | JSON ボディ形式を修正 |
 
+例（`refresh_token` 欠落による入力不正 / `422 Unprocessable Entity`）:
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "refresh_token"],
+      "msg": "Field required",
+      "input": {}
+    }
+  ]
+}
+```
+
+使い分け: `401` は未認証・無効トークン、`400` 系（本 API では主に `422`）は JSON 入力不正を示します。
+
 ### OAuth callback 共通（参考）
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |
 |------|------|-----------|-----------|
 | 400 | `Invalid or expired state` | state 不一致/期限切れ | 認証フローを最初から再実行 |
+| 400 | `OAuth callback failed: <error_code>` | provider が `error` を返却 | provider 側設定とエラー内容を確認（未知コードは metrics 監視） |
 | 400 | `Failed to exchange code` | 認可コード交換失敗 | provider 設定・redirect URI を確認 |
 | 400 | `Failed to get user info` | provider API 取得失敗 | provider 側障害・スコープ設定を確認 |
 | 429 | レート制限超過 | callback/API 連打 | 一定時間待って再試行 |
+
+### `state mismatch` の最小診断例
+
+`GET /api/v1/auth/{provider}/callback` で `400 Invalid or expired state` が返った場合は、次の2コマンドで「再送」か「状態消失」かを先に切り分けます。
+
+```bash
+# 1) callback の重複実行有無を確認
+docker compose logs api --since=30m | rg -n "Invalid state|/api/v1/auth/.*/callback"
+
+# 2) state 保持先（Valkey）の異常有無を確認
+docker compose logs valkey --since=30m | rg -n "error|timeout|OOM|evicted|fail"
+```
+
+判定目安:
+
+- 同一時刻帯に callback ログが連続する: ブラウザ再送・プロキシ再試行を疑う
+- callback は1回だが Valkey 側に異常ログがある: state 保持の欠損を疑う
+- どちらも該当しない: `API_URL` / `FRONTEND_URL` の環境不一致を確認する
+
+詳細フローは [`トラブルシューティング: state mismatch 診断フロー`](../help/troubleshooting.md#state-mismatch-flow) を参照してください。
 
 !!! tip "維持ルール"
     ルータ変更時は `api/app/auth/router.py` の `HTTPException` と `@limiter.limit(...)` を更新し、本表も同時に更新してください。
@@ -191,6 +305,15 @@ GET /api/v1/auth/mock/login?user=alice&provider=google
 **利用可能なユーザー:** `alice`, `bob`, `charlie`
 
 **利用可能なプロバイダー:** `google`, `github`, `discord`, `x`, `linkedin`, `facebook`, `slack`, `twitch`
+
+- `provider` は小文字正規化して判定（例: `GitHub` は `github` と同義）
+- サポート外 provider は `400 Bad Request` と固定文言を返却
+
+```json
+{
+  "detail": "Unsupported OAuth provider 'unknown'."
+}
+```
 
 ### ユーザー一覧
 

@@ -1,10 +1,15 @@
 """Tests for configuration helpers."""
 
+from pathlib import Path
 from unittest.mock import mock_open, patch
+
+import pytest
+import yaml
 
 from app.config import (
     DEFAULT_CORS_ORIGINS,
     parse_bool_env,
+    Settings,
     read_secret,
     resolve_cors_origins,
 )
@@ -44,7 +49,7 @@ def test_resolve_cors_origins_uses_default_when_unset():
 
 
 def test_resolve_cors_origins_uses_default_when_blank():
-    origins, using_default = resolve_cors_origins(" , ")
+    origins, using_default = resolve_cors_origins("   ")
 
     assert origins == DEFAULT_CORS_ORIGINS.split(",")
     assert using_default is True
@@ -85,3 +90,57 @@ def test_parse_bool_env_raises_clear_error_on_invalid_value(monkeypatch):
         message = str(exc)
         assert "Invalid boolean value for TESTING: 'maybe'" in message
         assert "Allowed values: 1,true,yes,0,false,no" in message
+
+
+def test_resolve_cors_origins_raises_when_empty_element_is_present():
+    with pytest.raises(ValueError, match="CORS_ORIGINS"):
+        resolve_cors_origins("https://example.com, ,https://admin.example.com")
+
+
+def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "")
+
+    with pytest.raises(
+        ValueError, match="GITHUB_CLIENT_SECRET"
+    ):
+        Settings()
+
+
+def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
+
+    settings = Settings()
+
+    assert settings.GITHUB_CLIENT_SECRET == "github-client-secret"
+
+
+def _load_compose_services() -> dict:
+    compose_path = Path(__file__).resolve().parents[2] / "docker-compose.yml"
+    with compose_path.open() as f:
+        compose = yaml.safe_load(f)
+    return compose["services"]
+
+
+def _environment_values(service: dict) -> list[str]:
+    environment = service.get("environment", [])
+    if isinstance(environment, dict):
+        return [f"{key}={value}" for key, value in environment.items()]
+    return [str(value) for value in environment]
+
+
+@pytest.mark.parametrize(
+    ("profile", "service_name"),
+    [
+        ("default", "api"),
+        ("full", "api"),
+        ("ci", "api-ci"),
+    ],
+)
+def test_mock_oauth_enabled_is_overridden_to_true_for_each_profile(profile, service_name):
+    services = _load_compose_services()
+    service = services[service_name]
+
+    assert profile in service.get("profiles", [])
+    assert "MOCK_OAUTH_ENABLED=1" in _environment_values(service)

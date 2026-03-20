@@ -38,6 +38,50 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+### provider 未設定のまま初回導入を進めてもよい？
+
+可能です。次の順で進めると最短で起動確認できます。
+
+1. `default` profile で起動し、`jwt_secret` と有効化する provider 分だけ先に設定する
+2. 未設定 provider の認証導線は呼ばず、`/health` と `/docs` の到達確認を先に完了する
+3. OAuth 設定がそろった時点で `docker compose --profile default up -d --force-recreate api` を実行して再開する
+
+再開ポイントは [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順) を参照してください。  
+導線全体は [インストール](../installation.md#provider-未設定時の最短スキップ手順) と [トラブルシューティング](./troubleshooting.md#provider-未設定のまま認証導線を実行した) で同期しています。
+
+### OAuth secretを更新したら再起動は必要？
+
+必要です。YESOD Auth は起動時に `/run/secrets/*` を読み込むため、`secrets/*.txt` を更新した直後は、対象コンテナを再作成して新しい値を読み込ませてください。
+
+| 変更内容 | 再起動要否 | 実行コマンド |
+| --- | --- | --- |
+| `secrets/<provider>_client_id.txt` / `secrets/<provider>_client_secret.txt` を更新 | 必須 | `docker compose up -d --force-recreate api worker` |
+| `secrets/jwt_secret.txt` を更新 | 必須 | `docker compose up -d --force-recreate api worker` |
+| `.env` のみ更新（secretは未変更） | 必須 | `docker compose up -d --force-recreate api worker` |
+| ドキュメントのみ更新 | 不要 | なし |
+
+再起動後は次の 2 点を固定で確認します。
+
+1. `docker compose ps` で `api` と `worker` が `Up` になっていること
+2. `curl -fsS http://localhost:8000/health` が `{"status":"ok"}` を返すこと
+
+シークレットの配置方針は [インストールガイド: OAuth認証情報](../installation.md#oauth認証情報)、
+プロバイダー別の有効化手順は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト向け最短手順) を参照してください。
+
+<a id="oauth-secret-permission-recovery"></a>
+
+### OAuth secret の権限不備を最短で復旧するには？
+
+次の順に実施してください（症状→確認→復旧）。
+
+1. `docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"` で症状を確認する
+2. Linux: `stat -c '%n %a %U:%G' secrets/*.txt` / macOS: `stat -f '%N %Lp %Su:%Sg' secrets/*.txt` で権限と所有者を確認する
+3. `chmod 600 secrets/*.txt` と `sudo chown "$(id -un):$(id -gn)" secrets/*.txt` で復旧する
+4. `docker compose up -d --force-recreate api worker` 後に `curl -fsS http://localhost:8000/health` を確認する
+
+詳細手順は [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./troubleshooting.md#secrets-permission-recovery) を参照してください。  
+受け入れ時は FAQ / installation / troubleshooting の3点で、コマンドと手順順が一致していることを確認してください。
+
 ### 429（Too Many Requests）が出たときの確認手順は？
 
 認証レート制限の切り分け手順を [トラブルシューティング: 429 Too Many Requests](./troubleshooting.md#auth-rate-limit-429) にまとめています。  
@@ -48,6 +92,30 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 現状のYESOD AuthはGitHub OAuthでorganization所属チェックを行いません。
 organization制限が必要な場合は、`read:org`スコープとコールバック後の所属検証を追加実装してください。
 
+### 認証失敗時の一次分類は？
+
+まずは HTTP ステータスと代表メッセージで次の4分類に分けると切り分けが速くなります。
+
+| 一次分類 | 典型シグナル | 主な原因 | 最初に見る場所 |
+| --- | --- | --- | --- |
+| 入力不正（422） | `Field required` / `Input should be a valid string` | `refresh_token` の欠落・型不正 | [`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) |
+| 認証失敗（401） | `Not authenticated` / `Could not validate credentials` | access/refresh token の期限切れ・失効・改ざん | [`トラブルシューティング: 認証エラー`](./troubleshooting.md#認証エラー) |
+| state不整合（400） | `Invalid or expired state` | callback 二重実行、Valkey不安定、環境不一致 | [`トラブルシューティング: state mismatch 診断フロー`](./troubleshooting.md#state-mismatch-flow) |
+| レート制限（429） | `Rate limit exceeded` / `Too Many Requests` | 短時間の連続アクセス、制限値過小 | [`トラブルシューティング: 429 Too Many Requests`](./troubleshooting.md#auth-rate-limit-429) |
+
+運用メモとして、分類時は「発生時刻」「対象エンドポイント」「利用プロバイダー（mock/google/github等）」をセットで記録すると再現調査が容易です。
+
+### sync-from-provider の 400/404 は何を意味する？
+
+`POST /api/v1/users/me/sync-from-provider` の主な失敗は次の 3 種類です。
+
+1. `400 Unsupported provider`: `provider` が `google` / `discord` 以外
+2. `404 No <provider> account linked`: 指定 provider の連携がない
+3. `400 No provider info stored ...`: provider 連携はあるが保存済みプロフィール情報がない
+
+API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。  
+切り分け手順は [トラブルシューティング: sync-from-provider で 400/404 が返る](./troubleshooting.md#sync-from-provider-errors) を参照してください。
+
 ---
 
 ## 開発
@@ -56,6 +124,39 @@ organization制限が必要な場合は、`read:org`スコープとコールバ�
 
 開発・テスト時に、実際のOAuthプロバイダーなしで認証フローをテストできる機能です。
 `MOCK_OAUTH_ENABLED=1`で有効化できます。
+
+### Mock OAuthから実OAuthへ切り替える最小確認は？
+
+実OAuth切替時は次の3項目だけ先に確認してください。
+
+1. `MOCK_OAUTH_ENABLED=0` になっていること（アプリ既定値は `0`。開発用 `default`/`ci` プロファイルでは Compose 側で `1` に上書きされるため、本番運用値を再確認）
+2. 利用するOAuthプロバイダーの `*_client_id` / `*_client_secret` が本番値で設定され、不要な開発用値が混在していないこと
+3. provider管理画面の callback URL と `GET /api/v1/auth/{provider}/callback` の実運用URLが一致していること
+
+再開ポイント:
+- [クイックスタート: Mock OAuthから実OAuthへ切り替える最小チェック](../getting-started.md#mock-oauthから実oauthへ切り替える最小チェック)
+- [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+- [トラブルシューティング: provider 未設定のまま認証導線を実行した](./troubleshooting.md#provider-未設定のまま認証導線を実行した)
+
+切り分け手順は [トラブルシューティング: state mismatch 診断フロー](./troubleshooting.md#state-mismatch-flow) と [トラブルシューティング: 401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client) を参照してください。  
+前提の設定差分は [インストール: profile別の環境変数優先順位](../installation.md#profile別の環境変数優先順位) を参照してください。
+
+### 複数providerを有効化するときの順序チェックは？
+
+複数 provider を導入するときは、次の順で確認すると取りこぼしを防げます。
+
+1. profile を先に固定する（`default` / `full` / `ci` のどれで起動するかを決める）
+2. 実際に有効化する provider 分だけ `secrets/<provider>_client_id.txt` / `secrets/<provider>_client_secret.txt` を用意する
+3. provider 管理画面の callback URL を `https://<api-domain>/api/v1/auth/<provider>/callback` に一致させる
+4. `GET /api/v1/auth/<provider>` の開始と callback を同じ環境（同一 host/scheme）で通す
+
+導線は次の順で参照してください。
+
+- インストール: [OAuth認証情報](../installation.md#oauth認証情報)
+- クイックスタート: [2.5 コールバックURLの検証](../getting-started.md#25-コールバックurlの検証)
+- トラブルシューティング: [401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client)
+
+受け入れ時は、FAQ / installation / troubleshooting の3点同期（手順・用語・リンク先）が保たれていることを確認してください。
 
 ### ローカルでテストするには？
 

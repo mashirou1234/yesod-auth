@@ -40,6 +40,7 @@ class WebhookSettings:
 
     max_retries: int = 5
     retry_base_delay_seconds: int = 2
+    retry_max_delay_seconds: int = 60
     delivery_timeout_seconds: int = 30
     log_retention_days: int = 30
 
@@ -89,9 +90,11 @@ class WebhookConfigLoader:
                 logger.warning("Skipping invalid endpoint: %s", e)
 
         settings_data = raw_config.get("settings", {})
+        cls._validate_settings(settings_data)
         settings = WebhookSettings(
             max_retries=settings_data.get("max_retries", 5),
             retry_base_delay_seconds=settings_data.get("retry_base_delay_seconds", 2),
+            retry_max_delay_seconds=settings_data.get("retry_max_delay_seconds", 60),
             delivery_timeout_seconds=settings_data.get("delivery_timeout_seconds", 30),
             log_retention_days=settings_data.get("log_retention_days", 30),
         )
@@ -107,6 +110,53 @@ class WebhookConfigLoader:
             CONFIG_PATH,
         )
         return cls._config
+
+    @classmethod
+    def _validate_settings(cls, settings_data: dict[str, Any]) -> None:
+        """Validate webhook settings before applying them."""
+        cls._validate_non_negative_int_setting(settings_data, "retry_base_delay_seconds")
+        cls._validate_non_negative_int_setting(settings_data, "retry_max_delay_seconds")
+
+        retry_base_delay_seconds = settings_data.get("retry_base_delay_seconds", 2)
+        retry_max_delay_seconds = settings_data.get("retry_max_delay_seconds", 60)
+        if retry_max_delay_seconds < retry_base_delay_seconds:
+            raise ValueError(
+                "settings.retry_max_delay_seconds must be greater than or equal to "
+                "settings.retry_base_delay_seconds"
+            )
+
+        retry_backoff_ms = settings_data.get("retry_backoff_ms")
+        if retry_backoff_ms is None:
+            return
+
+        if isinstance(retry_backoff_ms, int):
+            if retry_backoff_ms < 0:
+                raise ValueError("settings.retry_backoff_ms must be a non-negative integer")
+            return
+
+        if not isinstance(retry_backoff_ms, list) or not retry_backoff_ms:
+            raise ValueError("settings.retry_backoff_ms must be a non-empty array of integers")
+
+        prev_value = -1
+        for idx, value in enumerate(retry_backoff_ms):
+            if not isinstance(value, int) or value < 0:
+                raise ValueError(
+                    f"settings.retry_backoff_ms[{idx}] must be a non-negative integer"
+                )
+            if idx > 0 and value < prev_value:
+                raise ValueError(
+                    f"settings.retry_backoff_ms[{idx}] must be greater than or equal to "
+                    f"settings.retry_backoff_ms[{idx - 1}]"
+                )
+            prev_value = value
+
+    @staticmethod
+    def _validate_non_negative_int_setting(settings_data: dict[str, Any], key: str) -> None:
+        value = settings_data.get(key)
+        if value is None:
+            return
+        if not isinstance(value, int) or value < 0:
+            raise ValueError(f"settings.{key} must be a non-negative integer")
 
     @classmethod
     def reload(cls) -> WebhookConfig:
