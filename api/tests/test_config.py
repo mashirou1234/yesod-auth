@@ -8,6 +8,7 @@ import yaml
 
 from app.config import (
     DEFAULT_CORS_ORIGINS,
+    parse_bool_env,
     Settings,
     read_secret,
     resolve_cors_origins,
@@ -59,6 +60,36 @@ def test_resolve_cors_origins_uses_env_value_when_set():
 
     assert origins == ["https://example.com", "https://admin.example.com"]
     assert using_default is False
+
+
+def test_parse_bool_env_accepts_truthy_value(monkeypatch):
+    monkeypatch.setenv("TESTING", "YeS")
+
+    assert parse_bool_env("TESTING", default=False) is True
+
+
+def test_parse_bool_env_accepts_falsy_value(monkeypatch):
+    monkeypatch.setenv("TESTING", "0")
+
+    assert parse_bool_env("TESTING", default=True) is False
+
+
+def test_parse_bool_env_returns_default_when_unset(monkeypatch):
+    monkeypatch.delenv("TESTING", raising=False)
+
+    assert parse_bool_env("TESTING", default=True) is True
+
+
+def test_parse_bool_env_raises_clear_error_on_invalid_value(monkeypatch):
+    monkeypatch.setenv("TESTING", "maybe")
+
+    try:
+        parse_bool_env("TESTING")
+        assert False, "ValueError was not raised for invalid boolean value"
+    except ValueError as exc:
+        message = str(exc)
+        assert "Invalid boolean value for TESTING: 'maybe'" in message
+        assert "Allowed values: 1,true,yes,0,false,no" in message
 
 
 def test_resolve_cors_origins_raises_when_empty_element_is_present():

@@ -89,6 +89,23 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
 
+## 学習順ガイド（導入→API→運用）
+
+「まず動かす」「API仕様を確認する」「運用手順を固める」の順に進めると、オンボーディングと本番準備を並行しやすくなります。
+
+1. 導入
+   - [インストール](installation.md)
+   - [クイックスタート](getting-started.md)
+   - [OAuth設定ガイド](guides/oauth/index.md)
+2. API
+   - [認証API](api/auth.md)
+   - [ユーザーAPI](api/users.md)
+   - [Webhook API](api/webhooks.md)
+3. 運用
+   - [デプロイガイド](guides/deployment.md)
+   - [トラブルシューティング](help/troubleshooting.md)
+   - [FAQ](help/faq.md)
+
 ## アーキテクチャ
 
 ```

@@ -162,6 +162,19 @@ secrets/
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。
 
+## Callback確認の共通チェックリスト {#oauth-callback-checklist}
+
+プロバイダー個別ページに入る前に、まずこの共通チェックで callback 周りの設定漏れを切り分けます。
+
+1. Callback URL を完全一致で登録する
+   `http/https`、ホスト、ポート、パス、末尾 `/` を含めて一致しているか確認する。
+2. 認可開始エンドポイントから必ず検証する
+   `GET /api/v1/auth/{provider}` から開始し、直接 callback URL を叩かない。
+3. 失敗時は API ログで callback 関連語を確認する
+   `redirect_uri` / `callback` / `state` を起点に直近ログを確認する。
+4. FAQ / installation / troubleshooting の三点同期チェック
+   共通説明の整合は [インストール](../../installation.md#oauth-credentials) / [FAQ](../../help/faq.md) / [トラブルシューティング](../../help/troubleshooting.md) の3ページで確認する。
+
 ## provider追加時チェックリスト
 
 新しいOAuth providerを追加・有効化するときは、次の順で確認してください。

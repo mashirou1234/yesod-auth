@@ -6,6 +6,8 @@ from functools import lru_cache
 from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_KEYS
 
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
+TRUE_VALUES = {"1", "true", "yes"}
+FALSE_VALUES = {"0", "false", "no", ""}
 
 
 def read_secret(name: str, default: str = "") -> str:
@@ -31,12 +33,28 @@ def resolve_cors_origins(raw_value: str | None) -> tuple[list[str], bool]:
     return origins, False
 
 
+def parse_bool_env(name: str, default: bool = False) -> bool:
+    """Parse boolean environment variables with explicit invalid-value errors."""
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    normalized = raw.strip().lower()
+    if normalized in TRUE_VALUES:
+        return True
+    if normalized in FALSE_VALUES:
+        return False
+
+    allowed_values = "1,true,yes,0,false,no"
+    raise ValueError(f"Invalid boolean value for {name}: '{raw}'. Allowed values: {allowed_values}")
+
+
 class Settings:
     """Application settings."""
 
     # Environment
-    TESTING: bool = os.getenv("TESTING", "").lower() in ("1", "true", "yes")
-    MOCK_OAUTH_ENABLED: bool = os.getenv("MOCK_OAUTH_ENABLED", "").lower() in ("1", "true", "yes")
+    TESTING: bool = parse_bool_env("TESTING", default=False)
+    MOCK_OAUTH_ENABLED: bool = parse_bool_env("MOCK_OAUTH_ENABLED", default=False)
 
     # Database
     DATABASE_URL: str = os.getenv(

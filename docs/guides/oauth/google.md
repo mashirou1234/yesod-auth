@@ -70,6 +70,8 @@ docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri|m
 
 `Invalid or expired state` が同時に発生する場合は、[トラブルシューティング](../../help/troubleshooting.md#state-mismatch-flow) の診断フローも併せて確認してください。
 
+共通の callback 確認手順は [OAuth設定の共通チェックリスト](index.md#oauth-callback-checklist) を先に参照してください。
+
 ## 共通チェック観点の適用例
 
 - [x] Callback URL

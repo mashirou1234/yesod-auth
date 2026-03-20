@@ -58,6 +58,8 @@ curl -sSI \
   - コールバック後にGitHub APIで所属organizationを検証
   - 未所属ユーザーはログイン完了前に拒否
 
+共通の callback 確認手順は [OAuth設定の共通チェックリスト](index.md#oauth-callback-checklist) を先に参照してください。
+
 ## 共通チェック観点の適用例
 
 - [x] Callback URL
