@@ -37,6 +37,7 @@ from .schemas import (
     TokenPairResponse,
 )
 from .tokens import (
+    classify_refresh_token_failure,
     create_access_token,
     create_refresh_token,
     revoke_refresh_token,
@@ -1055,11 +1056,12 @@ async def refresh_tokens(
     result = await rotate_refresh_token(db, body.refresh_token, device_info, ip_address)
 
     if not result:
+        token_status = await classify_refresh_token_failure(db, body.refresh_token)
         await AuditLogger.log_event(
             db,
             AuthEventType.TOKEN_REFRESH_FAILED,
             None,
-            {"reason": "Invalid or expired token"},
+            {"reason": "Invalid or expired token", "token_status": token_status},
             ip_address,
             device_info,
         )
