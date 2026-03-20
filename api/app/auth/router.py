@@ -16,6 +16,10 @@ from app.config import get_settings
 from app.db.session import get_db
 from app.metrics import record_oauth_failure_metric
 from app.models import OAuthAccount, User
+from app.oauth_providers import (
+    OAUTH_PROVIDER_CREDENTIAL_FIELDS,
+    OAUTH_PROVIDER_ORDER,
+)
 from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
 
@@ -50,17 +54,17 @@ logger = logging.getLogger(__name__)
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
-OAUTH_PROVIDER_CREDENTIAL_FIELDS = {
-    "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
-    "discord": ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
-    "github": ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
-    "x": ("X_CLIENT_ID", "X_CLIENT_SECRET"),
-    "linkedin": ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
-    "facebook": ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
-    "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
-    "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
-}
-SUPPORTED_OAUTH_PROVIDERS = tuple(OAUTH_PROVIDER_CREDENTIAL_FIELDS.keys())
+
+
+def _log_provider_registry_order() -> None:
+    """Emit provider registry initialization order for diagnostics."""
+    logger.info(
+        "OAuth provider registry initialized in deterministic order: %s",
+        " -> ".join(OAUTH_PROVIDER_ORDER),
+    )
+
+
+_log_provider_registry_order()
 KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
     "access_denied",
     "invalid_request",

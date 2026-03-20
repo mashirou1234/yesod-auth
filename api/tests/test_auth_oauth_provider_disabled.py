@@ -3,25 +3,14 @@
 import importlib
 
 import pytest
+from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_FIELDS
 
 auth_router_module = importlib.import_module("app.auth.router")
 
-PROVIDER_CREDENTIAL_FIELDS = {
-    "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
-    "discord": ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
-    "github": ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
-    "x": ("X_CLIENT_ID", "X_CLIENT_SECRET"),
-    "linkedin": ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
-    "facebook": ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
-    "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
-    "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
-}
-
-
-@pytest.mark.parametrize("provider", list(PROVIDER_CREDENTIAL_FIELDS.keys()))
+@pytest.mark.parametrize("provider", list(OAUTH_PROVIDER_CREDENTIAL_FIELDS.keys()))
 def test_oauth_provider_disabled_raises_503(monkeypatch, provider: str):
     """Disabled provider must raise stable 503 contract."""
-    client_id_field, client_secret_field = PROVIDER_CREDENTIAL_FIELDS[provider]
+    client_id_field, client_secret_field = OAUTH_PROVIDER_CREDENTIAL_FIELDS[provider]
     monkeypatch.setattr(auth_router_module.settings, client_id_field, "")
     monkeypatch.setattr(auth_router_module.settings, client_secret_field, "")
 
