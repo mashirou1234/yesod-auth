@@ -324,7 +324,7 @@ curl -i -X POST "http://localhost:8000/api/v1/auth/logout" \
 Webhookは、getting-started から以下の2クリック以内で設定手順へ到達できます。
 
 1. このページの「次のステップ」から [Webhook設定](guides/webhooks.md) を開く
-2. ガイド内の [ローカルテスト](guides/webhooks.md#ローカルテスト) に沿って設定する
+2. ガイド内の [クイック導入（5分）](guides/webhooks.md#クイック導入5分) に沿って設定する
 
 ### Webhook導入の前提条件
 

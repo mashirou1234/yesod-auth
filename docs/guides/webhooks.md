@@ -15,6 +15,20 @@ YESOD Authは、ユーザーイベント発生時に外部サービスへHTTP通
 | `user.oauth_linked` | OAuthプロバイダー連携時 |
 | `user.oauth_unlinked` | OAuthプロバイダー連携解除時 |
 
+## クイック導入（5分）
+
+まず最短で動作確認したい場合は、[クイックスタートの Webhook 導線](../getting-started.md#5-webhook導入の最短導線) からこの節へ到達し、次の 3 手順だけ実行してください。
+
+1. `config/webhooks.yaml` に webhook.site の URL を設定する
+2. `docker compose --profile default up -d` で API を起動する
+3. Mock OAuth ログインを 1 回実行し、webhook.site で配信を確認する
+
+```bash
+curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
+```
+
+詳細設定（署名検証、リトライ調整、鍵ローテーション）はこのページの各節を順に参照してください。
+
 ## セットアップ
 
 ### 1. 設定ファイルの作成
