@@ -1,5 +1,9 @@
 """Prometheus metrics endpoint."""
 
+from collections import defaultdict
+import re
+from threading import Lock
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import text
@@ -8,6 +12,70 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 
 router = APIRouter(tags=["metrics"])
+_oauth_failure_counts: dict[tuple[str, str], int] = defaultdict(int)
+_oauth_failure_counts_lock = Lock()
+_oauth_rate_limit_burst_counts: dict[str, int] = defaultdict(int)
+_oauth_rate_limit_burst_counts_lock = Lock()
+_KNOWN_OAUTH_FAILURE_REASONS = {
+    "callback_url_mismatch",
+    "code_exchange_failed",
+    "invalid_state",
+    "unknown_error_code",
+    "user_info_failed",
+}
+
+
+def _normalize_oauth_failure_reason(reason: str) -> str:
+    """Normalize OAuth callback failure reasons for stable metric cardinality."""
+    normalized = re.sub(r"[^a-z0-9]+", "_", reason.strip().lower()).strip("_")
+    if normalized in _KNOWN_OAUTH_FAILURE_REASONS:
+        return normalized
+    return "unknown"
+
+
+def record_oauth_failure_metric(provider: str, reason: str) -> None:
+    """Record OAuth failure counter grouped by provider and failure reason."""
+    normalized_reason = _normalize_oauth_failure_reason(reason)
+    with _oauth_failure_counts_lock:
+        _oauth_failure_counts[(provider, normalized_reason)] += 1
+
+
+def reset_oauth_failure_metrics() -> None:
+    """Reset OAuth failure counters. Used by tests for deterministic assertions."""
+    with _oauth_failure_counts_lock:
+        _oauth_failure_counts.clear()
+
+
+def render_oauth_failure_metrics_lines() -> list[str]:
+    """Render OAuth failure metric lines from in-memory counters."""
+    with _oauth_failure_counts_lock:
+        oauth_failure_snapshot = dict(_oauth_failure_counts)
+    return [
+        f'yesod_oauth_failures_total{{provider="{provider}",reason="{reason}"}} {count}'
+        for (provider, reason), count in sorted(oauth_failure_snapshot.items())
+    ]
+
+
+def record_oauth_rate_limit_burst_metric(provider: str) -> None:
+    """Record OAuth burst rate-limit events grouped by provider."""
+    with _oauth_rate_limit_burst_counts_lock:
+        _oauth_rate_limit_burst_counts[provider] += 1
+
+
+def reset_oauth_rate_limit_burst_metrics() -> None:
+    """Reset OAuth burst rate-limit counters. Used by tests for deterministic assertions."""
+    with _oauth_rate_limit_burst_counts_lock:
+        _oauth_rate_limit_burst_counts.clear()
+
+
+def render_oauth_rate_limit_burst_metrics_lines() -> list[str]:
+    """Render OAuth burst rate-limit metric lines from in-memory counters."""
+    with _oauth_rate_limit_burst_counts_lock:
+        oauth_rate_limit_snapshot = dict(_oauth_rate_limit_burst_counts)
+    return [
+        f'yesod_oauth_rate_limit_burst_total{{provider="{provider}"}} {count}'
+        for provider, count in sorted(oauth_rate_limit_snapshot.items())
+    ]
 
 
 @router.get("/metrics", response_class=PlainTextResponse)
@@ -49,6 +117,9 @@ async def metrics(db: AsyncSession = Depends(get_db)):
     result = await db.execute(text("SELECT COUNT(*) FROM deleted_users"))
     deleted_users = result.scalar()
     metrics_output.append(f"yesod_deleted_users_pending {deleted_users}")
+
+    metrics_output.extend(render_oauth_failure_metrics_lines())
+    metrics_output.extend(render_oauth_rate_limit_burst_metrics_lines())
 
     # Login stats (last 24h) - only if audit schema exists
     try:

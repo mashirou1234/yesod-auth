@@ -1,6 +1,9 @@
 """Auth router with security enhancements."""
 
+import logging
 import secrets
+import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
@@ -11,7 +14,12 @@ from sqlalchemy.orm import selectinload
 from app.audit import AuditLogger, AuthEventType
 from app.config import get_settings
 from app.db.session import get_db
+from app.metrics import record_oauth_failure_metric
 from app.models import OAuthAccount, User
+from app.oauth_providers import (
+    OAUTH_PROVIDER_CREDENTIAL_FIELDS,
+    OAUTH_PROVIDER_ORDER,
+)
 from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
 
@@ -33,6 +41,7 @@ from .schemas import (
     TokenPairResponse,
 )
 from .tokens import (
+    classify_refresh_token_failure,
     create_access_token,
     create_refresh_token,
     revoke_refresh_token,
@@ -41,19 +50,48 @@ from .tokens import (
 
 settings = get_settings()
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
-OAUTH_PROVIDER_CREDENTIAL_FIELDS = {
-    "google": ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"),
-    "discord": ("DISCORD_CLIENT_ID", "DISCORD_CLIENT_SECRET"),
-    "github": ("GITHUB_CLIENT_ID", "GITHUB_CLIENT_SECRET"),
-    "x": ("X_CLIENT_ID", "X_CLIENT_SECRET"),
-    "linkedin": ("LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"),
-    "facebook": ("FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"),
-    "slack": ("SLACK_CLIENT_ID", "SLACK_CLIENT_SECRET"),
-    "twitch": ("TWITCH_CLIENT_ID", "TWITCH_CLIENT_SECRET"),
+
+
+def _log_provider_registry_order() -> None:
+    """Emit provider registry initialization order for diagnostics."""
+    logger.info(
+        "OAuth provider registry initialized in deterministic order: %s",
+        " -> ".join(OAUTH_PROVIDER_ORDER),
+    )
+
+
+_log_provider_registry_order()
+KNOWN_OAUTH_CALLBACK_ERROR_CODES = {
+    "access_denied",
+    "invalid_request",
+    "invalid_client",
+    "invalid_grant",
+    "unauthorized_client",
+    "unsupported_grant_type",
+    "invalid_scope",
+    "server_error",
+    "temporarily_unavailable",
 }
+
+
+def _normalize_oauth_provider(provider: str) -> str:
+    """Normalize provider input for stable validation."""
+    return provider.strip().lower()
+
+
+def _validate_supported_oauth_provider(provider: str) -> str:
+    """Return normalized provider or raise stable 400 contract."""
+    normalized_provider = _normalize_oauth_provider(provider)
+    if normalized_provider not in OAUTH_PROVIDER_CREDENTIAL_FIELDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported OAuth provider '{normalized_provider}'.",
+        )
+    return normalized_provider
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -63,9 +101,104 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+async def _rotate_refresh_token_with_retry(
+    db: AsyncSession,
+    refresh_token: str,
+    device_info: str | None,
+    ip_address: str | None,
+):
+    """Retry refresh token rotation on transient failures."""
+    max_retries = max(0, int(getattr(settings, "TOKEN_REFRESH_MAX_RETRIES", 3)))
+    last_error = None
+    for _attempt in range(max_retries + 1):
+        try:
+            return await rotate_refresh_token(db, refresh_token, device_info, ip_address)
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return None
+
+
+def _get_request_id(request: Request) -> str:
+    """Extract request-id header or generate a fallback ID."""
+    request_id = request.headers.get("X-Request-Id")
+    if request_id:
+        return request_id
+    return str(uuid.uuid4())
+
+
+def _invalid_state_reason(request: Request, provider: str) -> str:
+    """Build a fixed invalid-state reason format for audit logs."""
+    return f"Invalid state [provider={provider}] [request-id={_get_request_id(request)}]"
+
+
+def _normalize_callback_url(url: str) -> str:
+    """Normalize callback URL by dropping only trailing slash and query/fragment."""
+    parsed = urlsplit(url)
+    path = parsed.path
+    if path.endswith("/") and path != "/":
+        path = path[:-1]
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def _build_oauth_redirect_uri(provider: str) -> str:
+    """Build canonical OAuth redirect URI for provider callback."""
+    return f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/auth/{provider}/callback"
+
+
+def _record_unknown_oauth_error_code_metric(provider: str, error_code: str) -> None:
+    """Record metric only when provider returned an unclassified OAuth error code."""
+    normalized_error_code = error_code.strip().lower()
+    if normalized_error_code and normalized_error_code not in KNOWN_OAUTH_CALLBACK_ERROR_CODES:
+        record_oauth_failure_metric(provider, "unknown_error_code")
+
+
+async def _validate_callback_url_or_raise(
+    *,
+    request: Request,
+    db: AsyncSession,
+    provider: str,
+    ip_address: str | None,
+    device_info: str | None,
+    expected_callback_url: str,
+) -> None:
+    """Validate callback URL with trailing-slash normalization."""
+    actual_callback_url = str(request.url.replace(query="", fragment=""))
+    normalized_expected = _normalize_callback_url(expected_callback_url)
+    normalized_actual = _normalize_callback_url(actual_callback_url)
+    if normalized_expected == normalized_actual:
+        if expected_callback_url != actual_callback_url:
+            logger.info(
+                "OAuth callback URL normalized for provider=%s expected=%s actual=%s",
+                provider,
+                expected_callback_url,
+                actual_callback_url,
+            )
+        return
+
+    logger.warning(
+        "OAuth callback URL mismatch for provider=%s expected=%s actual=%s normalized_expected=%s normalized_actual=%s",
+        provider,
+        expected_callback_url,
+        actual_callback_url,
+        normalized_expected,
+        normalized_actual,
+    )
+    record_oauth_failure_metric(provider, "callback_url_mismatch")
+    await AuditLogger.log_login(
+        db, None, provider, False, ip_address, device_info, "Callback URL mismatch"
+    )
+    raise HTTPException(status_code=400, detail="OAuth callback URL mismatch")
+
+
 def _ensure_provider_enabled(provider: str) -> None:
     """Ensure OAuth provider credentials exist before starting auth flow."""
-    client_id_field, client_secret_field = OAUTH_PROVIDER_CREDENTIAL_FIELDS[provider]
+    provider = _validate_supported_oauth_provider(provider)
+    credential_fields = OAUTH_PROVIDER_CREDENTIAL_FIELDS.get(provider)
+    assert credential_fields is not None
+
+    client_id_field, client_secret_field = credential_fields
     client_id = getattr(settings, client_id_field, "")
     client_secret = getattr(settings, client_secret_field, "")
 
@@ -93,7 +226,7 @@ async def google_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "google", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    redirect_uri = _build_oauth_redirect_uri("google")
     authorize_url = GoogleOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -114,12 +247,26 @@ async def google_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "google":
         await AuditLogger.log_login(
-            db, None, "google", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "google",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "google"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/google/callback"
+    redirect_uri = _build_oauth_redirect_uri("google")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="google",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -189,7 +336,7 @@ async def discord_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "discord", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    redirect_uri = _build_oauth_redirect_uri("discord")
     authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -210,12 +357,26 @@ async def discord_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "discord":
         await AuditLogger.log_login(
-            db, None, "discord", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "discord",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "discord"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/discord/callback"
+    redirect_uri = _build_oauth_redirect_uri("discord")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="discord",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -285,7 +446,7 @@ async def github_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "github", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    redirect_uri = _build_oauth_redirect_uri("github")
     authorize_url = GitHubOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -295,27 +456,54 @@ async def github_login(request: Request):
 @limiter.limit("10/minute")
 async def github_callback(
     request: Request,
-    code: str,
-    state: str,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
     db: AsyncSession = Depends(get_db),
 ):
     """Handle GitHub OAuth callback."""
     device_info, ip_address = _get_client_info(request)
 
+    if error:
+        _record_unknown_oauth_error_code_metric("github", error)
+        await AuditLogger.log_login(
+            db, None, "github", False, ip_address, device_info, f"OAuth callback failed: {error}"
+        )
+        raise HTTPException(status_code=400, detail=f"OAuth callback failed: {error}")
+
+    if not code or not state:
+        raise HTTPException(status_code=400, detail="Missing code or state")
+
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "github":
+        record_oauth_failure_metric("github", "invalid_state")
         await AuditLogger.log_login(
-            db, None, "github", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "github",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "github"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/github/callback"
+    redirect_uri = _build_oauth_redirect_uri("github")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="github",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await GitHubOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
+        record_oauth_failure_metric("github", "code_exchange_failed")
         await AuditLogger.log_login(
             db, None, "github", False, ip_address, device_info, "Code exchange failed"
         )
@@ -324,6 +512,7 @@ async def github_callback(
     # Get user info
     user_info = await GitHubOAuth.get_user_info(token_data["access_token"])
     if not user_info:
+        record_oauth_failure_metric("github", "user_info_failed")
         await AuditLogger.log_login(
             db, None, "github", False, ip_address, device_info, "Failed to get user info"
         )
@@ -381,7 +570,7 @@ async def x_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "x", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    redirect_uri = _build_oauth_redirect_uri("x")
     authorize_url = XOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -401,11 +590,27 @@ async def x_callback(
     # Verify and consume state
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "x":
-        await AuditLogger.log_login(db, None, "x", False, ip_address, device_info, "Invalid state")
+        await AuditLogger.log_login(
+            db,
+            None,
+            "x",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "x"),
+        )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/x/callback"
+    redirect_uri = _build_oauth_redirect_uri("x")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="x",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await XOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -479,7 +684,7 @@ async def linkedin_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "linkedin", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    redirect_uri = _build_oauth_redirect_uri("linkedin")
     authorize_url = LinkedInOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -500,12 +705,26 @@ async def linkedin_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "linkedin":
         await AuditLogger.log_login(
-            db, None, "linkedin", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "linkedin",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "linkedin"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/linkedin/callback"
+    redirect_uri = _build_oauth_redirect_uri("linkedin")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="linkedin",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await LinkedInOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -575,7 +794,7 @@ async def facebook_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "facebook", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    redirect_uri = _build_oauth_redirect_uri("facebook")
     authorize_url = FacebookOAuth.get_authorize_url(redirect_uri, state, code_challenge)
 
     return RedirectResponse(url=authorize_url)
@@ -596,12 +815,26 @@ async def facebook_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "facebook":
         await AuditLogger.log_login(
-            db, None, "facebook", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "facebook",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "facebook"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/facebook/callback"
+    redirect_uri = _build_oauth_redirect_uri("facebook")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="facebook",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens
     token_data = await FacebookOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -672,7 +905,7 @@ async def slack_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "slack", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    redirect_uri = _build_oauth_redirect_uri("slack")
     authorize_url = SlackOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -693,12 +926,26 @@ async def slack_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "slack":
         await AuditLogger.log_login(
-            db, None, "slack", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "slack",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "slack"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/slack/callback"
+    redirect_uri = _build_oauth_redirect_uri("slack")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="slack",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await SlackOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -769,7 +1016,7 @@ async def twitch_login(request: Request):
     # Store state with code_verifier in Valkey
     await OAuthStateStore.save(state, "twitch", code_verifier)
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    redirect_uri = _build_oauth_redirect_uri("twitch")
     authorize_url = TwitchOAuth.get_authorize_url(redirect_uri, state, code_challenge, nonce)
 
     return RedirectResponse(url=authorize_url)
@@ -790,12 +1037,26 @@ async def twitch_callback(
     state_data = await OAuthStateStore.get_and_delete(state)
     if not state_data or state_data.get("provider") != "twitch":
         await AuditLogger.log_login(
-            db, None, "twitch", False, ip_address, device_info, "Invalid state"
+            db,
+            None,
+            "twitch",
+            False,
+            ip_address,
+            device_info,
+            _invalid_state_reason(request, "twitch"),
         )
         raise HTTPException(status_code=400, detail="Invalid or expired state")
 
     code_verifier = state_data.get("code_verifier")
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/auth/twitch/callback"
+    redirect_uri = _build_oauth_redirect_uri("twitch")
+    await _validate_callback_url_or_raise(
+        request=request,
+        db=db,
+        provider="twitch",
+        ip_address=ip_address,
+        device_info=device_info,
+        expected_callback_url=redirect_uri,
+    )
 
     # Exchange code for tokens with PKCE verifier
     token_data = await TwitchOAuth.exchange_code(code, redirect_uri, code_verifier)
@@ -863,14 +1124,17 @@ async def refresh_tokens(
     """Refresh access token using refresh token (with rotation)."""
     device_info, ip_address = _get_client_info(request)
 
-    result = await rotate_refresh_token(db, body.refresh_token, device_info, ip_address)
+    result = await _rotate_refresh_token_with_retry(
+        db, body.refresh_token, device_info, ip_address
+    )
 
     if not result:
+        token_status = await classify_refresh_token_failure(db, body.refresh_token)
         await AuditLogger.log_event(
             db,
             AuthEventType.TOKEN_REFRESH_FAILED,
             None,
-            {"reason": "Invalid or expired token"},
+            {"reason": "Invalid or expired token", "token_status": token_status},
             ip_address,
             device_info,
         )
@@ -1006,20 +1270,7 @@ async def mock_login(
             status_code=403, detail="Mock OAuth is disabled. Set MOCK_OAUTH_ENABLED=1 to enable."
         )
 
-    if provider not in [
-        "google",
-        "discord",
-        "github",
-        "x",
-        "linkedin",
-        "facebook",
-        "slack",
-        "twitch",
-    ]:
-        raise HTTPException(
-            status_code=400,
-            detail="Provider must be 'google', 'discord', 'github', 'x', 'linkedin', 'facebook', 'slack', or 'twitch'",
-        )
+    provider = _validate_supported_oauth_provider(provider)
 
     device_info, ip_address = _get_client_info(request)
     mock_user = get_mock_user(user)

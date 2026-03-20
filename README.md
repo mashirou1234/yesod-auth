@@ -63,6 +63,8 @@ openssl rand -base64 24 > secrets/admin_password.txt
 chmod 600 secrets/*.txt
 ```
 
+初回導入で `secret ... not found` が出た場合は、[`docs/installation.md` の最短復旧コマンド](docs/installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を実行してください。
+
 #### Self-hosted secret layout example
 
 `docker-compose.yml` reads from `./secrets/*.txt`. For self-hosted deployments,
@@ -147,6 +149,7 @@ Base URL: `http://localhost:8000/api/v1`
 
 運用時の注意点（refresh token のローテーション/再ログイン方針）は [docs/installation.md](docs/installation.md#リフレッシュトークン運用時の注意) を参照してください。
 認証エラーコードの運用向け一覧は [`docs/api/auth.md`](docs/api/auth.md) を参照してください。
+`invalid_grant` が断続的に発生する場合は、[clock skew 診断手順](docs/help/troubleshooting.md#oauth-clock-skew) を参照してください。
 
 ### Users
 
@@ -375,6 +378,16 @@ pip install -r requirements.txt
 pytest
 ```
 
+### Generated Artifacts Policy
+
+`artifacts/` と `api/.hypothesis/` は再生成可能な生成物のため、Git 管理対象に含めません。
+週次棚卸しやレビュー時に未追跡で残っていても、コミット対象へ含めない運用を推奨します。
+
+```bash
+# 必須エントリの確認（出力されれば設定済み）
+rg -n '^/artifacts/$|^artifacts/\\*\\*$|^api/.hypothesis/$' .gitignore
+```
+
 ## PR Auto-Approve + Auto-Merge
 
 This repository includes GitHub Actions workflows for automatic PR approval and merge:
@@ -390,6 +403,19 @@ This repository includes GitHub Actions workflows for automatic PR approval and 
 1. Enable `Allow auto-merge` in repository settings
 2. Configure branch protection for `main`/`master` with required status checks
 3. Register your CI checks (including external CI like Woodpecker) as required checks
+4. Keep `PR Auto Approve` and `PR Auto Merge` workflows enabled in GitHub Actions
+5. Bootstrap Codex labels when setting up the repository:
+
+```bash
+./scripts/ensure_github_labels.sh
+# dry-run only (no write):
+./scripts/ensure_github_labels.sh --dry-run
+```
+
+This script ensures the repository keeps the labels used by Codex / codex-orch automation:
+`codex`, `codex-automation`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened`.
+
+If a pull request was opened while the auto-approve / auto-merge workflows were disabled, enabling the workflows later does not retroactively register auto-merge for that PR. In that case, reopen/synchronize the PR or enable auto-merge manually.
 
 With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
 

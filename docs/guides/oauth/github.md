@@ -27,6 +27,28 @@ echo "your-client-secret" > secrets/github_client_secret.txt
     YESOD Authは`read:user`と`user:email`スコープを使用します。
     これにより、ユーザーの基本情報とメールアドレスを取得できます。
 
+## 3.5 必要スコープの確認手順
+
+GitHub OAuth App 設定画面には固定 scope の入力欄がないため、認可リクエストと認可後トークンの両方で確認します。
+
+1. ローカル API を起動した状態で、認可開始 URL のリダイレクト先を確認する
+
+```bash
+curl -sSI "http://localhost:8000/api/v1/auth/github" | rg -i '^location:'
+```
+
+2. `location` ヘッダーのクエリに `scope=read:user%20user:email`（または同等のURLエンコード）が含まれることを確認する
+3. 実際に GitHub で認可を完了し、アクセストークンを取得する
+4. 取得したトークンに対してレスポンスヘッダーを確認し、`X-OAuth-Scopes` に `read:user, user:email` が含まれることを確認する
+
+```bash
+curl -sSI \
+  -H "Authorization: Bearer <github_access_token>" \
+  https://api.github.com/user | rg -i '^x-oauth-scopes:'
+```
+
+5. `user:email` が不足している場合は、GitHub 側で再認可（連携解除後の再ログイン）を実施する
+
 ## organization制限時の挙動
 
 - 現在のGitHub OAuth実装は`read:user user:email`のみを要求し、organization所属チェックは行いません。

@@ -3,6 +3,8 @@
 import os
 from functools import lru_cache
 
+from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_KEYS
+
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
 TRUE_VALUES = {"1", "true", "yes"}
 FALSE_VALUES = {"0", "false", "no", ""}
@@ -22,9 +24,12 @@ def resolve_cors_origins(raw_value: str | None) -> tuple[list[str], bool]:
     if raw_value is None or not raw_value.strip():
         return DEFAULT_CORS_ORIGINS.split(","), True
 
-    origins = [origin.strip() for origin in raw_value.split(",") if origin.strip()]
-    if not origins:
-        return DEFAULT_CORS_ORIGINS.split(","), True
+    origins = [origin.strip() for origin in raw_value.split(",")]
+    if any(not origin for origin in origins):
+        raise ValueError(
+            "CORS_ORIGINS contains empty element. "
+            "Set non-empty comma-separated values for CORS_ORIGINS."
+        )
     return origins, False
 
 
@@ -64,6 +69,7 @@ class Settings:
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_LIFETIME_SECONDS: int = int(os.getenv("ACCESS_TOKEN_LIFETIME_SECONDS", "900"))
     REFRESH_TOKEN_LIFETIME_DAYS: int = int(os.getenv("REFRESH_TOKEN_LIFETIME_DAYS", "7"))
+    TOKEN_REFRESH_MAX_RETRIES: int = int(os.getenv("TOKEN_REFRESH_MAX_RETRIES", "3"))
 
     # OAuth State TTL (seconds)
     OAUTH_STATE_TTL: int = int(os.getenv("OAUTH_STATE_TTL", "300"))
@@ -111,6 +117,18 @@ class Settings:
     _cors_origins, _cors_origins_using_default = resolve_cors_origins(os.getenv("CORS_ORIGINS"))
     CORS_ORIGINS: list[str] = _cors_origins
     CORS_ORIGINS_USING_DEFAULT: bool = _cors_origins_using_default
+
+    def __init__(self) -> None:
+        self._validate_oauth_provider_secrets()
+
+    def _validate_oauth_provider_secrets(self) -> None:
+        for client_id_key, client_secret_key in OAUTH_PROVIDER_CREDENTIAL_KEYS:
+            client_id = str(getattr(self, client_id_key, "")).strip()
+            client_secret = str(getattr(self, client_secret_key, "")).strip()
+            if client_id and not client_secret:
+                raise ValueError(
+                    f"OAuth provider secret is empty. Set non-empty value for {client_secret_key}."
+                )
 
 
 @lru_cache

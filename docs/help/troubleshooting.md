@@ -18,6 +18,8 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 
 ## 起動時のエラー
 
+`secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
+
 ### `pg_cron`関連のエラー
 
 ```
@@ -28,6 +30,56 @@ ERROR: extension "pg_cron" is not available
 
 **解決策:** マイグレーションは自動的にpg_cronの有無を検出してスキップします。
 このエラーが出る場合は、マイグレーションファイルを確認してください。
+
+---
+
+### `SESSION_EXPIRY_HOURS` が不正値
+
+**症状:** 管理画面のセッション期限設定が反映されず、起動ログに警告が出る。
+
+警告メッセージ:
+
+```
+SESSION_EXPIRY_HOURS is invalid ('<value>'); using default value 24
+```
+
+**原因:** `SESSION_EXPIRY_HOURS` に整数以外、または 0 以下の値が設定されている。
+
+**解決策:**
+
+1. `SESSION_EXPIRY_HOURS` を 1 以上の整数に修正する
+2. 管理画面コンテナを再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
+3. 反映確認
+   ```bash
+   docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid"
+   ```
+
+---
+
+### `SESSION_COOKIE_SAMESITE` が空文字/未知値
+
+**症状:** admin 起動時に `SESSION_COOKIE_SAMESITE` の警告が出る。
+
+警告メッセージ例:
+
+```
+SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=<env>)
+SESSION_COOKIE_SAMESITE='<value>' is unsupported; falling back to framework default (environment=<env>)
+```
+
+**原因:** `SESSION_COOKIE_SAMESITE` が未設定（空文字）、または `Lax`/`Strict`/`None` 以外の値。
+
+**解決策:**
+
+1. `SESSION_COOKIE_SAMESITE` を `Lax` / `Strict` / `None` のいずれかに修正する
+2. `None` を使う場合は `SESSION_COOKIE_SECURE=true` を同時に設定する
+3. admin を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate admin
+   ```
 
 ---
 
@@ -68,21 +120,36 @@ sqlalchemy.exc.OperationalError: could not connect to server
 
 #### `state mismatch` 診断フロー
 
+0. ログ採取ウィンドウを統一する（推奨値）
+   ```bash
+   SINCE=30m
+   docker compose logs api --since="$SINCE" | rg -n "Invalid state|/auth/.*/callback"
+   docker compose logs valkey --since="$SINCE"
+   ```
+   - API/Valkey は同一 `--since` を使い、時系列比較を容易にする
+   - 例外調査で範囲を広げる場合も、両ログで同じ値にそろえる
 1. 発生時刻とリクエストを特定する（APIログ）
    ```bash
-   docker compose logs api --since=30m | rg "Invalid state|/auth/.*/callback"
+   docker compose logs api --since="$SINCE" | rg "Invalid state|/auth/.*/callback"
    ```
 2. `state` が一度だけ消費される前提を確認する（再送/二重callbackの有無）
    - 同一ブラウザ操作で callback が複数回呼ばれていないか
    - リバースプロキシや監視が callback URL を再実行していないか
 3. Valkey の接続状態を確認する（保存済みstateが即時消失していないか）
    ```bash
-   docker compose logs valkey --since=30m
+   docker compose logs valkey --since="$SINCE"
    ```
 4. OAuth開始URLとcallback URLの組み合わせを確認する（環境不一致の検出）
    - 開始: `GET /api/v1/auth/{provider}`
    - callback: `GET /api/v1/auth/{provider}/callback?code=...&state=...`
    - `API_URL` / `FRONTEND_URL` の環境差分を確認
+
+採取記録テンプレート（最低3項目）:
+
+- 発生時刻（UTC/JST）と調査ウィンドウ値（例: `SINCE=30m`）
+- provider 名（`github` / `google` など）と callback URL
+- `state` 再送有無（ブラウザ再送・プロキシ再試行・監視アクセス）
+- API/Valkey ログの該当行番号または抽出キーワード
 
 | 想定原因 | 観測シグナル | 対処 |
 | --- | --- | --- |
@@ -105,6 +172,23 @@ sqlalchemy.exc.OperationalError: could not connect to server
 environment:
   - MOCK_OAUTH_ENABLED=1
 ```
+
+<a id="provider-未設定のまま認証導線を実行した"></a>
+
+### provider 未設定のまま認証導線を実行した
+
+**症状:** `GET /api/v1/auth/<provider>` 実行時に `invalid_client` や secret 読み込みエラーが発生する。
+
+**最短対応:**
+
+1. 未設定 provider の導線呼び出しを一度止める
+2. `curl -fsS http://localhost:8000/health` と `curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs` で起動確認を先に完了する
+3. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+
+再開ポイント:
+- [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+- [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](./faq.md#mock-oauthから実oauthへ切り替える最小確認は)
 
 ---
 
@@ -136,6 +220,139 @@ environment:
    docker compose up -d --force-recreate api admin
    ```
 3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
+
+#### invalid_client 再発防止チェック（デプロイ前後で毎回実施）
+
+次の 4 項目を上から順に実施し、すべて満たした場合のみ OAuth 設定変更を完了とします。
+
+1. 対象 provider の secret ファイルが 2 つとも存在することを確認する
+   ```bash
+   ls -l secrets/github_client_id.txt secrets/github_client_secret.txt
+   ```
+2. 変更後の Compose 定義に対象 secret が含まれることを確認する
+   ```bash
+   docker compose config | rg -n "github_client_id|github_client_secret"
+   ```
+3. API 再作成後に `invalid_client` が新規発生していないことを確認する
+   ```bash
+   docker compose up -d --force-recreate api
+   docker compose logs api --since=10m | rg -n "invalid_client|401"
+   ```
+4. callback URL が現在の公開 API URL と一致していることを provider 管理画面で確認する
+   - 形式: `https://<api-domain>/api/v1/auth/{provider}/callback`
+   - self-host 運用時の基準は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト運用チェックリスト) を参照
+
+上記チェックを実施しても再発する場合は、[インストール時の secret 不足診断](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を再実行し、secret 名と実ファイル名の不一致を先に解消してください。
+
+---
+
+<a id="sync-from-provider-errors"></a>
+
+### sync-from-provider で 400/404 が返る
+
+対象: `POST /api/v1/users/me/sync-from-provider?provider=<name>`
+
+| ステータス | 代表メッセージ | 主な原因 | 直近の対処 |
+| --- | --- | --- | --- |
+| 400 | `Unsupported provider` | `provider` が `google` / `discord` 以外 | `provider` を `google` か `discord` に修正 |
+| 404 | `No <provider> account linked` | 指定 provider の連携がない | 当該 provider で再ログインして連携を作成 |
+| 400 | `No provider info stored for <provider>...` | 連携はあるが保存済みプロフィール情報が空 | 同 provider で再ログインし、プロフィール情報を再取得 |
+
+確認コマンド例:
+
+```bash
+TOKEN="<access_token>"
+curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/users/me/sync-from-provider?provider=discord" | jq
+```
+
+契約の最新版は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。
+
+---
+
+<a id="secrets-permission-recovery"></a>
+
+### secrets 権限不備で `Permission denied` が出る
+
+**症状:** `docker compose up -d` 実行時に `permission denied` が出て起動できない。`/run/secrets/*` の読み込みエラーが API ログに残る。
+
+**確認手順（Linux/macOS）:**
+
+1. 対象 secret の所有者とパーミッションを確認する
+   ```bash
+   ls -l secrets/*.txt
+   ```
+2. Linux の詳細確認
+   ```bash
+   stat -c '%n %a %U:%G' secrets/*.txt
+   ```
+3. macOS の詳細確認
+   ```bash
+   stat -f '%N %Lp %Su:%Sg' secrets/*.txt
+   ```
+
+**復旧手順:**
+
+1. パーミッションを `600` に戻す
+   ```bash
+   chmod 600 secrets/*.txt
+   ```
+2. 所有者が現在ユーザーでない場合は修正する（Linux/macOS 共通）
+   ```bash
+   sudo chown \"$(id -un):$(id -gn)\" secrets/*.txt
+   ```
+3. API を再作成して反映する
+   ```bash
+   docker compose up -d --force-recreate api worker
+   ```
+4. 再確認する
+   ```bash
+   docker compose logs --tail=100 api | rg -n \"permission denied|/run/secrets|invalid_client\"
+   curl -fsS http://localhost:8000/health
+   ```
+
+**受け入れ時の三点同期チェック:**
+
+1. FAQ: [OAuth secret の権限不備を最短で復旧するには？](./faq.md#oauth-secret-の権限不備を最短で復旧するには) の手順順序と一致していること
+2. Installation: [OAuth secret ファイル権限の復旧手順](../installation.md#oauth-secret-ファイル権限の復旧手順) のコマンドと一致していること
+3. 本節（troubleshooting）では症状→確認→復旧の順序になっていること
+
+---
+
+<a id="oauth-clock-skew"></a>
+
+### OAuth callback で `invalid_grant` が断続的に発生する（clock skew）
+
+**症状:** 同一設定でも時間帯やホストごとに `invalid_grant` / `code has expired` が発生し、再試行で一時的に成功する
+
+**原因:** APIサーバー・リバースプロキシ・ホストOSの時刻差（clock skew）により、OAuth認可コードの有効期限判定がずれる
+
+**診断手順（最小）:**
+
+1. 発生時刻の前後で callback 失敗ログを抽出する
+   ```bash
+   docker compose logs api --since=30m | rg -n "invalid_grant|code has expired|callback"
+   ```
+2. APIコンテナとホストの現在時刻を比較する（秒差を確認）
+   ```bash
+   date -u
+   docker compose exec api date -u
+   ```
+3. NTP同期状態を確認する（self-host 環境）
+   ```bash
+   timedatectl status
+   ```
+4. プロバイダー側の認可コード発行時刻と、callback受信時刻の乖離を確認する
+   - 監査ログ/アクセスログの時刻がUTC基準で連続しているか
+   - 特定ノードだけ数十秒以上ずれていないか
+
+| 想定原因 | 観測シグナル | 対処 |
+| --- | --- | --- |
+| ホスト時刻が遅延/先行 | `date -u` でノード間に秒差がある | NTP再同期後にOAuthを再試行 |
+| コンテナ時刻が固定化 | ホスト更新後も `docker compose exec api date -u` が追従しない | コンテナ再作成（`docker compose up -d --force-recreate api`） |
+| 逆プロキシ/多段環境の遅延 | callback 到達までの遅延が長い | callback 経路を短縮し、リトライ実装を見直す |
+
+**補足:** OAuth導入時は [OAuth設定ガイド](../guides/oauth/index.md) のセルフホスト手順と併せて、時刻同期を初期チェック項目に含めてください。
 
 ---
 
@@ -192,6 +409,7 @@ environment:
 
 4. Valkey 側の疎通とエラー有無を確認する
    ```bash
+   docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
    docker compose logs valkey --since=30m
    ```
 
@@ -200,6 +418,37 @@ environment:
 - バースト的なアクセスが原因: クライアント側の再試行間隔を延ばす
 - 設定値が過小: `RATE_LIMIT_PER_MINUTE` を運用実態に合わせて調整
 - Valkey 障害が疑われる: Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認
+
+<a id="users-pagination-limit-check"></a>
+
+### `/api/v1/sessions` で `limit=1/100` の結果が不安定
+
+**症状:** 同一トークンで `GET /api/v1/users/me` は成功するが、`/api/v1/sessions?limit=1` または `limit=100` の件数/応答が期待とずれる
+
+**確認手順:**
+
+1. 同じアクセストークンで `users/me` が成功することを先に確認する
+   ```bash
+   curl -i -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/users/me"
+   ```
+2. `limit=1` と `limit=100` を連続実行し、HTTPステータスと件数を比較する
+   ```bash
+   curl -sS -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+   curl -sS -H "Authorization: Bearer <access_token>" \
+     "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+   ```
+3. 期待値から外れる場合は API ログを確認する
+   ```bash
+   docker compose logs api --since=30m | rg -n "/api/v1/sessions|401|422"
+   ```
+
+**期待値:**
+
+- 両方とも `200` を返す
+- 返却件数は指定 `limit` を超えない
+- `401` が混在する場合はトークン失効を疑い、再ログイン後に再検証する
 
 ### 管理者トークン失効で管理APIが `401 Unauthorized` になる
 
@@ -280,15 +529,37 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
      - "user_created"  # 間違い
    ```
 
+4. 起動時に `settings.retry_*` エラーが出る場合は設定値の関係を確認
+   - `settings.retry_base_delay_seconds` と `settings.retry_max_delay_seconds` は非負整数
+   - `settings.retry_max_delay_seconds >= settings.retry_base_delay_seconds`
+   - `settings.retry_backoff_ms` を配列で指定する場合は「非負・単調増加（ms）」にする
+
 ---
 
 ### 署名検証に失敗する
 
-**確認事項:**
+**診断手順（最小）:**
 
-1. シークレットが一致しているか
-2. タイムスタンプの形式が正しいか
-3. ペイロードがそのまま（改変なし）で検証されているか
+1. API 側で署名失敗ログを先に抽出する
+   ```bash
+   docker compose logs api --since=30m | rg -n "webhook|signature|invalid signature|401|403"
+   ```
+2. 送信側と受信側のシークレット値が同一か確認する
+   - 送信側（外部サービス）に設定した署名鍵
+   - 受信側（yesod-auth）が参照する `config/webhooks.yaml` / secrets
+3. 設定変更直後は管理APIでリロードを実行する
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
+   ```
+4. 同じペイロードで再送し、HTTP ステータスが `2xx` に戻るか確認する
+
+| 想定原因 | 観測シグナル | 対処 |
+| --- | --- | --- |
+| 署名鍵の不一致 | 同一イベントで `invalid signature` が継続 | 送受信で同じ鍵へ統一し、`reload` 実行後に再送 |
+| ボディ改変（JSON整形/文字コード差分） | 送信元では成功、受信側だけ失敗 | 受信側は raw body をそのまま検証し、ミドルウェア改変を無効化 |
+| 時刻ずれや再送遅延 | 特定環境のみ断続的に失敗 | サーバー時刻同期を確認し、遅延経路を短縮 |
+
+署名鍵ローテーション時の手順は [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
 
 ---
 

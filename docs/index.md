@@ -47,13 +47,43 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` を確認
 3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で原因を切り分け
 
-## 導入者向けの読み進め方
+## 学習順ガイド（導入→API→運用）
 
-初回導入時は、次の順序で確認すると最短で環境を立ち上げられます。
+「まず動かす」「API仕様を確認する」「運用手順を固める」の順に進めると、オンボーディングと本番準備を並行しやすくなります。
 
-1. [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
-2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
-3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+1. 導入
+   - [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
+   - [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
+   - [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+2. API
+   - [認証API](api/auth.md): login / callback / refresh / logout の入出力を確認
+   - [ユーザーAPI](api/users.md): `/api/v1/users` 系の取得・更新フローを確認
+   - [Webhook API](api/webhooks.md): 署名検証と再送時の扱いを確認
+3. 運用
+   - [デプロイガイド](guides/deployment.md): デプロイと secrets ローテーション手順を確認
+   - [トラブルシューティング](help/troubleshooting.md): callback / state mismatch などの切り分け手順を確認
+   - [FAQ](help/faq.md): 導入後によくある確認事項を横断で参照
+
+## 運用導線の同期チェック
+
+トップページの導線を更新したときは、次の 3 文書へのリンクと記述の整合をあわせて確認してください。
+
+- [インストール](installation.md): 導入前提と profile / secret の説明が最新か
+- [トラブルシューティング](help/troubleshooting.md): 障害切り分け導線が最新か
+- [FAQ](help/faq.md): 運用中によくある確認事項への導線が残っているか
+
+チェック手順:
+
+1. `docs/index.md` から上記 3 文書へ到達できることを確認する
+2. 3 文書の見出し・用語・導線がトップページの説明と矛盾しないことを確認する
+3. 三点同期チェックの結果を、更新を行った Issue または PR コメントへ日付付きで残す
+
+記録例:
+
+- [ ] installation を確認
+- [ ] troubleshooting を確認
+- [ ] faq を確認
+- 記録先: Issue / PR コメント
 
 リフレッシュトークン運用時の注意点は [インストールガイド](installation.md#リフレッシュトークン運用時の注意) を参照してください。
 

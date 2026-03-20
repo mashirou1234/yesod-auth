@@ -5,12 +5,11 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.accounts import router as accounts_router
 from app.auth import router as auth_router
-from app.auth.rate_limit import limiter
+from app.auth.rate_limit import limiter, oauth_rate_limit_exceeded_handler
 from app.config import get_settings
 from app.db.session import async_session_factory
 from app.metrics import router as metrics_router
@@ -95,7 +94,7 @@ Set `MOCK_OAUTH_ENABLED=1` to enable mock OAuth endpoints for testing without re
 
 # Rate limiter
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, oauth_rate_limit_exceeded_handler)
 
 # CORS
 app.add_middleware(

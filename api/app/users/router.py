@@ -22,6 +22,11 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 # Soft delete grace period (days)
 SOFT_DELETE_GRACE_DAYS = 30
+SYNC_FROM_PROVIDER_CONFLICT_CODE = "SYNC_FROM_PROVIDER_CONFLICT"
+SYNC_FROM_PROVIDER_CONFLICT_MESSAGE = (
+    "Local profile already has different values. "
+    "Clear conflicting fields before syncing from provider."
+)
 
 
 def _get_client_info(request: Request) -> tuple[str | None, str | None]:
@@ -243,6 +248,30 @@ async def sync_profile_from_provider(
         profile = UserProfile(user_id=user.id)
         db.add(profile)
         user.profile = profile
+
+    conflicts = []
+    if (
+        oauth_account.provider_display_name
+        and user.profile.display_name
+        and user.profile.display_name != oauth_account.provider_display_name
+    ):
+        conflicts.append("display_name")
+    if (
+        oauth_account.provider_avatar_url
+        and user.profile.avatar_url
+        and user.profile.avatar_url != oauth_account.provider_avatar_url
+    ):
+        conflicts.append("avatar_url")
+
+    if conflicts:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": SYNC_FROM_PROVIDER_CONFLICT_CODE,
+                "message": SYNC_FROM_PROVIDER_CONFLICT_MESSAGE,
+                "conflicting_fields": conflicts,
+            },
+        )
 
     # Sync from provider
     updated_fields = []

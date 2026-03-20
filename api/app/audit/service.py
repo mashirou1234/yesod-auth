@@ -34,6 +34,25 @@ class AuditLogger:
     """Audit logging service for authentication events."""
 
     @staticmethod
+    def _normalize_event_details(details: dict | None) -> dict:
+        """Ensure request-id is always present in auth event details."""
+        normalized = dict(details or {})
+        request_id = None
+        for key in ("request_id", "request-id"):
+            value = normalized.get(key)
+            if isinstance(value, str) and value.strip():
+                request_id = value
+                break
+
+        if request_id is None:
+            normalized["request_id"] = str(uuid.uuid4())
+            normalized["request_id_backfilled"] = True
+        else:
+            normalized["request_id_backfilled"] = False
+
+        return normalized
+
+    @staticmethod
     async def log_login(
         db: AsyncSession,
         user_id: uuid.UUID | None,
@@ -78,6 +97,7 @@ class AuditLogger:
             return  # Skip audit logging in test environment
 
         import json
+        normalized_details = AuditLogger._normalize_event_details(details)
 
         await db.execute(
             text("""
@@ -88,7 +108,7 @@ class AuditLogger:
             {
                 "user_id": str(user_id) if user_id else None,
                 "event_type": event_type.value,
-                "details": json.dumps(details) if details else None,
+                "details": json.dumps(normalized_details),
                 "ip_address": ip_address,
                 "user_agent": user_agent[:500] if user_agent else None,
             },
