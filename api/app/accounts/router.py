@@ -15,7 +15,7 @@ from app.db.session import get_db
 from app.models import OAuthAccount, User
 from app.valkey import OAuthStateStore
 
-from .schemas import OAuthAccountResponse, UnlinkResponse
+from .schemas import OAuthAccountResponse, SUPPORTED_ACCOUNT_PROVIDERS, UnlinkResponse
 
 settings = get_settings()
 router = APIRouter(prefix="/accounts", tags=["accounts"])
@@ -42,7 +42,7 @@ async def start_link_account(
     current_user: User = Depends(get_current_user),
 ):
     """Start OAuth flow to link a new provider to existing account."""
-    if provider not in ["google", "discord"]:
+    if provider not in SUPPORTED_ACCOUNT_PROVIDERS:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
     state = secrets.token_urlsafe(32)
@@ -192,7 +192,7 @@ async def unlink_account(
     db: AsyncSession = Depends(get_db),
 ):
     """Unlink an OAuth provider from current user."""
-    if provider not in ["google", "discord"]:
+    if provider not in SUPPORTED_ACCOUNT_PROVIDERS:
         raise HTTPException(status_code=400, detail="Unsupported provider")
 
     # Count linked accounts
