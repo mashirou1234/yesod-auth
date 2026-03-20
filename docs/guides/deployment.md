@@ -99,6 +99,125 @@ curl https://api.your-domain.com/health
 docker compose logs -f api
 ```
 
+## OAuth callback監視チェック
+
+セルフホスト運用では、`/api/v1/auth/{provider}/callback` の失敗を「発生後に調査」ではなく「定期監視で先に検知」する運用を推奨します。
+
+### 監視項目（最小3点）
+
+1. callback 失敗ログ件数（`invalid_client` / `Invalid state`）
+2. callback URL への 4xx/5xx 応答の増加
+3. callback 処理遅延（認証開始から callback 完了まで）が急増していないこと
+
+### 日次確認コマンド（例）
+
+```bash
+docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_client|Invalid state" || true
+```
+
+### しきい値の目安（初期値）
+
+- 直近24時間で `invalid_client` が 1 件以上: provider secret の不整合を疑い、即時確認
+- 直近24時間で `Invalid state` が 3 件以上: callback 二重実行やセッション保持不安定を疑い、調査開始
+
+`Invalid state` の切り分け手順は `docs/help/troubleshooting.md` の `state mismatch 診断フロー` を参照してください。プロバイダー設定の前提は `docs/guides/oauth/index.md` の `セルフホスト運用チェックリスト` と合わせて確認します。
+
+## OAuthシークレットローテーション手順
+
+プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
+
+### ロールバック発動条件（先に判定）
+
+次のいずれかに該当した場合は、新シークレットの調査を継続せず、先にロールバックへ移行します。
+
+1. `invalid_client` / `401` が切替直後から継続し、認証開始を再実行しても解消しない
+2. provider 管理画面の callback URL と実運用 URL（`/api/v1/auth/{provider}/callback`）が一致しない
+3. API 再起動後に secret 読み込みエラーまたは OAuth 初期化失敗が発生する
+4. `/health` が期待値 `200` に戻らない
+
+### 運用前提の整合チェック（必須）
+
+本番切替前に、次の3点を必ず同時に確認してください。
+
+1. `MOCK_OAUTH_ENABLED` の本番値が `0` であること
+   - 既定値は `0` ですが、`docker-compose.yml` の profile によって開発向け上書きが入るため、実行プロファイルごとに確認します
+   ```bash
+   docker compose --profile default config | rg -n "MOCK_OAUTH_ENABLED"
+   docker compose --profile full config | rg -n "MOCK_OAUTH_ENABLED"
+   ```
+2. 対象 provider の secret が最新値へ反映済みであること（`*_client_id` / `*_client_secret`）
+3. provider 管理画面の callback URL と実際の `/api/v1/auth/{provider}/callback` が一致していること
+
+### 切替前チェック
+
+- redirect URI が現在の本番ドメインを向いていることを確認する
+  - 例: `https://api.your-domain.com/api/v1/auth/google/callback`
+  - 例: `https://api.your-domain.com/api/v1/auth/discord/callback`
+- 新旧シークレットを同時に参照できる退避手順を準備する（即時ロールバック用）
+- 反映対象（Compose の secret / ECS task definition / K8s Secret）を運用手順書に明記する
+- 反映前にヘルスチェックの現状値を取得する
+  ```bash
+  curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health
+  # 期待値: 200
+  ```
+
+### 切替実施
+
+1. 対象環境へ新しい OAuth client secret を反映する
+2. API プロセスを再起動または再デプロイして新シークレットを読み込ませる
+3. 起動ログで secret 読み込み失敗や OAuth 初期化失敗がないことを確認する
+   ```bash
+   docker compose logs --since=10m api | rg -n "secret|oauth|ERROR|FATAL" || true
+   ```
+
+### 切替後検証
+
+1. ヘルスチェックが成功すること
+   ```bash
+   curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health
+   # 期待値: 200
+   ```
+2. 認証開始エンドポイントに到達できること（`docs/api/auth.md` の仕様と整合）
+   ```bash
+   curl -I https://api.your-domain.com/api/v1/auth/google
+   curl -I https://api.your-domain.com/api/v1/auth/discord
+   ```
+3. 認証コールバック URL が想定ドメインのままであること（`/api/v1/auth/{provider}/callback`）
+
+### 失敗時のロールバック（最小3ステップ）
+
+実行順は必ず固定し、途中で確認項目を飛ばさないでください。
+
+1. **旧シークレットへ即時切り戻し**（更新前バックアップを復元）
+2. **API を再起動/再デプロイ** して旧シークレットを再読込
+3. **疎通確認を実施**（`curl https://api.your-domain.com/health` と `/api/v1/auth/{provider}`）
+4. **callback URL 一致を再確認**（provider 管理画面と実運用 URL）
+
+ロールバック後の追加確認は「ロールバック時の最小確認項目」を参照してください。
+
+### 受け入れ基準（運用レビュー）
+
+ローテーション失敗時の手順変更をレビューする場合は、次を満たしていることを受け入れ条件とします。
+
+1. ロールバック条件と実行順が明文化されている
+2. `MOCK_OAUTH_ENABLED` / provider secrets / callback URL の確認項目が含まれている
+3. FAQ / installation / troubleshooting の三点同期チェックが記載されている
+
+### docs 三点同期チェック（運用記録用）
+
+ローテーション手順を更新した場合は、次の3ドキュメントと導線が一致していることをレビュー記録に残してください。
+
+- `docs/help/faq.md`
+- `docs/installation.md`
+- `docs/help/troubleshooting.md`
+
+最小確認コマンド:
+
+```bash
+rg -n "MOCK_OAUTH_ENABLED|secret|callback|ローテーション" \
+  docs/guides/deployment.md docs/help/faq.md docs/installation.md docs/help/troubleshooting.md
+```
+
 ## ロールバック時の最小確認項目
 デプロイ直後に不具合が発生してロールバックした場合は、次の最小確認を順に実施してください。
 

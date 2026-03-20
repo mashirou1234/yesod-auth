@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     pass
 
 logger = logging.getLogger(__name__)
+MAX_RETRY_EXHAUSTED_LOG_KEY = "webhook_delivery_retry_exhausted"
 
 
 @dataclass
@@ -35,6 +36,7 @@ class DeliveryResult:
     error_message: str | None = None
     latency_ms: int | None = None
     attempt_count: int = 1
+    signature_algorithm: str | None = None
 
 
 class WebhookWorker:
@@ -121,7 +123,9 @@ class WebhookWorker:
         config = WebhookConfigLoader.get_config()
         max_retries = config.settings.max_retries
         base_delay = config.settings.retry_base_delay_seconds
+        max_delay = config.settings.retry_max_delay_seconds
         timeout = config.settings.delivery_timeout_seconds
+        delivery_id = uuid.uuid4()
 
         result = DeliveryResult(success=False)
 
@@ -130,13 +134,19 @@ class WebhookWorker:
 
             if attempt > 0:
                 # Exponential backoff
-                delay = base_delay * (2 ** (attempt - 1))
+                raw_delay = base_delay * (2 ** (attempt - 1))
+                delay = min(raw_delay, max_delay)
                 logger.info(
-                    "Retrying webhook delivery to %s (attempt %d/%d) after %ds",
+                    (
+                        "Retrying webhook delivery to %s (attempt %d/%d) after %ds "
+                        "(raw_delay=%ds, max_delay=%ds)"
+                    ),
                     endpoint.id,
                     attempt + 1,
                     max_retries + 1,
                     delay,
+                    raw_delay,
+                    max_delay,
                 )
                 await asyncio.sleep(delay)
 
@@ -156,22 +166,35 @@ class WebhookWorker:
             # Don't retry on 4xx errors (client errors)
             if result.http_status and 400 <= result.http_status < 500:
                 logger.warning(
-                    "Webhook delivery to %s failed with client error %d, not retrying",
+                    (
+                        "Webhook delivery to %s failed with client error %d, not retrying "
+                        "(signature_algo=%s)"
+                    ),
                     endpoint.id,
                     result.http_status,
+                    result.signature_algorithm,
                 )
                 break
 
         if not result.success:
             logger.error(
-                "Webhook delivery to %s failed after %d attempts: %s",
+                (
+                    "%s delivery_id=%s endpoint_id=%s event_id=%s attempts=%d "
+                    "max_attempts=%d signature_algo=%s http_status=%s error=%s"
+                ),
+                MAX_RETRY_EXHAUSTED_LOG_KEY,
+                delivery_id,
                 endpoint.id,
+                event.event_id,
                 result.attempt_count,
+                max_retries + 1,
+                result.signature_algorithm,
+                result.http_status,
                 result.error_message,
             )
 
         # Log delivery to database
-        await self._log_delivery(event, endpoint, result)
+        await self._log_delivery(delivery_id, event, endpoint, result)
 
         return result
 
@@ -194,6 +217,7 @@ class WebhookWorker:
             event.event_type,
             endpoint.id,
         )
+        signature_algorithm = WebhookSigner.SIGNATURE_PREFIX.removesuffix("=")
 
         start_time = time.time()
 
@@ -212,6 +236,7 @@ class WebhookWorker:
                     success=True,
                     http_status=response.status_code,
                     latency_ms=latency_ms,
+                    signature_algorithm=signature_algorithm,
                 )
             else:
                 return DeliveryResult(
@@ -219,21 +244,25 @@ class WebhookWorker:
                     http_status=response.status_code,
                     error_message=response.text[:500] if response.text else None,
                     latency_ms=latency_ms,
+                    signature_algorithm=signature_algorithm,
                 )
 
         except httpx.TimeoutException:
             return DeliveryResult(
                 success=False,
                 error_message="Request timeout",
+                signature_algorithm=signature_algorithm,
             )
         except httpx.RequestError as e:
             return DeliveryResult(
                 success=False,
                 error_message=str(e)[:500],
+                signature_algorithm=signature_algorithm,
             )
 
     async def _log_delivery(
         self,
+        delivery_id: uuid.UUID,
         event: WebhookEvent,
         endpoint: WebhookEndpoint,
         result: DeliveryResult,
@@ -247,7 +276,7 @@ class WebhookWorker:
 
             async with self._db_session_factory() as session:
                 delivery = WebhookDelivery(
-                    id=uuid.uuid4(),
+                    id=delivery_id,
                     event_id=event.event_id,
                     event_type=event.event_type,
                     endpoint_id=endpoint.id,

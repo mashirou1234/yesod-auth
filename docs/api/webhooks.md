@@ -84,6 +84,12 @@ POST /api/v1/admin/webhooks/reload
 }
 ```
 
+### 署名鍵ローテーション時の利用
+
+- `config/webhooks.yaml` が参照するシークレット値を切り替えた直後に `POST /api/v1/admin/webhooks/reload` を実行してください。
+- 切替後に署名検証失敗が増えた場合は、旧鍵へ戻して再度 `reload` することで復旧できます。
+- 詳細手順は [Webhook設定ガイドの署名鍵ローテーション最小手順](../guides/webhooks.md#署名鍵ローテーション最小手順) を参照してください。
+
 ---
 
 ## イベントタイプ
@@ -126,13 +132,23 @@ POST /api/v1/admin/webhooks/reload
 
 ---
 
-## 受信側の署名検証エラーコード
+## 署名検証エラー分類
 
-Webhook 受信側で署名検証を実装する場合は、次のエラー分類を推奨します。
+受信側の署名検証では、以下の `failure_reason` を固定値として扱うことを推奨します。
+
+| failure_reason | 説明 |
+|------|------|
+| `missing_signature_header` | `X-Webhook-Signature` ヘッダーがない |
+| `missing_timestamp_header` | `X-Webhook-Timestamp` ヘッダーがない |
+| `timestamp_skew` | 許容時刻差を超過している |
+| `invalid_signature_format` | `algorithm=digest` 形式でない |
+| `unsupported_signature_algorithm` | 未対応の署名方式が指定された（例: `sha1`） |
+| `hmac_mismatch` | 署名がペイロードと一致しない |
+| `replay_detected` | リプレイ攻撃が疑われる |
+
+アプリ内の `WebhookSigner.verify_or_raise()` を使う場合は、例外分類は次の 2 つに丸められます。
 
 | code | 説明 |
 |------|------|
 | `missing_signature_header` | `X-Webhook-Signature` ヘッダが欠落または空 |
-| `invalid_signature` | 署名値が不正（改ざん・秘密鍵不一致など） |
-
-`missing_signature_header` と `invalid_signature` を分離すると、送信側設定ミスと改ざん検知を即時に切り分けできます。
+| `invalid_signature` | 署名検証に失敗した |

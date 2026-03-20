@@ -33,6 +33,37 @@ echo "your-client-secret" > secrets/discord_client_secret.txt
 | PKCE | ✅ 独自実装 |
 | OpenID Connect | ❌ 非対応 |
 
+## redirect URI 検証手順
+
+Discord の Redirects は完全一致が必要です。`http/https`、ホスト名、ポート、パス、末尾スラッシュの差分があると `invalid_client` や callback 失敗の原因になります。
+
+### 1. 登録値を環境ごとに固定する
+
+- ローカル開発: `http://localhost:8000/api/v1/auth/discord/callback`
+- セルフホスト本番: `https://<your-domain>/api/v1/auth/discord/callback`
+
+### 2. API 側の実URLと一致させる
+
+開始 URL と callback URL のドメインを混在させないでください。
+
+```text
+開始:    GET /api/v1/auth/discord
+callback: GET /api/v1/auth/discord/callback?code=...&state=...
+```
+
+### 3. ログで不一致を検知する
+
+```bash
+docker compose logs api --since=30m | rg -n "auth/discord|callback|invalid_client|redirect"
+```
+
+### 4. 検証チェックリスト
+
+- [ ] Discord Developer Portal の Redirects が環境ごとのURLと一致している
+- [ ] 末尾スラッシュなし（`.../callback/` ではない）
+- [ ] リバースプロキシ配下では公開ドメインで callback を登録している
+- [ ] 設定変更後に API を再起動し、再ログインで検証した
+
 ## scope不足時の症状
 
 Discord OAuth では `scope=identify email` が前提です。`email` が不足すると、次の症状が発生します。

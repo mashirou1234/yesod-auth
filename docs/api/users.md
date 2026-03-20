@@ -7,6 +7,48 @@
 | GET | `/api/v1/users/me` | 現在のユーザー情報 |
 | PATCH | `/api/v1/users/me` | プロフィール更新 |
 | DELETE | `/api/v1/users/me` | アカウント削除 |
+| POST | `/api/v1/users/me/sync-from-provider?provider=<name>` | OAuth プロバイダ情報からプロフィール復元 |
+
+---
+
+## ページング境界値（`limit=1/100`）の検証例
+
+`/api/v1/users/me` 自体はページング対象ではありません。  
+ただし、ユーザー認証後の一覧系確認を同一トークンで実施する場合は、`/api/v1/sessions` の `limit` 境界値をあわせて確認できます。
+
+```bash
+# 前提: OAuthログイン済みトークンを利用
+TOKEN="<access_token>"
+
+# 最小件数境界
+curl -sS -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+
+# 実運用でよく使う上限確認（100件）
+curl -sS -H "Authorization: Bearer ${TOKEN}" \
+  "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+```
+
+確認観点:
+
+1. どちらも `200 OK` で返る
+2. `.items | length` が指定した `limit` を超えない
+3. 同一トークンで `GET /api/v1/users/me` も継続して成功する
+
+上限超過時（`limit > 1000`）は `400 Bad Request` を返し、専用エラーコードと上限値を本文に含みます。
+
+```json
+{
+  "detail": {
+    "code": "SESSIONS_LIMIT_EXCEEDED",
+    "message": "limit must be less than or equal to 1000",
+    "max_limit": 1000
+  }
+}
+```
+
+!!! tip "切り分け導線"
+    `limit=1/100` で期待どおりにならない場合は、[トラブルシューティングの確認手順](../help/troubleshooting.md#users-pagination-limit-check) を参照してください。
 
 ---
 
@@ -103,3 +145,84 @@ Authorization: Bearer <access_token>
 
 !!! note "Webhookイベント"
     アカウント削除時に`user.deleted`イベントが発火します。
+
+---
+
+## プロバイダ情報からプロフィール復元
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=google
+Authorization: Bearer <access_token>
+```
+
+**前提条件**
+
+1. `provider` は `google` または `discord` のみ指定可能
+2. 指定した `provider` の OAuth 連携が、実行ユーザーに紐づいていること
+3. `provider_display_name` / `provider_avatar_url` のいずれかが保存済みであること
+
+**成功レスポンス (`200 OK`)**
+
+```json
+{
+  "message": "Profile synced from google",
+  "provider": "google",
+  "updated_fields": ["display_name", "avatar_url"],
+  "display_name": "Provider User",
+  "avatar_url": "https://example.com/provider-user.png"
+}
+```
+
+**入力不正 (`400 Bad Request`: 未対応 provider)**
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=github
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "detail": "Unsupported provider"
+}
+```
+
+**未連携 (`404 Not Found`)**
+
+```bash
+POST /api/v1/users/me/sync-from-provider?provider=discord
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "detail": "No discord account linked"
+}
+```
+
+**保存情報なし (`400 Bad Request`)**
+
+指定した provider は連携済みでも、保存済みプロフィール情報がない場合は `400` を返します。
+
+```json
+{
+  "detail": "No provider info stored for google. Try re-logging in with google."
+}
+```
+
+**競合レスポンス (`409 Conflict`)**
+
+ローカルのプロフィール値とプロバイダ保持値が衝突する場合は、`detail.code` と `detail.message` を固定した契約で返します。
+
+```json
+{
+  "detail": {
+    "code": "SYNC_FROM_PROVIDER_CONFLICT",
+    "message": "Local profile already has different values. Clear conflicting fields before syncing from provider.",
+    "conflicting_fields": ["display_name", "avatar_url"]
+  }
+}
+```
+
+!!! tip "三点同期の確認導線"
+    FAQ は [sync-from-provider の 400/404 の意味](../help/faq.md#sync-from-provider-の-400404-は何を意味する)、
+    障害対応は [sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors) を参照してください。

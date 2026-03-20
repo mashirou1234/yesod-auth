@@ -3,6 +3,16 @@
 import hashlib
 import hmac
 import time
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class SignatureVerificationResult:
+    """Detailed result for signature verification."""
+
+    ok: bool
+    error_code: str | None = None
+    message: str | None = None
 
 
 class WebhookSignatureError(ValueError):
@@ -33,6 +43,12 @@ class WebhookSigner:
     """Signs webhook payloads for verification."""
 
     SIGNATURE_PREFIX = "sha256="
+    SIGNATURE_ALGORITHM = SIGNATURE_PREFIX.removesuffix("=")
+    DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS = 300
+    ERROR_TIMESTAMP_SKEW = "timestamp_skew"
+    ERROR_INVALID_SIGNATURE_FORMAT = "invalid_signature_format"
+    ERROR_UNSUPPORTED_SIGNATURE_ALGORITHM = "unsupported_signature_algorithm"
+    ERROR_HMAC_MISMATCH = "hmac_mismatch"
 
     @staticmethod
     def sign(payload: str, secret: str, timestamp: int | None = None) -> tuple[str, int]:
@@ -66,6 +82,8 @@ class WebhookSigner:
         secret: str,
         timestamp: int,
         signature: str,
+        current_timestamp: int | None = None,
+        max_timestamp_skew_seconds: int = DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS,
     ) -> bool:
         """
         Verify a webhook signature.
@@ -75,12 +93,66 @@ class WebhookSigner:
             secret: The shared secret key
             timestamp: The timestamp from X-Webhook-Timestamp header
             signature: The signature from X-Webhook-Signature header
+            current_timestamp: The current Unix timestamp used for skew checks
+            max_timestamp_skew_seconds: Maximum allowed skew in seconds
 
         Returns:
             True if signature is valid, False otherwise
         """
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+            current_timestamp=current_timestamp,
+            max_timestamp_skew_seconds=max_timestamp_skew_seconds,
+        )
+        return result.ok
+
+    @staticmethod
+    def verify_with_error(
+        payload: str,
+        secret: str,
+        timestamp: int,
+        signature: str,
+        current_timestamp: int | None = None,
+        max_timestamp_skew_seconds: int = DEFAULT_MAX_TIMESTAMP_SKEW_SECONDS,
+    ) -> SignatureVerificationResult:
+        """Verify signature and return a normalized error classification."""
+        if current_timestamp is None:
+            current_timestamp = int(time.time())
+
+        if abs(current_timestamp - timestamp) > max_timestamp_skew_seconds:
+            return SignatureVerificationResult(
+                ok=False,
+                error_code=WebhookSigner.ERROR_TIMESTAMP_SKEW,
+                message="Timestamp outside allowed skew window",
+            )
+
+        if "=" not in signature:
+            return SignatureVerificationResult(
+                ok=False,
+                error_code=WebhookSigner.ERROR_INVALID_SIGNATURE_FORMAT,
+                message="Signature must be in '<algorithm>=<digest>' format",
+            )
+
+        algorithm, _ = signature.split("=", 1)
+        if algorithm != WebhookSigner.SIGNATURE_ALGORITHM:
+            return SignatureVerificationResult(
+                ok=False,
+                error_code=WebhookSigner.ERROR_UNSUPPORTED_SIGNATURE_ALGORITHM,
+                message=f"Unsupported signature algorithm: {algorithm}",
+            )
+
         expected_signature, _ = WebhookSigner.sign(payload, secret, timestamp)
-        return hmac.compare_digest(expected_signature, signature)
+        if not hmac.compare_digest(expected_signature, signature):
+            return SignatureVerificationResult(
+                ok=False,
+                error_code=WebhookSigner.ERROR_HMAC_MISMATCH,
+                message="Signature does not match payload",
+            )
+
+        return SignatureVerificationResult(ok=True)
 
     @staticmethod
     def verify_or_raise(

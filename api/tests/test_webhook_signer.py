@@ -70,7 +70,7 @@ class TestWebhookSigner:
         assert signature.startswith("sha256=")
 
         # Verification with same inputs should succeed
-        assert WebhookSigner.verify(payload, secret, timestamp, signature) is True
+        assert WebhookSigner.verify(payload, secret, timestamp, signature, current_timestamp=timestamp) is True
 
     @settings(max_examples=50)
     @given(payload=payloads, secret=secrets, timestamp=timestamps)
@@ -144,7 +144,87 @@ class TestWebhookSigner:
 
         # Verify with wrong secret
         wrong_secret = secret + "wrong"
-        assert WebhookSigner.verify(payload, wrong_secret, timestamp, signature) is False
+        assert WebhookSigner.verify(
+            payload,
+            wrong_secret,
+            timestamp,
+            signature,
+            current_timestamp=timestamp,
+        ) is False
+
+    @pytest.mark.parametrize("timestamp_offset", (-300, 300))
+    def test_verification_accepts_timestamp_at_skew_boundary(self, timestamp_offset: int):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        current_timestamp = 1_700_000_000
+        timestamp = current_timestamp + timestamp_offset
+        signature, _ = WebhookSigner.sign(payload, secret, timestamp)
+
+        assert (
+            WebhookSigner.verify(
+                payload,
+                secret,
+                timestamp,
+                signature,
+                current_timestamp=current_timestamp,
+            )
+            is True
+        )
+
+    @pytest.mark.parametrize("timestamp_offset", (-301, 301))
+    def test_verification_rejects_timestamp_outside_skew_boundary(self, timestamp_offset: int):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        current_timestamp = 1_700_000_000
+        timestamp = current_timestamp + timestamp_offset
+        signature, _ = WebhookSigner.sign(payload, secret, timestamp)
+
+        assert (
+            WebhookSigner.verify(
+                payload,
+                secret,
+                timestamp,
+                signature,
+                current_timestamp=current_timestamp,
+            )
+            is False
+        )
+
+    def test_verify_with_error_classifies_unsupported_algorithm(self):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        timestamp = 1_700_000_000
+        signature = "sha1=deadbeef"
+
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+            current_timestamp=timestamp,
+        )
+
+        assert result.ok is False
+        assert result.error_code == "unsupported_signature_algorithm"
+        assert result.message == "Unsupported signature algorithm: sha1"
+
+    def test_verify_with_error_keeps_success_path_compatible(self):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        timestamp = 1_700_000_000
+        signature, _ = WebhookSigner.sign(payload, secret, timestamp)
+
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+            current_timestamp=timestamp,
+        )
+
+        assert result.ok is True
+        assert result.error_code is None
+        assert result.message is None
 
     def test_get_headers_includes_all_required_headers(self):
         """

@@ -1,5 +1,6 @@
 """Internationalization (i18n) support for admin dashboard."""
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,21 @@ DEFAULT_LANGUAGE = "en"
 
 # Cache for loaded translations
 _translations_cache: dict[str, dict] = {}
+logger = logging.getLogger(__name__)
+
+
+def _resolve_language(lang: str) -> str:
+    """Resolve language code to a safe supported value."""
+    normalized = (lang or "").strip().lower()
+    if normalized in SUPPORTED_LANGUAGES:
+        return normalized
+    if normalized:
+        logger.warning(
+            "Unsupported locale '%s' requested. Falling back to '%s'.",
+            normalized,
+            DEFAULT_LANGUAGE,
+        )
+    return DEFAULT_LANGUAGE
 
 
 def _get_locales_dir() -> Path:
@@ -26,16 +42,13 @@ def _get_locales_dir() -> Path:
 
 def _load_translations(lang: str) -> dict:
     """Load translations for a specific language."""
+    lang = _resolve_language(lang)
+
     if lang in _translations_cache:
         return _translations_cache[lang]
 
     locales_dir = _get_locales_dir()
     file_path = locales_dir / f"{lang}.json"
-
-    if not file_path.exists():
-        # Fallback to default language
-        file_path = locales_dir / f"{DEFAULT_LANGUAGE}.json"
-        lang = DEFAULT_LANGUAGE
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
@@ -102,7 +115,7 @@ class Translator:
 
     def __init__(self, lang: str = DEFAULT_LANGUAGE):
         """Initialize translator with a language."""
-        self.lang = lang if lang in SUPPORTED_LANGUAGES else DEFAULT_LANGUAGE
+        self.lang = _resolve_language(lang)
 
     def __call__(self, key: str, **kwargs: Any) -> str:
         """Get translated text."""
@@ -110,5 +123,4 @@ class Translator:
 
     def set_language(self, lang: str) -> None:
         """Set the current language."""
-        if lang in SUPPORTED_LANGUAGES:
-            self.lang = lang
+        self.lang = _resolve_language(lang)
