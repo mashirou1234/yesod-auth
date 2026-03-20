@@ -403,9 +403,9 @@ class TestWebhookConfigValidation:
             default_path.unlink()
             override_path.unlink()
 
-    @pytest.mark.parametrize("invalid_backoff_ms", [0, -1])
-    def test_retry_backoff_ms_non_positive_raises_startup_error(self, invalid_backoff_ms: int):
-        """retry_backoff_ms が 0 以下なら起動時に設定エラーとする。"""
+    @pytest.mark.parametrize("invalid_backoff_ms", [-1])
+    def test_retry_backoff_ms_negative_raises_startup_error(self, invalid_backoff_ms: int):
+        """retry_backoff_ms が負値なら起動時に設定エラーとする。"""
         config = {
             "endpoints": [
                 {
@@ -428,6 +428,103 @@ class TestWebhookConfigValidation:
             with patch.object(config_module, "CONFIG_PATH", config_path):
                 WebhookConfigLoader._config = None
                 with pytest.raises(ValueError, match="settings\\.retry_backoff_ms"):
+                    WebhookConfigLoader.load()
+        finally:
+            config_path.unlink()
+
+    @pytest.mark.parametrize(
+        ("retry_backoff_ms", "error_key"),
+        [
+            ([], "settings.retry_backoff_ms"),
+            ([100, -1, 300], "settings.retry_backoff_ms\\[1\\]"),
+            ([300, 100, 500], "settings.retry_backoff_ms\\[1\\]"),
+        ],
+    )
+    def test_retry_backoff_ms_list_invalid_cases_raise_startup_error(
+        self,
+        retry_backoff_ms: list[int],
+        error_key: str,
+    ):
+        """retry_backoff_ms 配列が非負・単調増加でなければ起動時に設定エラーとする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_backoff_ms": retry_backoff_ms,
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                with pytest.raises(ValueError, match=error_key):
+                    WebhookConfigLoader.load()
+        finally:
+            config_path.unlink()
+
+    def test_retry_backoff_ms_list_non_decreasing_is_accepted(self):
+        """retry_backoff_ms 配列が非負かつ単調増加なら設定を受理する。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_backoff_ms": [100, 100, 300, 500],
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                loaded = WebhookConfigLoader.load()
+            assert loaded.settings.retry_base_delay_seconds == 2
+        finally:
+            config_path.unlink()
+
+    def test_retry_delay_bounds_invalid_order_raises_startup_error(self):
+        """retry_max_delay_seconds が retry_base_delay_seconds 未満なら設定エラーにする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_base_delay_seconds": 10,
+                "retry_max_delay_seconds": 5,
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                with pytest.raises(ValueError, match="settings\\.retry_max_delay_seconds"):
                     WebhookConfigLoader.load()
         finally:
             config_path.unlink()

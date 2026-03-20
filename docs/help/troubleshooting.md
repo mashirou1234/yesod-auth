@@ -456,6 +456,11 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
      - "user_created"  # 間違い
    ```
 
+4. 起動時に `settings.retry_*` エラーが出る場合は設定値の関係を確認
+   - `settings.retry_base_delay_seconds` と `settings.retry_max_delay_seconds` は非負整数
+   - `settings.retry_max_delay_seconds >= settings.retry_base_delay_seconds`
+   - `settings.retry_backoff_ms` を配列で指定する場合は「非負・単調増加（ms）」にする
+
 ---
 
 ### 署名検証に失敗する

@@ -114,12 +114,49 @@ class WebhookConfigLoader:
     @classmethod
     def _validate_settings(cls, settings_data: dict[str, Any]) -> None:
         """Validate webhook settings before applying them."""
+        cls._validate_non_negative_int_setting(settings_data, "retry_base_delay_seconds")
+        cls._validate_non_negative_int_setting(settings_data, "retry_max_delay_seconds")
+
+        retry_base_delay_seconds = settings_data.get("retry_base_delay_seconds", 2)
+        retry_max_delay_seconds = settings_data.get("retry_max_delay_seconds", 60)
+        if retry_max_delay_seconds < retry_base_delay_seconds:
+            raise ValueError(
+                "settings.retry_max_delay_seconds must be greater than or equal to "
+                "settings.retry_base_delay_seconds"
+            )
+
         retry_backoff_ms = settings_data.get("retry_backoff_ms")
         if retry_backoff_ms is None:
             return
 
-        if not isinstance(retry_backoff_ms, int) or retry_backoff_ms <= 0:
-            raise ValueError("settings.retry_backoff_ms must be a positive integer")
+        if isinstance(retry_backoff_ms, int):
+            if retry_backoff_ms < 0:
+                raise ValueError("settings.retry_backoff_ms must be a non-negative integer")
+            return
+
+        if not isinstance(retry_backoff_ms, list) or not retry_backoff_ms:
+            raise ValueError("settings.retry_backoff_ms must be a non-empty array of integers")
+
+        prev_value = -1
+        for idx, value in enumerate(retry_backoff_ms):
+            if not isinstance(value, int) or value < 0:
+                raise ValueError(
+                    f"settings.retry_backoff_ms[{idx}] must be a non-negative integer"
+                )
+            if idx > 0 and value < prev_value:
+                raise ValueError(
+                    f"settings.retry_backoff_ms[{idx}] must be greater than or equal to "
+                    f"settings.retry_backoff_ms[{idx - 1}]"
+                )
+            prev_value = value
+
+    @staticmethod
+    def _validate_non_negative_int_setting(settings_data: dict[str, Any], key: str) -> None:
+        value = settings_data.get(key)
+        if value is None:
+            return
+        if not isinstance(value, int) or value < 0:
+            raise ValueError(f"settings.{key} must be a non-negative integer")
 
     @classmethod
     def reload(cls) -> WebhookConfig:
