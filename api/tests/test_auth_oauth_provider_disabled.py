@@ -66,3 +66,12 @@ def test_oauth_provider_case_variant_passes_when_credentials_exist(monkeypatch):
     monkeypatch.setattr(auth_router_module.settings, "GITHUB_CLIENT_SECRET", "dummy-secret")
 
     auth_router_module._ensure_provider_enabled("GitHub")
+
+
+def test_oauth_unknown_provider_normalizes_case_before_400():
+    """Unknown mixed-case provider input should keep stable detail."""
+    with pytest.raises(auth_router_module.HTTPException) as exc_info:
+        auth_router_module._ensure_provider_enabled("UnKnown")
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "Unsupported OAuth provider 'unknown'."

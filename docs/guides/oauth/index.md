@@ -15,6 +15,25 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 | [Slack](slack.md) | - | ✅ | ✅ | |
 | [Twitch](twitch.md) | - | ✅ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
 
+## provider別必須環境変数一覧
+
+実OAuthで必要なのは、`jwt_secret` と「有効化して使う provider 分の `*_client_id` / `*_client_secret`」だけです。
+`MOCK_OAUTH_ENABLED=1` はローカル疎通用であり、実運用では `MOCK_OAUTH_ENABLED=0` を使用します。
+
+| provider | 必須 secret 名 | 環境変数名（secret未使用時） | 個別ガイド |
+|---|---|---|---|
+| Google | `google_client_id` / `google_client_secret` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [google.md](google.md) |
+| GitHub | `github_client_id` / `github_client_secret` | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | [github.md](github.md) |
+| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | [discord.md](discord.md) |
+| X (Twitter) | `x_client_id` / `x_client_secret` | `X_CLIENT_ID` / `X_CLIENT_SECRET` | [x.md](x.md) |
+| LinkedIn | `linkedin_client_id` / `linkedin_client_secret` | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | [linkedin.md](linkedin.md) |
+| Facebook | `facebook_client_id` / `facebook_client_secret` | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | [facebook.md](facebook.md) |
+| Slack | `slack_client_id` / `slack_client_secret` | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | [slack.md](slack.md) |
+| Twitch | `twitch_client_id` / `twitch_client_secret` | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [twitch.md](twitch.md) |
+
+一覧の定義元は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) です。
+クイックスタートでの初回導入順は [getting-started](../../getting-started.md#2-シークレットファイルの作成) を参照してください。
+
 ### PKCEについて
 
 PKCE（Proof Key for Code Exchange）は、認可コード横取り攻撃を防ぐためのセキュリティ拡張です。
@@ -74,6 +93,24 @@ OAuthプロバイダーを「有効化できているか」を、次の順序で
    `GET /api/v1/auth/{provider}` で認可画面へ遷移できることを確認し、失敗時は [トラブルシューティング](../../help/troubleshooting.md) を参照します。
 6. 時刻同期を確認する（self-host）
    OAuth認可コードは短命なため、ホスト時刻のずれで `invalid_grant` が発生します。`timedatectl status` で NTP 同期状態を確認し、ずれがある場合は [clock skew 診断](../../help/troubleshooting.md#oauth-clock-skew) を参照してください。
+
+### provider切替時の確認フロー
+
+既存プロバイダー（例: Google）から別プロバイダー（例: GitHub）へ切り替えるときは、次の順で確認してください。
+
+1. 切替対象を1つに固定する
+   同時に複数プロバイダーを切り替えず、今回有効化する provider 名を1つ決めます。
+2. 新プロバイダーの secret 2点を追加する
+   `secrets/<provider>_client_id.txt` と `secrets/<provider>_client_secret.txt` を作成し、値を設定します。名称規約は [OAuth認証情報](../../installation.md#oauth-credentials) に合わせます。
+3. Compose 定義へ mount を追加する
+   `docker-compose.override.yml` で `api`（必要なら `api-ci` も）に対象 provider の secret を追加し、`docker compose config` で反映を確認します。
+4. callback URL を新プロバイダー管理画面へ反映する
+   `https://<api-domain>/api/v1/auth/<provider>/callback` を登録し、旧 provider の callback 設定と混在しないことを確認します。
+5. 新プロバイダー導線だけで疎通確認する
+   `GET /api/v1/auth/<provider>` から認可画面へ遷移できることを確認し、失敗時は [invalid_client 診断](../../help/troubleshooting.md#401-unauthorized--invalid_client) と [state mismatch 診断](../../help/troubleshooting.md#state-mismatch-flow) の順で切り分けます。
+
+!!! tip "旧プロバイダーの扱い"
+    旧プロバイダーを無効化する場合は、対応する secret mount を Compose から削除したうえで再起動し、`docker compose config --services` と API ログで不要 provider の導線が呼ばれていないことを確認してください。
 
 ### config / secrets の参照関係（要点）
 

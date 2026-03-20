@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, call, patch
 
 import pytest
 from hypothesis import given, settings
@@ -147,6 +147,47 @@ class TestWebhookWorkerRetry:
             assert result.attempt_count == 1
 
     @pytest.mark.asyncio
+    async def test_no_retry_on_4xx_logs_signature_algorithm(
+        self,
+        caplog,
+        sample_endpoint,
+        sample_event,
+        sample_config,
+    ):
+        """4xx の失敗ログに署名アルゴリズム名を含める。"""
+        worker = WebhookWorker()
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 401
+        mock_response.text = "invalid signature"
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=sample_config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            caplog.at_level("WARNING", logger="app.webhooks.worker"),
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            result = await worker._deliver_to_endpoint(sample_event, sample_endpoint)
+
+        assert result.success is False
+        assert result.attempt_count == 1
+        assert result.signature_algorithm == "sha256"
+        client_error_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if "failed with client error" in record.getMessage()
+        )
+        assert "signature_algo=sha256" in client_error_log
+
+    @pytest.mark.asyncio
     async def test_retry_on_5xx(self, sample_endpoint, sample_event, sample_config):
         """Test that 5xx errors trigger retries."""
         worker = WebhookWorker()
@@ -229,7 +270,46 @@ class TestWebhookWorkerRetry:
         assert f"endpoint_id={sample_endpoint.id}" in exhausted_log
         assert f"event_id={sample_event.event_id}" in exhausted_log
         assert "attempts=3" in exhausted_log
+        assert "signature_algo=sha256" in exhausted_log
         assert "error=Server Error" in exhausted_log
+
+    @pytest.mark.asyncio
+    async def test_retry_backoff_respects_max_delay(self, sample_endpoint, sample_event):
+        """指数バックオフ遅延は retry_max_delay_seconds で上限化される。"""
+        worker = WebhookWorker()
+        capped_config = WebhookConfig(
+            endpoints=[sample_endpoint],
+            settings=WebhookSettings(
+                max_retries=4,
+                retry_base_delay_seconds=10,
+                retry_max_delay_seconds=15,
+                delivery_timeout_seconds=5,
+            ),
+        )
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server Error"
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=capped_config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            patch("app.webhooks.worker.asyncio.sleep", new_callable=AsyncMock) as mock_sleep,
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            result = await worker._deliver_to_endpoint(sample_event, sample_endpoint)
+
+        assert result.success is False
+        assert result.attempt_count == 5
+        assert mock_sleep.await_args_list == [call(10), call(15), call(15), call(15)]
 
 
 class TestWebhookWorkerOrdering:

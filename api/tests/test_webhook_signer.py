@@ -186,6 +186,42 @@ class TestWebhookSigner:
             is False
         )
 
+    def test_verify_with_error_classifies_unsupported_algorithm(self):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        timestamp = 1_700_000_000
+        signature = "sha1=deadbeef"
+
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+            current_timestamp=timestamp,
+        )
+
+        assert result.ok is False
+        assert result.error_code == "unsupported_signature_algorithm"
+        assert result.message == "Unsupported signature algorithm: sha1"
+
+    def test_verify_with_error_keeps_success_path_compatible(self):
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        secret = "test-secret-key"
+        timestamp = 1_700_000_000
+        signature, _ = WebhookSigner.sign(payload, secret, timestamp)
+
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+            current_timestamp=timestamp,
+        )
+
+        assert result.ok is True
+        assert result.error_code is None
+        assert result.message is None
+
     def test_get_headers_includes_all_required_headers(self):
         """
         Test that get_headers returns all required HTTP headers.

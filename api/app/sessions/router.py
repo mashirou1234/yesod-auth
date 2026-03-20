@@ -3,10 +3,11 @@
 import uuid
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import AuditLogger, AuthEventType
 from app.auth.jwt import get_current_user
 from app.db.session import get_db
 from app.models import RefreshToken, User
@@ -14,15 +15,34 @@ from app.models import RefreshToken, User
 from .schemas import RevokeResponse, SessionListResponse, SessionResponse
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
+SESSIONS_LIMIT_MAX = 1000
+SESSIONS_LIMIT_EXCEEDED_CODE = "SESSIONS_LIMIT_EXCEEDED"
+
+
+def _get_client_info(request: Request) -> tuple[str | None, str | None]:
+    """Extract device info and IP address from request."""
+    device_info = request.headers.get("User-Agent")
+    ip_address = request.client.host if request.client else None
+    return device_info, ip_address
 
 
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     current_user: User = Depends(get_current_user),
-    limit: int = Query(100, ge=1, le=1000, description="Maximum results"),
+    limit: int = Query(100, ge=1, description="Maximum results"),
     db: AsyncSession = Depends(get_db),
 ):
     """List all active sessions for current user."""
+    if limit > SESSIONS_LIMIT_MAX:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "code": SESSIONS_LIMIT_EXCEEDED_CODE,
+                "message": f"limit must be less than or equal to {SESSIONS_LIMIT_MAX}",
+                "max_limit": SESSIONS_LIMIT_MAX,
+            },
+        )
+
     result = await db.execute(
         select(RefreshToken)
         .where(
@@ -55,27 +75,43 @@ async def list_sessions(
 
 @router.delete("/{session_id}", response_model=RevokeResponse)
 async def revoke_session(
+    request: Request,
     session_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke a specific session."""
+    device_info, ip_address = _get_client_info(request)
     result = await db.execute(
         select(RefreshToken).where(
             and_(
                 RefreshToken.id == session_id,
                 RefreshToken.user_id == current_user.id,
-                RefreshToken.is_revoked.is_(False),
             )
         )
     )
     session = result.scalar_one_or_none()
 
     if not session:
-        raise HTTPException(status_code=404, detail="Session not found or already revoked")
+        raise HTTPException(status_code=404, detail="Session not found")
 
-    session.is_revoked = True
-    await db.commit()
+    already_revoked = session.is_revoked
+    if not already_revoked:
+        session.is_revoked = True
+        await db.commit()
+
+    await AuditLogger.log_event(
+        db,
+        AuthEventType.SESSION_REVOKED,
+        current_user.id,
+        {
+            "audit_key": "session_id",
+            "session_id": str(session_id),
+            "already_revoked": already_revoked,
+        },
+        ip_address,
+        device_info,
+    )
 
     return RevokeResponse(
         message="Session revoked successfully",
