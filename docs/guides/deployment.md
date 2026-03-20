@@ -126,6 +126,15 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
 
 プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
 
+### ロールバック発動条件（先に判定）
+
+次のいずれかに該当した場合は、新シークレットの調査を継続せず、先にロールバックへ移行します。
+
+1. `invalid_client` / `401` が切替直後から継続し、認証開始を再実行しても解消しない
+2. provider 管理画面の callback URL と実運用 URL（`/api/v1/auth/{provider}/callback`）が一致しない
+3. API 再起動後に secret 読み込みエラーまたは OAuth 初期化失敗が発生する
+4. `/health` が期待値 `200` に戻らない
+
 ### 運用前提の整合チェック（必須）
 
 本番切替前に、次の3点を必ず同時に確認してください。
@@ -177,11 +186,22 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
 
 ### 失敗時のロールバック（最小3ステップ）
 
-1. 旧シークレットへ即時切り戻し（更新前バックアップを復元）
-2. API を再起動/再デプロイして旧シークレットを再読込
-3. `curl https://api.your-domain.com/health` と `/api/v1/auth/{provider}` への到達を再確認
+実行順は必ず固定し、途中で確認項目を飛ばさないでください。
+
+1. **旧シークレットへ即時切り戻し**（更新前バックアップを復元）
+2. **API を再起動/再デプロイ** して旧シークレットを再読込
+3. **疎通確認を実施**（`curl https://api.your-domain.com/health` と `/api/v1/auth/{provider}`）
+4. **callback URL 一致を再確認**（provider 管理画面と実運用 URL）
 
 ロールバック後の追加確認は「ロールバック時の最小確認項目」を参照してください。
+
+### 受け入れ基準（運用レビュー）
+
+ローテーション失敗時の手順変更をレビューする場合は、次を満たしていることを受け入れ条件とします。
+
+1. ロールバック条件と実行順が明文化されている
+2. `MOCK_OAUTH_ENABLED` / provider secrets / callback URL の確認項目が含まれている
+3. FAQ / installation / troubleshooting の三点同期チェックが記載されている
 
 ### docs 三点同期チェック（運用記録用）
 
