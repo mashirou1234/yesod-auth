@@ -97,6 +97,25 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
     return device_info, ip_address
 
 
+async def _rotate_refresh_token_with_retry(
+    db: AsyncSession,
+    refresh_token: str,
+    device_info: str | None,
+    ip_address: str | None,
+):
+    """Retry refresh token rotation on transient failures."""
+    max_retries = max(0, int(getattr(settings, "TOKEN_REFRESH_MAX_RETRIES", 3)))
+    last_error = None
+    for _attempt in range(max_retries + 1):
+        try:
+            return await rotate_refresh_token(db, refresh_token, device_info, ip_address)
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+    if last_error is not None:
+        raise last_error
+    return None
+
+
 def _get_request_id(request: Request) -> str:
     """Extract request-id header or generate a fallback ID."""
     request_id = request.headers.get("X-Request-Id")
@@ -1053,7 +1072,9 @@ async def refresh_tokens(
     """Refresh access token using refresh token (with rotation)."""
     device_info, ip_address = _get_client_info(request)
 
-    result = await rotate_refresh_token(db, body.refresh_token, device_info, ip_address)
+    result = await _rotate_refresh_token_with_retry(
+        db, body.refresh_token, device_info, ip_address
+    )
 
     if not result:
         token_status = await classify_refresh_token_failure(db, body.refresh_token)
