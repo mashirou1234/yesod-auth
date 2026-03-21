@@ -60,6 +60,8 @@ services:
       - google_client_secret
       - github_client_id
       - github_client_secret
+      - linkedin_client_id
+      - linkedin_client_secret
       - discord_client_id
       - discord_client_secret
       - x_client_id
@@ -106,6 +108,8 @@ services:
       - google_client_secret
       - github_client_id
       - github_client_secret
+      - linkedin_client_id
+      - linkedin_client_secret
       - discord_client_id
       - discord_client_secret
       - x_client_id
@@ -166,6 +170,10 @@ secrets:
     file: ./secrets/github_client_id.txt
   github_client_secret:
     file: ./secrets/github_client_secret.txt
+  linkedin_client_id:
+    file: ./secrets/linkedin_client_id.txt
+  linkedin_client_secret:
+    file: ./secrets/linkedin_client_secret.txt
   discord_client_id:
     file: ./secrets/discord_client_id.txt
   discord_client_secret:
