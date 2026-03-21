@@ -354,9 +354,14 @@ curl http://localhost:8000/api/v1/admin/webhooks/deliveries
   コマンド: `ls secrets/*client_id.txt secrets/*client_secret.txt secrets/jwt_secret.txt`
   確認基準: 使うプロバイダー分の `client_id/client_secret` と `jwt_secret` が不足なく存在する。
 - [ ] OAuth callback URL の登録値を確認する
-  確認場所: 各プロバイダー管理画面の Redirect/Callback URL 設定
+  手順:
+  1. 期待値を組み立てる（`google` は利用する provider 名へ置換）
+     コマンド: `API_BASE_URL=http://localhost:8000 PROVIDER=google echo "${API_BASE_URL}/api/v1/auth/${PROVIDER}/callback"`
+  2. provider 管理画面（Redirect/Callback URL 設定）を開く
+     確認場所: 各プロバイダー管理画面の OAuth クライアント設定
+  3. 管理画面の登録値と 1 の出力結果を照合する
+     確認基準: スキーム/ホスト/ポート/パスが完全一致し、末尾 `/` が付かない
   参照先: [OAuth設定ガイド](guides/oauth/index.md) と各プロバイダー節（`docs/guides/oauth/*.md`）
-  確認基準: `http://localhost:8000/api/v1/auth/<provider>/callback` と完全一致（スキーム/ホスト/ポート/パス）。
 - [ ] API が正常起動しているか確認する
   コマンド: `curl http://localhost:8000/health`
   確認基準: `{"status":"healthy"}` が返る。
