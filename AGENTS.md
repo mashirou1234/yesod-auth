@@ -4,5 +4,6 @@
 - まず `artifacts/` を確認して前回結果を把握する
 - `scripts/orch.sh` を使う自動レーンでは必ず 1 run 1 issue を守る
 - 手動レーン（Power User の直接対応）は一括処理可。ただし `codex:queue` 系ラベル遷移の整合は維持する
+- Project 併用 repo では、queue 着手前に linked Project の status / priority を確認する
 - 失敗時は issue コメントと `codex:blocked` を付与する
-- マルチオーケストレーションでは `codex:pr-opened` の滞留を成功扱いで放置しない。required check 未到着、auto-merge 未成立、競合を切り分け、必要なら `codex:blocked`・再キュー・手動介入へ進める
+- `codex:pr-opened` の Issue は merge 確認後の reconcile で close する
