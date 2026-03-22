@@ -22,5 +22,9 @@ async def test_missing_bearer_token_returns_fixed_contract(
     response = await getattr(client, method)(path, **kwargs)
 
     assert response.status_code == 401
-    assert response.json() == {"detail": "Not authenticated"}
-
+    assert response.json() == {
+        "detail": {
+            "code": "missing_bearer_token",
+            "message": "Not authenticated",
+        }
+    }
