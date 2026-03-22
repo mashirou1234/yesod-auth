@@ -421,27 +421,38 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
    docker compose logs api --since=30m | rg -n "429|Too Many Requests|/api/v1/auth/"
    ```
 
-2. 現在の制限値と参照元を確認する
+2. 同一経路で再現し、`X-RateLimit-*` ヘッダを採取する
+   ```bash
+   curl -i -X POST "http://localhost:8000/api/v1/auth/refresh" \
+     -H "Content-Type: application/json" \
+     -d '{"refresh_token":"<refresh_token>"}' | rg -n "HTTP/|X-RateLimit|Retry-After|detail"
+   ```
+   - `X-RateLimit-Remaining=0`: 現在ウィンドウで上限到達
+   - `X-RateLimit-Reset` / `Retry-After`: 再試行可能時刻の目安
+
+3. 現在の制限値と参照元を確認する
    - 参照元: `api/app/auth/rate_limit.py`
    - 制限値: `settings.RATE_LIMIT_PER_MINUTE`（`default_limits=[f"{settings.RATE_LIMIT_PER_MINUTE}/minute"]`）
    - ストレージ: `settings.VALKEY_URL`（レート制限カウンタ保存先）
 
-3. 実行環境の設定値が意図どおりか確認する
+4. 実行環境の設定値が意図どおりか確認する
    ```bash
    docker compose exec api env | rg -n "RATE_LIMIT_PER_MINUTE|VALKEY_URL"
    ```
 
-4. Valkey 側の疎通とエラー有無を確認する
+5. Valkey 側の疎通とエラー有無を確認する
    ```bash
    docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
-   docker compose logs valkey --since=30m
+   docker compose logs valkey --since=30m | rg -n "error|timeout|OOM|evicted|fail|refused"
    ```
 
-**対処の目安:**
+**判断の目安（10分で判定）:**
 
-- バースト的なアクセスが原因: クライアント側の再試行間隔を延ばす
-- 設定値が過小: `RATE_LIMIT_PER_MINUTE` を運用実態に合わせて調整
-- Valkey 障害が疑われる: Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認
+| 観測シグナル | 想定原因 | 最初の対処 |
+| --- | --- | --- |
+| `X-RateLimit-Remaining=0` かつ Valkey 異常なし | 正常な制限発動（アクセス集中） | `Retry-After` に従って再試行、クライアントのバックオフ間隔を拡大 |
+| 低負荷でも 429 が継続し `RATE_LIMIT_PER_MINUTE` が小さい | 制限値が運用実態に対して過小 | `RATE_LIMIT_PER_MINUTE` を段階的に引き上げて再検証 |
+| 429 と同時刻に Valkey エラー/疎通不良 | カウンタストア障害 | Valkey 復旧後に再試行し、429/接続エラーの再発有無を確認 |
 
 <a id="users-pagination-limit-check"></a>
 
