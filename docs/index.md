@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | :material-shield-check: **OAuth 2.0対応** | :material-refresh: **トークンローテーション** |
-| OAuthガイドで扱う8プロバイダー（Google、GitHub、Discord、X (Twitter)、LinkedIn、Facebook、Slack、Twitch）の設定手順を提供。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
+| OAuthガイドで扱う8プロバイダー（Google、GitHub、X (Twitter)、LinkedIn、Facebook、Discord、Slack、Twitch）の設定手順を提供。PKCEによるセキュアな認証フロー | リフレッシュトークンの自動ローテーションでセキュリティを強化 |
 | :material-webhook: **Webhook連携** | :material-docker: **Docker対応** |
 | ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
@@ -36,10 +36,20 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 主要ドキュメント:
 
-- [Quick Start](index.md#クイックスタート)
+- [Quick Start](getting-started.md)
 - [OAuth設定ガイド](guides/oauth/index.md)
 
 起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
+
+## 表記統一サマリー（レビュー用）
+
+`docs/index.md` と [OAuth設定ガイド](guides/oauth/index.md) の対応表記を、次のルールで同期しています。
+
+| 項目 | 統一表記 |
+|---|---|
+| provider 並び順 | Google → GitHub → X (Twitter) → LinkedIn → Facebook → Discord → Slack → Twitch |
+| provider 名称 | `X (Twitter)` を含め、各ページで同一の表記を使用 |
+| 主要導線 | Quick Start は `docs/getting-started.md`、OAuth Guide は `docs/guides/oauth/index.md` を案内 |
 
 ## API認証トラブル時の参照順
 
@@ -89,23 +99,6 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 
 OAuth provider を追加する場合は、先に[事前チェックリスト](installation.md#oauth-provider追加時の事前チェック)を実施してください。
 
-## 学習順ガイド（導入→API→運用）
-
-「まず動かす」「API仕様を確認する」「運用手順を固める」の順に進めると、オンボーディングと本番準備を並行しやすくなります。
-
-1. 導入
-   - [インストール](installation.md)
-   - [クイックスタート](getting-started.md)
-   - [OAuth設定ガイド](guides/oauth/index.md)
-2. API
-   - [認証API](api/auth.md)
-   - [ユーザーAPI](api/users.md)
-   - [Webhook API](api/webhooks.md)
-3. 運用
-   - [デプロイガイド](guides/deployment.md)
-   - [トラブルシューティング](help/troubleshooting.md)
-   - [FAQ](help/faq.md)
-
 ## アーキテクチャ
 
 ```
@@ -131,9 +124,6 @@ OAuth provider を追加する場合は、先に[事前チェックリスト](in
   <a href="guides/oauth/github.md" title="GitHub">
     <img src="assets/icons/github.svg" alt="GitHub" width="48" height="48">
   </a>
-  <a href="guides/oauth/discord.md" title="Discord">
-    <img src="assets/icons/discord.svg" alt="Discord" width="48" height="48">
-  </a>
   <a href="guides/oauth/x.md" title="X (Twitter)">
     <img src="assets/icons/x.svg" alt="X (Twitter)" width="48" height="48">
   </a>
@@ -142,6 +132,9 @@ OAuth provider を追加する場合は、先に[事前チェックリスト](in
   </a>
   <a href="guides/oauth/facebook.md" title="Facebook">
     <img src="assets/icons/facebook.svg" alt="Facebook" width="48" height="48">
+  </a>
+  <a href="guides/oauth/discord.md" title="Discord">
+    <img src="assets/icons/discord.svg" alt="Discord" width="48" height="48">
   </a>
   <a href="guides/oauth/slack.md" title="Slack">
     <img src="assets/icons/slack.svg" alt="Slack" width="48" height="48">
