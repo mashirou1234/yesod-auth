@@ -24,7 +24,12 @@ async def test_sessions_endpoints_require_authorization_header(
     response = await getattr(client, method)(path)
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Not authenticated"
+    assert response.json() == {
+        "detail": {
+            "code": "missing_bearer_token",
+            "message": "Not authenticated",
+        }
+    }
 
 
 @pytest.mark.asyncio

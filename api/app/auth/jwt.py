@@ -20,6 +20,7 @@ settings = get_settings()
 security = HTTPBearer(auto_error=False)
 
 MISSING_BEARER_TOKEN_DETAIL = "Not authenticated"
+MISSING_BEARER_TOKEN_CODE = "missing_bearer_token"
 INVALID_TOKEN_HEADER_CODE = "invalid_token_header"
 INVALID_TOKEN_HEADER_MESSAGE = "Invalid token header"
 
@@ -28,7 +29,10 @@ def _missing_bearer_token_exception() -> HTTPException:
     """Return a fixed auth error for missing Authorization bearer token."""
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=MISSING_BEARER_TOKEN_DETAIL,
+        detail={
+            "code": MISSING_BEARER_TOKEN_CODE,
+            "message": MISSING_BEARER_TOKEN_DETAIL,
+        },
         headers={"WWW-Authenticate": "Bearer"},
     )
 

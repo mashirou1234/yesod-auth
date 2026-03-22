@@ -72,7 +72,10 @@ curl -sS -H "Authorization: Bearer ${TOKEN}" \
 
 ```json
 {
-  "detail": "Not authenticated"
+  "detail": {
+    "code": "missing_bearer_token",
+    "message": "Not authenticated"
+  }
 }
 ```
 
