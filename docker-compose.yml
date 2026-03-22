@@ -66,6 +66,8 @@ services:
       - linkedin_client_secret
       - discord_client_id
       - discord_client_secret
+      - twitch_client_id
+      - twitch_client_secret
       - x_client_id
       - x_client_secret
       - jwt_secret
@@ -116,6 +118,8 @@ services:
       - linkedin_client_secret
       - discord_client_id
       - discord_client_secret
+      - twitch_client_id
+      - twitch_client_secret
       - x_client_id
       - x_client_secret
       - jwt_secret
@@ -186,6 +190,10 @@ secrets:
     file: ./secrets/discord_client_id.txt
   discord_client_secret:
     file: ./secrets/discord_client_secret.txt
+  twitch_client_id:
+    file: ./secrets/twitch_client_id.txt
+  twitch_client_secret:
+    file: ./secrets/twitch_client_secret.txt
   x_client_id:
     file: ./secrets/x_client_id.txt
   x_client_secret:
