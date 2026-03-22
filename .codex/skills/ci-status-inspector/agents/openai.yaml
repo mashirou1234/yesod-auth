@@ -1,0 +1,7 @@
+interface:
+  display_name: "CI Status Inspector"
+  short_description: "PR/commit の CI 状態を provider 別に調査する"
+  default_prompt: "Use $ci-status-inspector to identify the CI provider for this failing check and summarize the exact failed pipeline."
+
+policy:
+  allow_implicit_invocation: true
