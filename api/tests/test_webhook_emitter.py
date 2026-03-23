@@ -1,6 +1,7 @@
 """Tests for WebhookEmitter."""
 
 import asyncio
+import logging
 import time
 import uuid
 from unittest.mock import AsyncMock, patch
@@ -146,22 +147,25 @@ class TestWebhookEmitter:
             assert elapsed < 1.0  # Should be much faster than 1 second
 
     @pytest.mark.asyncio
-    async def test_emit_handles_valkey_error(self, mock_valkey, sample_config):
+    async def test_emit_handles_valkey_error(self, mock_valkey, sample_config, caplog):
         """Test that emit() handles Valkey errors gracefully."""
         mock_valkey.rpush = AsyncMock(side_effect=Exception("Connection failed"))
 
-        with (
-            patch("app.webhooks.emitter._is_testing", return_value=False),
-            patch("app.webhooks.emitter.get_valkey", return_value=mock_valkey),
-            patch(
-                "app.webhooks.config.WebhookConfigLoader.get_endpoints_for_event",
-                return_value=sample_config.endpoints,
-            ),
-        ):
-            event = await WebhookEmitter.emit(
-                "user.created",
-                {"user_id": str(uuid.uuid4())},
-            )
+        with caplog.at_level(logging.ERROR, logger="app.webhooks.emitter"):
+            with (
+                patch("app.webhooks.emitter._is_testing", return_value=False),
+                patch("app.webhooks.emitter.get_valkey", return_value=mock_valkey),
+                patch(
+                    "app.webhooks.config.WebhookConfigLoader.get_endpoints_for_event",
+                    return_value=sample_config.endpoints,
+                ),
+            ):
+                event = await WebhookEmitter.emit(
+                    "user.created",
+                    {"user_id": str(uuid.uuid4())},
+                )
 
-            # Should return None on error, not raise
-            assert event is None
+        # Should return None on error, not raise
+        assert event is None
+        assert "event_type=user.created" in caplog.text
+        assert "queue_key=webhook:events" in caplog.text
