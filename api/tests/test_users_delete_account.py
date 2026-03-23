@@ -6,7 +6,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
+from app.main import app
 from app.models import DeletedUser, RefreshToken, User, UserEmail
+
+
+@pytest.fixture(autouse=True)
+def disable_rate_limiter():
+    """Avoid external Redis dependency in account deletion tests."""
+    original_enabled = app.state.limiter.enabled
+    app.state.limiter.enabled = False
+    try:
+        yield
+    finally:
+        app.state.limiter.enabled = original_enabled
 
 
 @pytest.mark.asyncio
