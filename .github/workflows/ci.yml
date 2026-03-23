@@ -40,6 +40,8 @@ jobs:
           echo "ci-github-secret" > secrets/github_client_secret.txt
           echo "ci-x-id" > secrets/x_client_id.txt
           echo "ci-x-secret" > secrets/x_client_secret.txt
+          echo "ci-linkedin-id" > secrets/linkedin_client_id.txt
+          echo "ci-linkedin-secret" > secrets/linkedin_client_secret.txt
           echo "ci-jwt-secret-key" > secrets/jwt_secret.txt
           echo "ci-admin-password" > secrets/admin_password.txt
 
