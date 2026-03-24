@@ -16,6 +16,15 @@ curl -fsS http://localhost:8000/health
 docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_client|401"
 ```
 
+段階ごとの参照先ショートカット:
+
+| 段階 | まず見る場所 | 最小確認コマンド |
+| --- | --- | --- |
+| `health` | [初回起動トラブルシュート](./first-start-troubleshooting.md#症状1-health-が失敗する) | `curl -fsS http://localhost:8000/health` |
+| `auth` | [state mismatch 診断フロー](#state-mismatch-flow) | `docker compose logs api --since=30m \| rg "Invalid state\|/auth/.*/callback"` |
+| `provider` | [`401 Unauthorized` / `invalid_client`](#401-unauthorized--invalid_client) | `docker compose logs --tail=100 api \| rg -n "invalid_client\|401\|client_secret\|client_id"` |
+| `webhook` | [Webhook設定ガイド](../guides/webhooks.md#ローカルテスト) | `curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints` |
+
 ## 起動時のエラー
 
 `secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
