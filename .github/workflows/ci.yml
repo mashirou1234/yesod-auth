@@ -38,6 +38,8 @@ jobs:
           echo "ci-discord-secret" > secrets/discord_client_secret.txt
           echo "ci-github-id" > secrets/github_client_id.txt
           echo "ci-github-secret" > secrets/github_client_secret.txt
+          echo "ci-slack-id" > secrets/slack_client_id.txt
+          echo "ci-slack-secret" > secrets/slack_client_secret.txt
           echo "ci-x-id" > secrets/x_client_id.txt
           echo "ci-x-secret" > secrets/x_client_secret.txt
           echo "ci-jwt-secret-key" > secrets/jwt_secret.txt
