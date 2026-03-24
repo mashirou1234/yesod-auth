@@ -380,12 +380,12 @@ pytest
 
 ### Generated Artifacts Policy
 
-`artifacts/` と `api/.hypothesis/` は再生成可能な生成物のため、Git 管理対象に含めません。
+`artifacts/` と `api/.hypothesis/`、`.codex/skills/` は再生成可能またはローカル専用のため、Git 管理対象に含めません。
 週次棚卸しやレビュー時に未追跡で残っていても、コミット対象へ含めない運用を推奨します。
 
 ```bash
 # 必須エントリの確認（出力されれば設定済み）
-rg -n '^/artifacts/$|^artifacts/\\*\\*$|^api/.hypothesis/$' .gitignore
+rg -n '^/artifacts/$|^artifacts/\\*\\*$|^api/.hypothesis/$|^\\.codex/skills/$' .gitignore
 ```
 
 ## PR Auto-Approve + Auto-Merge
