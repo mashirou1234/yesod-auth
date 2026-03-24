@@ -391,4 +391,5 @@ API認証で問題が発生した場合は、次の順で確認してくださ�
 
 1. [インストール](installation.md#oauth認証情報)で OAuth シークレットの配置と profile を確認する
 2. [クイックスタート](getting-started.md#4-動作確認)で `/health` と `/docs` の到達性を確認する
-3. [トラブルシューティング](help/troubleshooting.md#state-mismatch-flow)で症状別の診断手順を実施する
+3. [トラブルシューティング: 障害時の参照順（最短導線）](help/troubleshooting.md#障害時の参照順最短導線) で `health -> auth -> provider -> webhook` の順に切り分ける
+4. 認証フローの失敗は [state mismatch 診断フロー](help/troubleshooting.md#state-mismatch-flow)、資格情報エラーは [`401 Unauthorized` / `invalid_client`](help/troubleshooting.md#401-unauthorized--invalid_client) を確認する
