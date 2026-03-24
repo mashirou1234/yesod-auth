@@ -479,9 +479,9 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
 2. `limit=1` と `limit=100` を連続実行し、HTTPステータスと件数を比較する
    ```bash
    curl -sS -H "Authorization: Bearer <access_token>" \
-     "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+     "http://localhost:8000/api/v1/sessions?limit=1" | jq '.sessions | length'
    curl -sS -H "Authorization: Bearer <access_token>" \
-     "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+     "http://localhost:8000/api/v1/sessions?limit=100" | jq '.sessions | length'
    ```
 3. 期待値から外れる場合は API ログを確認する
    ```bash
