@@ -22,17 +22,17 @@ TOKEN="<access_token>"
 
 # 最小件数境界
 curl -sS -H "Authorization: Bearer ${TOKEN}" \
-  "http://localhost:8000/api/v1/sessions?limit=1" | jq '.items | length'
+  "http://localhost:8000/api/v1/sessions?limit=1" | jq '.sessions | length'
 
 # 実運用でよく使う上限確認（100件）
 curl -sS -H "Authorization: Bearer ${TOKEN}" \
-  "http://localhost:8000/api/v1/sessions?limit=100" | jq '.items | length'
+  "http://localhost:8000/api/v1/sessions?limit=100" | jq '.sessions | length'
 ```
 
 確認観点:
 
 1. どちらも `200 OK` で返る
-2. `.items | length` が指定した `limit` を超えない
+2. `.sessions | length` が指定した `limit` を超えない
 3. 同一トークンで `GET /api/v1/users/me` も継続して成功する
 
 上限超過時（`limit > 1000`）は `400 Bad Request` を返し、専用エラーコードと上限値を本文に含みます。
