@@ -73,11 +73,22 @@ OAuthプロバイダーを「有効化できているか」を、次の順序で
 5. 起動後に導線で確認する
    `GET /api/v1/auth/{provider}` で認可画面へ遷移できることを確認し、失敗時は [トラブルシューティング](../../help/troubleshooting.md) を参照します。
 
+### 有効化判定の早見表
+
+| 判定ポイント | Yes | No |
+|---|---|---|
+| 利用する provider を決めたか | 次へ進む | 対象 provider を確定してから再開 |
+| `MOCK_OAUTH_ENABLED` の目的が明確か | 次へ進む | [環境変数](../../installation.md#environment-variables) で運用モードを再確認 |
+| 対象 provider の `*_client_id` / `*_client_secret` が両方あるか | 次へ進む | [OAuth認証情報](../../installation.md#oauth-credentials) の名称に合わせて追加 |
+| Compose に対象 provider の secret マウントがあるか | 次へ進む | `docker-compose.override.yml` で `api` / `api-ci` の `secrets` を追加 |
+| `GET /api/v1/auth/{provider}` で認可画面に遷移するか | 有効化完了 | [トラブルシューティング](../../help/troubleshooting.md) で切り分け |
+
 ### config / secrets の参照関係（要点）
 
 - アプリ設定は `api/app/config.py` の `read_secret()` で読み込みます。
 - 優先順位は `Docker Secrets (/run/secrets/<name>)` → `環境変数(<NAME>)` → `既定値` です。
 - そのため、同名を両方設定した場合は Secrets 側が採用されます。
+- 詳細な優先順位の説明は [インストールガイド（環境変数）](../../installation.md#environment-variables) を参照してください。
 
 ### シークレットファイルの配置
 
