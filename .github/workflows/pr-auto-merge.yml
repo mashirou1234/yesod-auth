@@ -22,6 +22,7 @@ jobs:
       - name: Enable auto-merge
         uses: peter-evans/enable-pull-request-automerge@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use a dedicated token when available so workflow-changing PRs can enable auto-merge.
+          token: ${{ secrets.AUTO_MERGE_TOKEN || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: squash
