@@ -209,6 +209,13 @@ environment:
 
 **原因:** OAuth provider の `client_id` または `client_secret` が未設定、または誤っている
 
+#### provider secret 未設定（`client_id`/`client_secret` 欠損）
+
+**想定エラー例:**
+
+- `401 Unauthorized`
+- `{"detail":"OAuth callback failed: invalid_client"}`
+
 **確認事項:**
 
 1. provider 用シークレットファイルの中身を確認
@@ -219,6 +226,12 @@ environment:
 2. APIログで provider 側エラーを確認
    ```bash
    docker compose logs --tail=100 api | rg -n "invalid_client|401|client_secret|client_id"
+   ```
+
+3. `yesod-*` コンテナ名で発生ログを確認
+   ```bash
+   docker logs yesod-api --since=30m | rg -n "invalid_client|401|client_secret|client_id"
+   docker compose ps | rg -n "yesod-api|yesod-admin"
    ```
 
 **解決策:**
