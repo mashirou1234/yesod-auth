@@ -32,16 +32,28 @@ def test_read_secret_falls_back_to_env_when_secret_file_missing(monkeypatch):
     """Environment variable is used when secret file does not exist."""
     monkeypatch.setenv("JWT_SECRET", "env-value")
 
-    with patch("app.config.os.path.exists", return_value=False):
+    with patch("app.config.os.path.exists", return_value=False), patch("builtins.open") as mock_file:
         assert read_secret("jwt_secret", "default-value") == "env-value"
+        mock_file.assert_not_called()
 
 
 def test_read_secret_falls_back_to_default_when_secret_and_env_missing(monkeypatch):
     """Default value is used when both secret file and environment are absent."""
     monkeypatch.delenv("JWT_SECRET", raising=False)
 
-    with patch("app.config.os.path.exists", return_value=False):
+    with patch("app.config.os.path.exists", return_value=False), patch("builtins.open") as mock_file:
         assert read_secret("jwt_secret", "default-value") == "default-value"
+        mock_file.assert_not_called()
+
+
+def test_read_secret_strips_trailing_whitespace_from_secret_file(monkeypatch):
+    """Trailing whitespace in secret files must be removed."""
+    monkeypatch.setenv("JWT_SECRET", "env-value")
+
+    with patch("app.config.os.path.exists", return_value=True), patch(
+        "builtins.open", mock_open(read_data="file-value  \n\n")
+    ):
+        assert read_secret("jwt_secret", "default-value") == "file-value"
 
 
 def test_resolve_cors_origins_uses_default_when_unset():
