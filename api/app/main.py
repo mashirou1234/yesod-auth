@@ -58,11 +58,11 @@ app = FastAPI(
     description="""
 ## OAuth Authentication API
 
-YESOD Auth provides a complete OAuth 2.0 authentication solution with support for multiple providers.
+YESOD Auth provides a complete OAuth 2.0 authentication solution with multi-provider support.
 
 ### Features
 
-- 🔑 **OAuth 2.0** - Eight-provider authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch) with PKCE support
+- 🔑 **OAuth 2.0** - Eight-provider OAuth authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch) with PKCE support
 - 🔄 **Token Rotation** - Secure refresh token rotation
 - 👤 **User Management** - Profile updates, account linking
 - 📊 **Audit Logging** - Complete authentication event tracking
