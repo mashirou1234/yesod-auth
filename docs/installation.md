@@ -377,26 +377,41 @@ docker compose up -d --build
 
 <a id="environment-variables"></a>
 
-### 必須（未設定時に運用影響が出る）
+### 区分付き一覧（必須 / 推奨 / 任意）
 
-| 変数/シークレット | 用途 | 未設定時の症状 | 既定値/補足 |
-|------------------|------|----------------|------------|
-| `DATABASE_URL` | PostgreSQL接続先 | API/管理画面がDB接続エラーで起動失敗、または意図しないDBへ接続 | 開発向け既定値あり。セルフホストでは明示設定推奨 |
-| `VALKEY_URL` | Valkey接続先（state/レート制御） | OAuthの`state mismatch`やセッション関連エラーが発生しやすくなる | 開発向け既定値あり。セルフホストでは明示設定推奨 |
-| `FRONTEND_URL` | OAuth完了後のリダイレクト先 | ログイン後の遷移先が不正になり、認証完了後のUXが壊れる | 既定値 `http://localhost:3000` |
-| `CORS_ORIGINS` | API許可オリジン | ブラウザから`CORS`エラーでAPI呼び出し失敗 | 既定値 `http://localhost:3000,http://localhost:5173` |
-| `jwt_secret` | JWT署名鍵 | トークン検証不整合や`401`が発生。既定値運用はセキュリティ上非推奨 | Docker Secret推奨（`secrets/jwt_secret.txt`） |
-| `<provider>_client_id` / `<provider>_client_secret` | OAuth provider資格情報 | 該当providerで`invalid_client`や認証失敗が発生 | 有効化して使うprovider分のみ必須 |
-
-### 推奨（運用品質・セキュリティ向上）
-
-| 変数名 | 説明 | デフォルト |
-|--------|------|-----------|
-| `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | `900` |
-| `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | `7` |
-| `SESSION_EXPIRY_HOURS` | 管理画面セッション有効期限（時間） | `24` |
+| 区分 | 変数/シークレット | 用途 | 未設定時の症状 | 既定値/補足 |
+|------|-------------------|------|----------------|------------|
+| 必須 | `DATABASE_URL` | PostgreSQL接続先 | API/管理画面がDB接続エラーで起動失敗、または意図しないDBへ接続 | 開発向け既定値あり。セルフホストでは明示設定推奨 |
+| 必須 | `VALKEY_URL` | Valkey接続先（state/レート制御） | OAuthの`state mismatch`やセッション関連エラーが発生しやすくなる | 開発向け既定値あり。セルフホストでは明示設定推奨 |
+| 必須 | `FRONTEND_URL` | OAuth完了後のリダイレクト先 | ログイン後の遷移先が不正になり、認証完了後のUXが壊れる | 既定値 `http://localhost:3000` |
+| 必須 | `CORS_ORIGINS` | API許可オリジン | ブラウザから`CORS`エラーでAPI呼び出し失敗 | 既定値 `http://localhost:3000,http://localhost:5173` |
+| 必須 | `jwt_secret` | JWT署名鍵 | トークン検証不整合や`401`が発生。既定値運用はセキュリティ上非推奨 | Docker Secret推奨（`secrets/jwt_secret.txt`） |
+| 必須 | `<provider>_client_id` / `<provider>_client_secret` | OAuth provider資格情報 | 該当providerで`invalid_client`や認証失敗が発生 | 有効化して使うprovider分のみ必須 |
+| 推奨 | `ACCESS_TOKEN_LIFETIME_SECONDS` | アクセストークン有効期限 | セキュリティポリシーに対して寿命が長すぎる/短すぎる状態になりやすい | `900` |
+| 推奨 | `REFRESH_TOKEN_LIFETIME_DAYS` | リフレッシュトークン有効期限 | 再認証頻度と失効リスクのバランスが運用要件とずれる | `7` |
+| 推奨 | `SESSION_EXPIRY_HOURS` | 管理画面セッション有効期限（時間） | 管理画面セッションが運用要件より長期化/短期化する | `24` |
+| 任意 | `MOCK_OAUTH_ENABLED` | Mock OAuth有効化（アプリ既定値は`0`。`docker compose --profile default`/`ci`ではCompose側で`1`に上書き） | 期待したログイン経路（Mock/実OAuth）と実挙動がずれる | `0` |
+| 任意 | `ADMIN_USER` | 管理者ユーザー名 | 管理画面ログイン時に想定と異なるユーザー名を参照して混乱が起きる | `admin` |
+| 任意 | `DEFAULT_LANGUAGE` | 管理画面デフォルト言語（en, ja, fr, ko, de） | 管理画面の初期表示言語が運用想定と一致しない | `en` |
 
 `CORS_ORIGINS` が未設定または空文字の場合、API起動時に警告ログを出し、開発用デフォルト値（`http://localhost:3000,http://localhost:5173`）で起動します。
+
+### 設定チェック表（記入用）
+
+| 項目 | 区分 | 設定値確認 | 未設定時症状の理解確認 |
+|------|------|------------|------------------------|
+| `DATABASE_URL` | 必須 | ☐ | ☐ |
+| `VALKEY_URL` | 必須 | ☐ | ☐ |
+| `FRONTEND_URL` | 必須 | ☐ | ☐ |
+| `CORS_ORIGINS` | 必須 | ☐ | ☐ |
+| `jwt_secret` | 必須 | ☐ | ☐ |
+| `<provider>_client_id` / `<provider>_client_secret` | 必須 | ☐ | ☐ |
+| `ACCESS_TOKEN_LIFETIME_SECONDS` | 推奨 | ☐ | - |
+| `REFRESH_TOKEN_LIFETIME_DAYS` | 推奨 | ☐ | - |
+| `SESSION_EXPIRY_HOURS` | 推奨 | ☐ | - |
+| `MOCK_OAUTH_ENABLED` | 任意 | ☐ | - |
+| `ADMIN_USER` | 任意 | ☐ | - |
+| `DEFAULT_LANGUAGE` | 任意 | ☐ | - |
 
 ### 環境変数・Secrets の優先順位
 
@@ -459,16 +474,9 @@ docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
 rg -n "REFRESH_TOKEN_LIFETIME_DAYS|/api/v1/auth/refresh|再ログイン" docs/installation.md README.md
 ```
 
-### 任意（要件に応じて設定）
-
-| 変数名 | 説明 | デフォルト |
-|--------|------|-----------|
-| `MOCK_OAUTH_ENABLED` | Mock OAuth有効化（アプリ既定値は`0`。`docker compose --profile default`/`ci`ではCompose側で`1`に上書き） | `0` |
-| `ADMIN_USER` | 管理者ユーザー名 | `admin` |
-| `DEFAULT_LANGUAGE` | 管理画面デフォルト言語（en, ja, fr, ko, de） | `en` |
-
 関連ヘルプ:
 - [トラブルシューティング（認証エラー）](./help/troubleshooting.md#認証エラー)
+- [初回起動トラブルシュート](./help/first-start-troubleshooting.md)
 
 ## OAuth認証情報
 
