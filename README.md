@@ -6,7 +6,10 @@
 
 ## Features
 
-- 🔑 OAuth 2.0 authentication (Google, GitHub, Discord, X, LinkedIn, Facebook, Slack, Twitch)
+- 🔑 OAuth 2.0 authentication for 8 providers (Google, GitHub, X (Twitter), LinkedIn, Facebook, Discord, Slack, Twitch)
+- 🛡️ PKCE-enabled secure OAuth flow
+- 🔄 Refresh token rotation support
+- 📣 Webhook integration for user events
 - 🐳 Docker Compose ready - just add secrets and run
 - 🗄️ PostgreSQL with automatic migrations
 - 🔒 JWT-based session management
@@ -14,6 +17,7 @@
 - 👤 User profile with avatar support
 
 > Source of truth for provider support notation: `docs/guides/oauth/index.md`.
+> Source of truth for top-level feature descriptions: `docs/index.md`.
 
 ## Quick Start
 

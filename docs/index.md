@@ -14,6 +14,7 @@
 | ユーザーイベントを外部サービスにリアルタイム通知 | Docker Composeで簡単にデプロイ |
 
 > 対応プロバイダー表記の参照元（正）は `docs/guides/oauth/index.md` です。
+> 機能説明の参照元（正）は `docs/index.md` とし、`README.md` は本項目へ同期します。
 
 ## クイックスタート
 
