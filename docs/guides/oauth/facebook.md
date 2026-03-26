@@ -48,7 +48,8 @@ echo "your-app-secret" > secrets/facebook_client_secret.txt
   - 失効時の再認可導線（管理者通知または再ログイン誘導）
   - 監査用ログ（更新日時・失敗理由・対象ユーザー）
 - 長期トークンを保存する場合は、`secrets/` 直置きや平文コミットを避け、シークレット管理基盤を利用してください。
-- 障害時は [トラブルシューティング](../../help/troubleshooting.md) の OAuth 再ログイン手順とあわせて確認してください。
+- 監査ログの保持期間・ローテーション方針は [Deployment ガイド](../deployment.md#ログ保全設定例) で先に定義してください。
+- 障害時は [トラブルシューティング](../../help/troubleshooting.md) の「管理者トークン失効で管理APIが `401 Unauthorized` になる」節の再認証導線とあわせて確認してください。
 
 ## 技術仕様
 
