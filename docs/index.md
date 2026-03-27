@@ -16,6 +16,14 @@
 > 対応プロバイダー表記の参照元（正）は `docs/guides/oauth/index.md` です。
 > 機能説明の参照元（正）は `docs/index.md` とし、`README.md` は本項目へ同期します。
 
+## 導入者向け最短導線（3ステップ）
+
+初回導入時は、次の順序で確認すると最短で環境を立ち上げられます。
+
+1. [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
+2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
+3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+
 ## クイックスタート
 
 ```bash
@@ -63,9 +71,8 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 「まず動かす」「API仕様を確認する」「運用手順を固める」の順に進めると、オンボーディングと本番準備を並行しやすくなります。
 
 1. 導入
-   - [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
-   - [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
-   - [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
+   - [導入者向け最短導線（3ステップ）](#導入者向け最短導線3ステップ)を先に実施
+   - 詳細が必要な場合のみ、各ドキュメント内の補足手順へ進む
 2. API
    - [認証API](api/auth.md): login / callback / refresh / logout の入出力を確認
    - [ユーザーAPI](api/users.md): `/api/v1/users` 系の取得・更新フローを確認
