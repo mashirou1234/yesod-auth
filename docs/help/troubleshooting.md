@@ -166,6 +166,15 @@ sqlalchemy.exc.OperationalError: could not connect to server
 | Valkey 接続不安定 | `OAuthStateStore` 参照前後で Valkey エラーが発生 | Valkey を復旧し、`docker compose ps/logs valkey` で安定化確認後に再試行 |
 | OAuth開始とcallbackの環境不一致 | `API_URL` と実アクセス先のホスト/スキームが異なる | 環境変数を一致させて再デプロイし、再度 `/api/v1/auth/{provider}` から開始 |
 
+#### Valkey 失敗分類（`api/app/valkey.py`）
+
+- `Valkey configuration error ... retryable=no`:
+  `VALKEY_URL` や認証情報の不備。再試行前に設定修正を優先する。
+- `Valkey unavailable ... retryable=yes`:
+  接続不能（例: refused / DNS 解決不可）。`docker compose ps/logs valkey` で疎通復旧後に再試行する。
+- `Valkey timeout ... retryable=yes`:
+  一時的な負荷・ネットワーク遅延。Valkey/API ログを確認し、バックオフ付きで再試行する。
+
 ---
 
 ### `Mock OAuth is disabled`
