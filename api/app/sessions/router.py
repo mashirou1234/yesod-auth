@@ -121,10 +121,12 @@ async def revoke_session(
 
 @router.delete("", response_model=RevokeResponse)
 async def revoke_all_sessions(
+    request: Request,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Revoke all sessions for current user."""
+    device_info, ip_address = _get_client_info(request)
     result = await db.execute(
         select(RefreshToken).where(
             and_(
@@ -140,7 +142,21 @@ async def revoke_all_sessions(
 
     await db.commit()
 
+    revoked_count = len(sessions)
+    await AuditLogger.log_event(
+        db,
+        AuthEventType.ALL_SESSIONS_REVOKED,
+        current_user.id,
+        {
+            "audit_key": "revoked_count",
+            "revoked_count": revoked_count,
+            "user_id": str(current_user.id),
+        },
+        ip_address,
+        device_info,
+    )
+
     return RevokeResponse(
-        message=f"Revoked {len(sessions)} sessions",
-        revoked_count=len(sessions),
+        message=f"Revoked {revoked_count} sessions",
+        revoked_count=revoked_count,
     )
