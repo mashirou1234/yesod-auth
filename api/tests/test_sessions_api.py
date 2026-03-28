@@ -1,15 +1,20 @@
 """Sessions API tests."""
 
 import uuid
+from importlib import import_module
+from unittest.mock import AsyncMock
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import AuthEventType
 from app.auth.tokens import create_access_token, create_refresh_token, hash_refresh_token
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
+
+sessions_router_module = import_module("app.sessions.router")
 
 
 @pytest.mark.asyncio
@@ -70,3 +75,36 @@ async def test_revoke_session_is_idempotent_for_same_session_id(
         "session_id": str(session_id),
         "revoked_count": None,
     }
+
+
+@pytest.mark.asyncio
+async def test_revoke_all_sessions_logs_audit_with_revoked_count_and_user_id(
+    client: AsyncClient, db_session: AsyncSession, monkeypatch: pytest.MonkeyPatch
+):
+    """DELETE /api/v1/sessions should emit one all-sessions audit event."""
+    user = User()
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    await create_refresh_token(db_session, user.id)
+    await create_refresh_token(db_session, user.id)
+
+    access_token = create_access_token(str(user.id), "revoke-all-audit@example.com")
+    auth_header = {"Authorization": f"Bearer {access_token}"}
+
+    mock_log_event = AsyncMock()
+    monkeypatch.setattr(sessions_router_module.AuditLogger, "log_event", mock_log_event)
+
+    response = await client.delete("/api/v1/sessions", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json()["revoked_count"] == 2
+    mock_log_event.assert_awaited_once()
+
+    _, event_type, user_id, details, *_ = mock_log_event.await_args.args
+    assert event_type == AuthEventType.ALL_SESSIONS_REVOKED
+    assert user_id == user.id
+    assert details["audit_key"] == "revoked_count"
+    assert details["revoked_count"] == 2
+    assert details["user_id"] == str(user.id)
