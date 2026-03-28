@@ -25,16 +25,25 @@ echo "your-client-secret" > secrets/twitch_client_secret.txt
 
 ## 4. 追加設定の最小手順（セルフホスト向け）
 
+「起動できるがTwitchログインだけ失敗する」状態を避けるため、次の5項目を順に確認します。
+
 1. **Callback URLを実運用値へ更新**
     - ローカル: `http://localhost:8000/api/v1/auth/twitch/callback`
     - 本番: `https://<your-domain>/api/v1/auth/twitch/callback`
-2. **スコープを固定**
-    - YESOD Auth の既定は `openid user:read:email`
-    - Twitch側の設定変更時も、この2つを維持する
-3. **APIコンテナへ secrets を渡す**
-    - `docker-compose.override.yml` で `twitch_client_id` / `twitch_client_secret` を `api` と `api-ci` に追加する
-4. **実OAuthモードを有効化**
-    - `MOCK_OAUTH_ENABLED=0`（または未設定）を確認する
+2. **Client ID / Client Secret を secrets に配置**
+    - `secrets/twitch_client_id.txt`
+    - `secrets/twitch_client_secret.txt`
+3. **APIコンテナへ secrets をマウント**
+    - `docker-compose.override.yml` で `twitch_client_id` / `twitch_client_secret` を `api` と `api-ci` に追加
+4. **実OAuthモードへ切替**
+    - `MOCK_OAUTH_ENABLED=0`（または未設定）を確認
+5. **スコープを固定**
+    - YESOD Auth の既定: `openid user:read:email`
+    - Twitch側の設定変更時もこの2つを維持
+
+補足:
+- OAuth設定全体の共通方針は [OAuth設定ハブ](index.md) を参照してください。
+- 初回導入時の起動確認は [クイックスタート](../../getting-started.md) の手順と同じです。
 
 ### docker-compose.override.yml の最小例
 
@@ -59,7 +68,7 @@ secrets:
 ### 最小確認手順
 
 ```bash
-# 1) API起動確認
+# 1) API起動確認（200 + {"status":"healthy"}）
 curl -fsS http://localhost:8000/health
 
 # 2) Twitch OAuth導線確認（302想定）
