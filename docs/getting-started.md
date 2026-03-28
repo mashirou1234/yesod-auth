@@ -189,10 +189,14 @@ curl -fsS -o /dev/null -w '%{http_code}\n' \
 1. まずリフレッシュトークンで再発行を試す
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/auth/refresh" \
+curl -sS -X POST "http://localhost:8000/api/v1/auth/refresh" \
   -H "Content-Type: application/json" \
   -d '{"refresh_token":"<refresh_token>"}'
 ```
+
+判定基準:
+- `200` かつ `access_token` が返る: 新しいアクセストークンで API 呼び出しを再開
+- `401` / `422`: refresh では復旧できないため、手順2へ進む
 
 2. 再発行できない場合は OAuth ログインを再実行する
 
@@ -204,13 +208,24 @@ open "http://localhost:8000/api/v1/auth/google"
 3. 複数端末で状態がずれた場合は古いセッションを失効させる
 
 ```bash
-curl -X DELETE "http://localhost:8000/api/v1/sessions/me" \
+curl -sS -X DELETE "http://localhost:8000/api/v1/sessions/me" \
   -H "Authorization: Bearer <access_token>"
 ```
+
+4. 復旧確認を行う（最小確認）
+
+```bash
+curl -sS -o /dev/null -w '%{http_code}\n' \
+  "http://localhost:8000/api/v1/users/me" \
+  -H "Authorization: Bearer <new_access_token>"
+```
+
+`200` なら復旧完了です。`401` が継続する場合は、`Authorization` ヘッダーのトークン更新漏れを確認してください。
 
 補足:
 - 認証API詳細は `docs/api/auth.md` を参照してください。
 - セッションAPI一覧は `README.md` の `Sessions` セクションと同一です。
+- 管理API向けの同等手順は `docs/help/troubleshooting.md` の「管理者トークン失効で管理APIが `401 Unauthorized` になる」を参照してください。
 
 ### OAuth callback失敗時の確認順
 
