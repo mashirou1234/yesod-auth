@@ -15,7 +15,7 @@ def run_async(coro):
 
 async def _get_oauth_states() -> list[dict]:
     async def _read(client) -> list[dict]:
-        keys = await client.keys("oauth_state:*")
+        keys = [key async for key in client.scan_iter(match="oauth_state:*")]
         states = []
         for key in keys:
             ttl = await client.ttl(key)
@@ -34,7 +34,7 @@ async def _get_oauth_states() -> list[dict]:
 
 async def _get_rate_limit_info() -> list[dict]:
     async def _read(client) -> list[dict]:
-        keys = await client.keys("LIMITER:*")
+        keys = [key async for key in client.scan_iter(match="LIMITER:*")]
         limits = []
         for key in keys:
             ttl = await client.ttl(key)
