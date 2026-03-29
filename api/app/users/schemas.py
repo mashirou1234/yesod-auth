@@ -58,6 +58,9 @@ class UserDeleteResponse(BaseModel):
     message: str = Field(..., description="Deletion confirmation message")
     deleted_user_id: uuid.UUID = Field(..., description="ID of the deleted user")
     deleted_email: str = Field(..., description="Email of the deleted user")
+    scheduled_delete_at: datetime = Field(
+        ..., description="Scheduled permanent deletion datetime (UTC)"
+    )
 
 
 class SyncFromProviderResponse(BaseModel):
