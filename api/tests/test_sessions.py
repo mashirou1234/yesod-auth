@@ -123,10 +123,19 @@ async def test_sessions_list_accepts_limit_at_maximum(client: AsyncClient):
     assert login_response.status_code == 200
 
     token = login_response.json()["access_token"]
-
     response = await client.get(
         "/api/v1/sessions?limit=1000",
         headers={"Authorization": f"Bearer {token}"},
     )
 
     assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_sessions_openapi_limit_has_maximum(client: AsyncClient):
+    """OpenAPI should expose limit maximum as 1000."""
+    response = await client.get("/openapi.json")
+    assert response.status_code == 200
+
+    parameter_schema = response.json()["paths"]["/api/v1/sessions"]["get"]["parameters"][0]["schema"]
+    assert parameter_schema["maximum"] == 1000

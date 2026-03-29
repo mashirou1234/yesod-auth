@@ -29,7 +29,12 @@ def _get_client_info(request: Request) -> tuple[str | None, str | None]:
 @router.get("", response_model=SessionListResponse)
 async def list_sessions(
     current_user: User = Depends(get_current_user),
-    limit: int = Query(100, ge=1, description="Maximum results"),
+    limit: int = Query(
+        100,
+        ge=1,
+        description="Maximum results",
+        json_schema_extra={"maximum": SESSIONS_LIMIT_MAX},
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """List all active sessions for current user."""
