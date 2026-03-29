@@ -166,12 +166,19 @@ async def delete_account(
     # Get OAuth providers for reference
     oauth_providers = [oa.provider for oa in user.oauth_accounts]
 
+    scheduled_delete_at = datetime.now(UTC) + timedelta(days=SOFT_DELETE_GRACE_DAYS)
+    scheduled_delete_at_iso = scheduled_delete_at.isoformat().replace("+00:00", "Z")
+
     # Log account deletion before deleting
     await AuditLogger.log_event(
         db,
         AuthEventType.ACCOUNT_DELETED,
         user_id,
-        {"email": email, "oauth_providers": oauth_providers},
+        {
+            "email": email,
+            "oauth_providers": oauth_providers,
+            "scheduled_delete_at": scheduled_delete_at_iso,
+        },
         ip_address,
         device_info,
     )
@@ -186,7 +193,7 @@ async def delete_account(
         id=user_id,
         email_backup=email,
         display_name_backup=display_name,
-        purge_at=datetime.now(UTC) + timedelta(days=SOFT_DELETE_GRACE_DAYS),
+        purge_at=scheduled_delete_at,
         oauth_providers=json.dumps(oauth_providers) if oauth_providers else None,
     )
     db.add(deleted_user)
@@ -199,6 +206,7 @@ async def delete_account(
         message=f"Account scheduled for deletion. Will be permanently removed after {SOFT_DELETE_GRACE_DAYS} days.",
         deleted_user_id=user_id,
         deleted_email=email,
+        scheduled_delete_at=scheduled_delete_at,
     )
 
 

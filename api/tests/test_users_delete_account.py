@@ -1,5 +1,7 @@
 """User account deletion endpoint tests."""
 
+from datetime import UTC, datetime
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
@@ -46,11 +48,16 @@ async def test_delete_account_invalidates_related_session_tokens(
         "/api/v1/users/me",
         headers={"Authorization": f"Bearer {access_token}"},
     )
+    payload = delete_response.json()
     assert delete_response.status_code == 200
-    assert delete_response.json()["deleted_user_id"] == str(user.id)
+    assert payload["deleted_user_id"] == str(user.id)
+    assert payload["deleted_email"] == "delete-session-test@example.com"
+    scheduled_delete_at = datetime.fromisoformat(payload["scheduled_delete_at"].replace("Z", "+00:00"))
+    assert scheduled_delete_at.tzinfo == UTC
 
     deleted_user = await db_session.scalar(select(DeletedUser).where(DeletedUser.id == user.id))
     assert deleted_user is not None
+    assert deleted_user.purge_at == scheduled_delete_at.replace(tzinfo=None)
 
     refresh_record = await db_session.scalar(
         select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(refresh_token))
@@ -63,3 +70,37 @@ async def test_delete_account_invalidates_related_session_tokens(
     )
     assert refresh_response.status_code == 401
     assert refresh_response.json() == {"detail": "Invalid or expired refresh token"}
+
+
+@pytest.mark.asyncio
+async def test_delete_account_second_request_with_same_token_returns_user_not_found(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Second delete with the same access token should fail because user is already removed."""
+    user = User()
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        UserEmail(
+            user_id=user.id,
+            email="delete-user-not-found@example.com",
+            is_primary=True,
+        )
+    )
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    access_token = create_access_token(str(user.id), "delete-user-not-found@example.com")
+
+    first_delete = await client.delete(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert first_delete.status_code == 200
+
+    second_delete = await client.delete(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {access_token}"},
+    )
+    assert second_delete.status_code == 401
+    assert second_delete.json() == {"detail": "User not found"}

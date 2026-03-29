@@ -146,6 +146,19 @@ Authorization: Bearer <access_token>
 !!! warning "注意"
     この操作は取り消せません。関連するすべてのデータが削除されます。
 
+**成功レスポンス (`200 OK`)**
+
+```json
+{
+  "message": "Account scheduled for deletion. Will be permanently removed after 30 days.",
+  "deleted_user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "deleted_email": "user@example.com",
+  "scheduled_delete_at": "2026-01-31T00:00:00Z"
+}
+```
+
+`scheduled_delete_at` は UTC で、永続削除予定時刻を示します。
+
 !!! note "Webhookイベント"
     アカウント削除時に`user.deleted`イベントが発火します。
 
