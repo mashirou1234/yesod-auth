@@ -14,5 +14,9 @@ async def test_logout_without_auth_returns_401(client: AsyncClient):
 
     assert response.status_code == 401
     data = response.json()
-    assert "detail" in data
-    assert isinstance(data["detail"], str)
+    assert data == {
+        "detail": {
+            "code": "missing_bearer_token",
+            "message": "Not authenticated",
+        }
+    }

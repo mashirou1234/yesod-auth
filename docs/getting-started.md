@@ -331,7 +331,18 @@ curl -i -X POST "http://localhost:8000/api/v1/auth/logout" \
 期待値:
 
 - ステータスコード: `401 Unauthorized`
-- レスポンスボディ: `{"detail":"Not authenticated"}`
+- `WWW-Authenticate` ヘッダ: `Bearer`
+- レスポンスボディ: `{"detail":{"code":"missing_bearer_token","message":"Not authenticated"}}`
+
+値を機械的に確認したい場合は、次のコマンドで HTTP ステータスと本文を同時に検証できます。
+
+```bash
+status=$(curl -s -o /tmp/logout-unauth.json -w "%{http_code}" -X POST "http://localhost:8000/api/v1/auth/logout" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token":"dummy"}')
+test "$status" = "401"
+jq -e '.detail.code == "missing_bearer_token" and .detail.message == "Not authenticated"' /tmp/logout-unauth.json
+```
 
 詳細な調査手順は [トラブルシューティング](help/troubleshooting.md) を参照してください。
 
