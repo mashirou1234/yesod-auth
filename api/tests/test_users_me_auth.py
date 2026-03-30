@@ -6,6 +6,7 @@ import pytest
 from httpx import AsyncClient
 from jose import jwt
 
+from app.auth.tokens import settings as token_settings
 from app.config import get_settings
 
 
@@ -19,6 +20,38 @@ async def test_users_me_requires_valid_token(client: AsyncClient):
 
     assert response.status_code == 401
     assert response.json() == {"detail": "Invalid or expired token"}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+@pytest.mark.asyncio
+async def test_users_me_rejects_expired_token(client: AsyncClient):
+    """GET /api/v1/users/me returns fixed 401 contract for expired JWT."""
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+
+    valid_token = login_response.json()["access_token"]
+    payload = jwt.decode(
+        valid_token,
+        token_settings.JWT_SECRET,
+        algorithms=[token_settings.JWT_ALGORITHM],
+        options={"verify_exp": False},
+    )
+    payload["exp"] = int((datetime.now(UTC) - timedelta(minutes=1)).timestamp())
+
+    expired_token = jwt.encode(
+        payload,
+        token_settings.JWT_SECRET,
+        algorithm=token_settings.JWT_ALGORITHM,
+    )
+
+    response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {expired_token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": "Invalid or expired token"}
+    assert response.headers["WWW-Authenticate"] == "Bearer"
 
 
 @pytest.mark.asyncio
