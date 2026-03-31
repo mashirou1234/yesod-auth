@@ -37,7 +37,11 @@ def extract_oauth_provider_from_path(path: str) -> str | None:
     if not path.startswith(prefix):
         return None
 
-    provider = path.removeprefix(prefix).split("/", 1)[0]
+    remainder = path.removeprefix(prefix)
+    if not remainder or "/" in remainder:
+        return None
+
+    provider = remainder
     if provider in SUPPORTED_OAUTH_PROVIDERS:
         return provider
     return None
