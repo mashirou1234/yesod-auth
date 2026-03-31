@@ -338,6 +338,27 @@ class TestGitHubOAuthCallback:
         )
 
     @pytest.mark.asyncio
+    async def test_callback_missing_state_logs_missing_field(self, client):
+        """Missing state must be logged with explicit missing field and request-id."""
+        with (
+            patch("app.auth.rate_limit.limiter._check_request_limit", return_value=None),
+            patch("app.auth.router.AuditLogger.log_login", new=AsyncMock()) as mock_log_login,
+        ):
+            response = await client.get(
+                "/api/v1/auth/github/callback?code=test-code",
+                headers={"X-Request-Id": "req-test-missing-state"},
+            )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "Missing code or state"}
+        assert mock_log_login.await_count == 1
+        assert (
+            mock_log_login.await_args.args[6]
+            == "OAuth callback missing params [provider=github] [missing=state] "
+            "[request-id=req-test-missing-state]"
+        )
+
+    @pytest.mark.asyncio
     async def test_callback_unknown_error_code_records_metric(self, client):
         """Unknown OAuth error code should increment dedicated classification metric."""
         with (
