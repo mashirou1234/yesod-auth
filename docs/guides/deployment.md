@@ -237,8 +237,23 @@ rg -n "MOCK_OAUTH_ENABLED|secret|callback|ローテーション" \
 4. OAuthコールバックURLが意図した環境を向いている
    - `https://api.your-domain.com/api/v1/auth/google/callback`
    - `https://api.your-domain.com/api/v1/auth/discord/callback`
+5. OAuth認証開始エンドポイントが到達可能である（最低1 provider）
+   ```bash
+   curl -I https://api.your-domain.com/api/v1/auth/google
+   # 期待値: 302 or 307
+   ```
 
 障害の切り分けが必要な場合は、`docs/help/troubleshooting.md` の認証・起動時エラー項目を参照してください。
+
+### ロールバック記録テンプレート（運用ログ最小項目）
+
+ロールバック完了後は、次の4項目を運用ログに残してください。  
+OSS 配布時の問い合わせ切り分けと、セルフホスト環境での再発防止を最短化できます。
+
+1. 実施時刻（UTC/JST）と対象デプロイID（または commit SHA）
+2. どの確認項目で失敗を検知したか（上記 1〜5）
+3. ロールバック後の確認結果（`/health` の HTTP ステータスとログ抽出コマンド結果）
+4. provider 設定差分の有無（`client_id` / `client_secret` / callback URL）
 
 ## ログ保全設定例
 
