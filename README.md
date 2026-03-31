@@ -420,6 +420,27 @@ This repository includes GitHub Actions workflows for automatic PR approval and 
 This script ensures the repository keeps the labels used by Codex / codex-orch automation:
 `codex`, `codex-automation`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened`.
 
+### Bench-80 Queue Inventory Normalization
+
+`codex:queue` issue の title 先頭に付いている `"[Bench-80][NN]"` 番号は重複・スロット逸脱の温床になるため、在庫キーとして運用しません。
+active queue の正規化は title から番号プレフィックスを除去する方針で統一します。
+
+```bash
+# 事前確認（dry-run）
+python3 scripts/normalize_bench80_queue_titles.py --repo mashirou1234/yesod-auth
+
+# 実適用
+python3 scripts/normalize_bench80_queue_titles.py --repo mashirou1234/yesod-auth --apply
+
+# 正規化後の確認
+python3 scripts/queue_seed_snapshot.py --repo mashirou1234/yesod-auth --format markdown
+```
+
+期待値:
+- `unexpected_slots` が空
+- `duplicate_slots` が空
+- `bench_count` は `0`（番号プレフィックス廃止方針）
+
 If a pull request was opened while the auto-approve / auto-merge workflows were disabled, enabling the workflows later does not retroactively register auto-merge for that PR. In that case, reopen/synchronize the PR or enable auto-merge manually.
 
 With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
