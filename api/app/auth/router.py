@@ -133,6 +133,22 @@ def _invalid_state_reason(request: Request, provider: str) -> str:
     return f"Invalid state [provider={provider}] [request-id={_get_request_id(request)}]"
 
 
+def _missing_oauth_callback_params_reason(
+    request: Request, provider: str, code: str | None, state: str | None
+) -> str:
+    """Build audit reason for missing OAuth callback params."""
+    missing_params: list[str] = []
+    if not code:
+        missing_params.append("code")
+    if not state:
+        missing_params.append("state")
+    missing = ",".join(missing_params) if missing_params else "unknown"
+    return (
+        f"OAuth callback missing params [provider={provider}] [missing={missing}] "
+        f"[request-id={_get_request_id(request)}]"
+    )
+
+
 def _normalize_callback_url(url: str) -> str:
     """Normalize callback URL by dropping only trailing slash and query/fragment."""
     parsed = urlsplit(url)
@@ -472,6 +488,15 @@ async def github_callback(
         raise HTTPException(status_code=400, detail=f"OAuth callback failed: {error}")
 
     if not code or not state:
+        await AuditLogger.log_login(
+            db,
+            None,
+            "github",
+            False,
+            ip_address,
+            device_info,
+            _missing_oauth_callback_params_reason(request, "github", code, state),
+        )
         raise HTTPException(status_code=400, detail="Missing code or state")
 
     # Verify and consume state
