@@ -65,6 +65,25 @@ curl -sS -H "Authorization: Bearer ${TOKEN}" \
 !!! tip "トークン未取得時"
     先に [認証API](./auth.md) の OAuth フローでアクセストークンを取得してください。
 
+### 実行前の最小チェック（更新系共通）
+
+更新系を実行する直前に、同じトークンで `GET /api/v1/users/me` が `200 OK` で返ることを確認してください。  
+この確認が失敗する場合、`PATCH` / `DELETE` も同様に失敗します。
+
+```bash
+TOKEN="<access_token>"
+curl -sS -o /tmp/users-me.json -w "%{http_code}\n" \
+  -H "Authorization: Bearer ${TOKEN}" \
+  http://localhost:8000/api/v1/users/me
+```
+
+更新系で想定される主な失敗条件:
+
+- `401 Unauthorized`: Bearer トークン未指定・期限切れ・不正
+- `422 Unprocessable Entity`: `PATCH` ボディの型不正や `max_length` 超過（`display_name` 255 文字、`avatar_url` 500 文字）
+
+`DELETE` 成功後は、同じトークンで再度 `GET /api/v1/users/me` を呼ぶと `401` になることを確認してください。
+
 ## 認証・認可エラー例
 
 `/api/v1/users/me` 系エンドポイントは Bearer トークン必須です。  
