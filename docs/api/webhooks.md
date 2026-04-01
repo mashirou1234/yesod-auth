@@ -62,6 +62,7 @@ GET /api/v1/admin/webhooks/deliveries
 ### 冪等性の注意点（再送時）
 
 - 同一イベントの再送では、`event_id` は同じ値のまま `attempt_count` だけ増加します。
+- `id`（delivery レコードID）や `attempt_count` は再送ごとに変わるため、冪等キーとして使わないでください。
 - 受信側は `event_id`（必要に応じて `endpoint_id` も併用）を冪等キーにして重複処理を防止してください。
 - タイムアウトや 5xx の場合は再送が発生するため、同一 `event_id` の処理は再実行しても結果が変わらない実装を推奨します。
 
@@ -119,6 +120,7 @@ POST /api/v1/admin/webhooks/reload
 ### 実装メモ
 
 - 冪等キー: JSON ボディの `event_id`
+- 非推奨キー: 配信履歴の `id` や `attempt_count`（再送で変わるため）
 - 管理用途: `X-Webhook-ID` と `X-Webhook-Event` を監査ログに残す
 - 保持期間: 少なくとも Webhook 再送が起こり得る期間（運用で定義したリトライ期間）以上
 
