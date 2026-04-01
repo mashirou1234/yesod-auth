@@ -145,7 +145,7 @@ docker compose --profile ci config | rg "MOCK_OAUTH_ENABLED|api-ci:"
 詳細な profile 判定観点は [インストール: profile選択チェック表](installation.md#profile選択チェック表) を参照してください。
 ## 3.5 初回ヘルスチェック（推奨）
 
-初回起動時は、次の3点を順に確認すると原因切り分けがしやすくなります。
+初回起動時は、次の4点を順に確認すると原因切り分けがしやすくなります。
 
 ### 1. コンテナ状態を確認
 
@@ -170,6 +170,17 @@ curl -i http://localhost:8000/health
 ```
 
 `HTTP/1.1 200 OK`（または `HTTP/2 200`）と `{"status":"healthy"}` が返れば初回ヘルスチェックは完了です。
+
+### 4. Docsエンドポイントの到達を確認
+
+```bash
+curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+```
+
+`200` が返れば、API とドキュメント公開導線の初回確認は完了です。
+ここで失敗する場合は [初回起動トラブルシュート](help/first-start-troubleshooting.md) と
+[トラブルシューティング: 障害時の参照順（最短導線）](help/troubleshooting.md#障害時の参照順最短導線) を参照してください。
+
 ## 4. 動作確認
 
 ### ヘルスチェック
