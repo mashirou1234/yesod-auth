@@ -289,7 +289,7 @@ curl -sS -o /dev/null -w '%{http_code}\n' \
 補足:
 - 認証API詳細は `docs/api/auth.md` を参照してください。
 - セッションAPI一覧は `README.md` の `Sessions` セクションと同一です。
-- 管理API向けの同等手順は `docs/help/troubleshooting.md` の「管理者トークン失効で管理APIが `401 Unauthorized` になる」を参照してください。
+- 管理API向けの同等手順は [`docs/help/troubleshooting.md`](help/troubleshooting.md#admin-token-reauth) を参照してください。
 
 ### OAuth callback失敗時の確認順
 

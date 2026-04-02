@@ -28,6 +28,17 @@ MIT Licenseです。商用利用も可能です。
 リフレッシュトークンを使用するたびに、新しいリフレッシュトークンが発行され、
 古いトークンは無効化されます。これにより、トークン漏洩時のリスクを軽減します。
 
+### 管理者トークンが失効して管理APIで 401 が出たときの再認証手順は？
+
+次の順で復旧してください。
+
+1. 現在の `access_token` で管理API（例: `GET /api/v1/admin/webhooks/endpoints`）を呼び、`401` を確認する
+2. `refresh_token` が有効なら `POST /api/v1/auth/refresh` で再発行する
+3. `refresh_token` も失効している場合は OAuth ログインを最初からやり直す
+4. 新しい `access_token` で管理APIを再実行し、`200` を確認する
+
+コマンド付きの詳細手順は [トラブルシューティング: 管理者トークン失効で管理APIが `401 Unauthorized` になる](./troubleshooting.md#admin-token-reauth) を参照してください。
+
 ### PKCEとは？
 
 Proof Key for Code Exchangeの略で、OAuth 2.0の認可コードフローをより安全にする拡張機能です。
