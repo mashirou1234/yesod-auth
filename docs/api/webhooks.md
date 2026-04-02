@@ -170,3 +170,5 @@ POST /api/v1/admin/webhooks/reload
 4. 改善しない場合は旧鍵へ一時ロールバックし、`reload` 後に成功可否を確認して鍵不一致か実装差異かを判定する
 
 詳細なログ確認コマンドと復旧パターンは [トラブルシューティングの「署名検証に失敗する」](../help/troubleshooting.md#署名検証に失敗する) を参照してください。
+調査時に最低限確認する監査ログ項目（`event_type`, `failure_reason`, `webhook_id`, `x_webhook_event`, `request_id`）は、
+[Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照してください。
