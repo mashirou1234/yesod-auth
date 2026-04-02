@@ -516,6 +516,8 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
 - 返却件数は指定 `limit` を超えない
 - `401` が混在する場合はトークン失効を疑い、再ログイン後に再検証する
 
+<a id="admin-token-reauth"></a>
+
 ### 管理者トークン失効で管理APIが `401 Unauthorized` になる
 
 **症状:** 管理画面操作や `GET /api/v1/admin/*` 呼び出しが `401 Unauthorized` を返す
