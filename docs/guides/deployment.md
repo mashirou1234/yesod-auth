@@ -259,11 +259,28 @@ OSS 配布時の問い合わせ切り分けと、セルフホスト環境での�
 
 長期運用では「保持期間」「ローテーション」「収集先」を先に決めておくと、障害調査と監査の再現性が上がります。
 
+### 保全ポリシーの最小テンプレート
+
+| 種別 | 推奨保持期間（初期値） | ローテーション | 主な用途 |
+| --- | --- | --- | --- |
+| API / Admin コンテナ標準出力 | 7日 | Docker `json-file` (`max-size=10m`, `max-file=7`) | 直近障害の一次切り分け |
+| 監査・運用ログ（ホスト永続） | 14日 | `logrotate` 日次 (`rotate 14`) | 監査証跡、問い合わせ対応 |
+
+> 監査要件がある環境では、保持期間を法令・社内規程に合わせて延長してください。
+
 ### Docker ログドライバ（json-file）でローテーション
+
+`compose.prod.yml` など本番用オーバーレイに次の設定を置くと、起動プロファイルを変えても設定差分を追跡しやすくなります。
 
 ```yaml
 services:
   api:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "7"
+  admin:
     logging:
       driver: json-file
       options:
@@ -288,6 +305,17 @@ services:
 ```
 
 14日保持の例です。セキュリティ監査や法令対応が必要な環境では、保持日数を要件に合わせて調整してください。
+
+### 反映後の確認コマンド（例）
+
+```bash
+# Docker logging 設定が反映されているか確認
+docker inspect yesod-api --format '{{json .HostConfig.LogConfig}}'
+docker inspect yesod-admin --format '{{json .HostConfig.LogConfig}}'
+
+# logrotate 設定の構文と適用対象を確認
+sudo logrotate -d /etc/logrotate.d/yesod-auth
+```
 
 ## バックアップ
 
