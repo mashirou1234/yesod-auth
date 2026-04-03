@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+# shellcheck source=../../../scripts/secret_env.sh
+source "${ROOT_DIR}/scripts/secret_env.sh"
+orch_load_standard_secret_envs "${ROOT_DIR}"
+
 HOST="${WOODPECKER_HOST:-https://mashirou.stream}"
 REPO_ID="${WOODPECKER_REPO_ID:-}"
 REPO_FULL_NAME="${WOODPECKER_REPO:-}"
