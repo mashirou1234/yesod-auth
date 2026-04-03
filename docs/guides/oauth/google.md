@@ -72,6 +72,22 @@ docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri|m
 
 共通の callback 確認手順は [OAuth設定の共通チェックリスト](index.md#oauth-callback-checklist) を先に参照してください。
 
+### 5.1 callback mismatch 早見表（Google）
+
+| 症状 | まず確認する差分 | 修正先 |
+| --- | --- | --- |
+| `http://` で登録しているのに本番は `https://` | スキーム不一致 | Google Cloud Console の「承認済みのリダイレクト URI」を `https://.../callback` に修正 |
+| `api.example.com` ではなく `example.com` で登録している | ホスト不一致 | 実際に API が公開されているホスト名へ統一 |
+| `:8000` 付きで登録している（本番） | ポート不一致 | 本番 callback URI から開発用ポートを除外 |
+| `.../callback/` で登録している | パス末尾スラッシュ不一致 | `.../callback`（末尾 `/` なし）へ修正 |
+| API_URL は正しいが mismatch が続く | 逆プロキシで `X-Forwarded-Proto` が未伝搬 | Nginx/Ingress 側で `X-Forwarded-Proto=https` を API へ引き継ぐ |
+
+最終確認コマンド（Google callback 観点）:
+
+```bash
+docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri_mismatch|X-Forwarded-Proto"
+```
+
 ## 共通チェック観点の適用例
 
 - [x] Callback URL
