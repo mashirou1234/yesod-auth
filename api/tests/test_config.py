@@ -129,6 +129,23 @@ def test_config_import_fails_fast_when_cors_origins_contains_empty_element():
     assert "CORS_ORIGINS contains empty element" in (result.stderr + result.stdout)
 
 
+def test_frontend_url_defaults_when_env_is_unset():
+    env = os.environ.copy()
+    env.pop("FRONTEND_URL", None)
+
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.config import Settings; print(Settings.FRONTEND_URL)"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(Path(__file__).resolve().parents[1]),
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "http://localhost:3000"
+
+
 def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monkeypatch):
     monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
     monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "")
