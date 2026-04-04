@@ -83,9 +83,14 @@ GET /api/v1/auth/google
 }
 ```
 
-### 未知 provider 入力時
+### 未対応 provider path の場合
 
-- 条件: サポート対象外の provider 名が入力された場合
+- 条件: `GET /api/v1/auth/unknown` のように未対応 path を呼び出した場合
+- 応答: `404 Not Found`（ルーティング未定義）
+
+### 未知 provider 名のバリデーション時
+
+- 条件: サポート対象外の provider 名が内部バリデーションへ渡された場合
 - 応答: `400 Bad Request`
 - 例:
 
