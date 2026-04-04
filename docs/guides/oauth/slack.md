@@ -43,6 +43,23 @@ echo "your-client-secret" > secrets/slack_client_secret.txt
 - 開発時は`MOCK_OAUTH_ENABLED=1`を無効化してから実OAuthを試してください。Mock OAuthが有効だと、Slack設定ミスが見えにくくなります。
 - `OpenID Connect`を有効化していない場合、Slackログイン画面まで進んでもユーザー情報取得で失敗します。
 
+### ローカル検証チェックリスト
+
+1. callback 設定が期待値どおりか確認する
+    ```bash
+    rg "localhost|callback" docs/guides/oauth/slack.md
+    ```
+2. ローカル起動時に Mock OAuth を無効化する（実 OAuth に切り替わること）
+    ```bash
+    export MOCK_OAUTH_ENABLED=0
+    ```
+3. 開始エンドポイントへアクセスし、Slack へリダイレクトされることを確認する
+    ```bash
+    curl -I "http://localhost:8000/api/v1/auth/slack"
+    ```
+4. 認証後の callback で失敗した場合は、Slack 側 Redirect URLs と
+   `http://localhost:8000/api/v1/auth/slack/callback` の完全一致を再確認する
+
 !!! info "OpenID Connect"
     SlackはOpenID Connectを使用します。
     YESOD Authは`openid`、`email`、`profile`スコープを要求し、
