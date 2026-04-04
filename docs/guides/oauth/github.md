@@ -51,12 +51,22 @@ curl -sSI \
 
 ## organization制限時の挙動
 
-- 現在のGitHub OAuth実装は`read:user user:email`のみを要求し、organization所属チェックは行いません。
-- そのため、organization制限を有効化したい場合は、アプリ側で追加実装が必要です。
-- 追加実装の例:
-  - 認可スコープに`read:org`を追加
-  - コールバック後にGitHub APIで所属organizationを検証
-  - 未所属ユーザーはログイン完了前に拒否
+現在の YESOD Auth は GitHub OAuth で organization 制限を実施しません。  
+つまり、`/api/v1/auth/github` と `/api/v1/auth/github/callback` は organization 所属を判定せず、認可成功後は通常どおりログイン完了します。
+
+| 観点 | 現在の挙動 |
+| --- | --- |
+| 認可スコープ | `read:user user:email` のみ要求 |
+| organization 所属チェック | 実施しない |
+| 非所属ユーザーの扱い | organization を理由に拒否しない（通常のログイン結果になる） |
+
+organization メンバー限定にしたい場合は、アプリ側で次を追加してください。
+
+1. 認可スコープに `read:org` を追加
+2. callback 後に GitHub API で所属 organization を検証
+3. 未所属ユーザーはログイン完了前に `403` などで拒否
+
+セルフホスト運用では、導入前に「許可 organization 名」「未所属時のエラー応答」「監査ログ項目」を先に決めておくと、運用時の問い合わせを減らせます。
 
 共通の callback 確認手順は [OAuth設定の共通チェックリスト](index.md#oauth-callback-checklist) を先に参照してください。
 

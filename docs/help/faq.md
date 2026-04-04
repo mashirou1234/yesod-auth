@@ -100,8 +100,16 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 
 ### GitHubログインをorganizationメンバーだけに制限できる？
 
-現状のYESOD AuthはGitHub OAuthでorganization所属チェックを行いません。
-organization制限が必要な場合は、`read:org`スコープとコールバック後の所属検証を追加実装してください。
+現状の YESOD Auth は GitHub OAuth で organization 所属チェックを行いません。  
+そのため、organization 非所属ユーザーでも GitHub 側の認可が成功すれば通常どおりログインできます。
+
+organization 制限が必要な場合は、次を追加実装してください。
+
+1. `read:org` スコープを要求する
+2. callback 後に organization 所属を検証する
+3. 未所属ユーザーを `403` などで拒否する
+
+実装前の仕様確認は [GitHub OAuth ガイド: organization制限時の挙動](../guides/oauth/github.md#organization制限時の挙動) を参照してください。
 
 ### 認証失敗時の一次分類は？
 
