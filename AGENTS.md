@@ -1,10 +1,12 @@
 # Codex Project Agent Notes (GitHub)
 
 - 日本語で簡潔に報告する
-- `artifacts/` は必要なときだけ参照し、開始時に全体確認しない
-- まずは `artifacts/orch_result.json` を確認し、失敗調査時のみ `artifacts/runs/<work_category>/<system_category>/run_*.log` と `artifacts/test.log` を見る
-- `scripts/blackrain.sh` を使う自動レーンでは必ず 1 run 1 issue を守る
+- まず `artifacts/` を確認して前回結果を把握する
+- 自動レーンは `<ORCH_RUN_COMMAND>` を使い、必ず 1 run 1 issue を守る
+- 自動レーンの commit/push は原則許可。Issue 指示やプロンプトで明示禁止がある場合のみ停止する
 - 手動レーン（Power User の直接対応）は一括処理可。ただし `codex:queue` 系ラベル遷移の整合は維持する
-- Project 併用 repo では、queue 着手前に linked Project の status / priority を確認する
+- 手動レーンの push はローカル確認後に 1 回を標準とする
+- queue 着手前に linked Project の status / priority を確認する。Project 未連携 repo は `N/A` を記録する
+- Issue 状態遷移は `queue -> claimed -> (blocked | pr-opened) -> merge確認 -> close` を標準とする
 - 失敗時は issue コメントと `codex:blocked` を付与する
-- `codex:pr-opened` の Issue は merge を観測した run で close し、残件は reconcile で回収する
+- `codex:pr-opened` の Issue は merge 確認後の reconcile で close する（自動レーン主体）

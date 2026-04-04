@@ -1,4 +1,5 @@
 # push(main/master) と pull_request を有効化。
+# docs/ + README.md + AGENTS.md だけの変更は重い検証ステップを成功スキップする。
 # 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
 when:
   - event: [pull_request]
@@ -6,11 +7,57 @@ when:
     branch: [main, master]
 
 steps:
-  - name: fmt
+  - name: detect-docs-only
     image: rust:1
     commands:
       - |
         set -eu
+        docs_only_file=".ci_docs_only"
+        event="${CI_PIPELINE_EVENT:-}"
+        if [ "${event}" != "pull_request" ] && [ "${event}" != "push" ]; then
+          echo "0" > "${docs_only_file}"
+          exit 0
+        fi
+
+        head="${CI_COMMIT_SHA:-HEAD}"
+        before="${CI_COMMIT_BEFORE:-}"
+        if [ -n "${before}" ] && git cat-file -e "${before}^{commit}" 2>/dev/null; then
+          range="${before} ${head}"
+        elif git rev-parse --verify HEAD~1 >/dev/null 2>&1; then
+          range="HEAD~1 HEAD"
+        else
+          echo "0" > "${docs_only_file}"
+          echo "Skip docs-only optimization: cannot resolve diff base."
+          exit 0
+        fi
+
+        changed_files="$(git diff --name-only ${range} || true)"
+        if [ -z "${changed_files}" ]; then
+          echo "0" > "${docs_only_file}"
+          echo "No changed files detected. Run full CI."
+          exit 0
+        fi
+
+        non_docs_files="$(printf '%s\n' "${changed_files}" | grep -Ev '^(docs/|README\.md$|AGENTS\.md$)' || true)"
+        if [ -n "${non_docs_files}" ]; then
+          echo "0" > "${docs_only_file}"
+          echo "Detected non-doc files. Run full CI."
+        else
+          echo "1" > "${docs_only_file}"
+          echo "Docs-only change detected. Skip heavy CI steps."
+        fi
+
+  - name: fmt
+    image: rust:1
+    depends_on:
+      - detect-docs-only
+    commands:
+      - |
+        set -eu
+        if [ -f .ci_docs_only ] && [ "$(cat .ci_docs_only)" = "1" ]; then
+          echo "Docs-only change. Skip fmt."
+          exit 0
+        fi
         if [ ! -f Cargo.toml ]; then
           echo "Cargo.toml not found. Skip fmt."
           exit 0
@@ -33,9 +80,15 @@ steps:
 
   - name: clippy
     image: rust:1
+    depends_on:
+      - detect-docs-only
     commands:
       - |
         set -eu
+        if [ -f .ci_docs_only ] && [ "$(cat .ci_docs_only)" = "1" ]; then
+          echo "Docs-only change. Skip clippy."
+          exit 0
+        fi
         if [ ! -f Cargo.toml ]; then
           echo "Cargo.toml not found. Skip clippy."
           exit 0
@@ -58,9 +111,15 @@ steps:
 
   - name: test
     image: rust:1
+    depends_on:
+      - detect-docs-only
     commands:
       - |
         set -eu
+        if [ -f .ci_docs_only ] && [ "$(cat .ci_docs_only)" = "1" ]; then
+          echo "Docs-only change. Skip test."
+          exit 0
+        fi
         if [ ! -f Cargo.toml ]; then
           echo "Cargo.toml not found. Skip test."
           exit 0
@@ -82,9 +141,15 @@ steps:
 
   - name: build-release
     image: rust:1
+    depends_on:
+      - detect-docs-only
     commands:
       - |
         set -eu
+        if [ -f .ci_docs_only ] && [ "$(cat .ci_docs_only)" = "1" ]; then
+          echo "Docs-only change. Skip build-release."
+          exit 0
+        fi
         if [ ! -f Cargo.toml ]; then
           echo "Cargo.toml not found. Skip build-release."
           exit 0
