@@ -44,3 +44,5 @@ config/webhooks.yaml
 /artifacts/
 artifacts/**
 api/.hypothesis/
+
+api/uv.lock
