@@ -104,3 +104,38 @@ async def test_delete_account_second_request_with_same_token_returns_user_not_fo
     )
     assert second_delete.status_code == 401
     assert second_delete.json() == {"detail": "User not found"}
+
+
+@pytest.mark.asyncio
+async def test_delete_account_invalidates_sessions_endpoint_for_same_access_token(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Deleting a user account should make session endpoints reject the same access token."""
+    user = User()
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        UserEmail(
+            user_id=user.id,
+            email="delete-session-endpoint@example.com",
+            is_primary=True,
+        )
+    )
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    await create_refresh_token(db_session, user.id)
+    await create_refresh_token(db_session, user.id)
+    access_token = create_access_token(str(user.id), "delete-session-endpoint@example.com")
+    auth_header = {"Authorization": f"Bearer {access_token}"}
+
+    sessions_before_delete = await client.get("/api/v1/sessions", headers=auth_header)
+    assert sessions_before_delete.status_code == 200
+    assert sessions_before_delete.json()["total"] == 2
+
+    delete_response = await client.delete("/api/v1/users/me", headers=auth_header)
+    assert delete_response.status_code == 200
+
+    sessions_after_delete = await client.get("/api/v1/sessions", headers=auth_header)
+    assert sessions_after_delete.status_code == 401
+    assert sessions_after_delete.json() == {"detail": "User not found"}
