@@ -70,6 +70,23 @@ X の `client_id` / `client_secret` が未設定または不正な場合に発�
 - ブラウザ戻る操作や callback URL の再実行を避ける
 - `API_URL` と実アクセス先ホスト/スキームの一致
 
+### `400 Bad Request` / `Failed to exchange code`
+
+認可コード交換に失敗した場合に発生します。X 側の callback URL 設定不一致
+（`redirect_uri_mismatch`）でも同じ API レスポンスになります。
+
+```json
+{
+  "detail": "Failed to exchange code"
+}
+```
+
+確認ポイント:
+
+- X Developer Portal の Callback URI が `.../api/v1/auth/x/callback` と完全一致しているか
+- API 側の `API_URL` / リバースプロキシ設定が実アクセス先と一致しているか
+- 詳細切り分けは [トラブルシューティング: redirect_uri_mismatch](../../help/troubleshooting.md#redirect_uri_mismatch正規化差分の診断) を参照
+
 ## 技術仕様
 
 | 項目 | 値 |
