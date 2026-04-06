@@ -50,7 +50,7 @@ OAuth provider をまだ一部用意できていない場合は、次の手順�
 
 ## Docker起動前チェック項目
 
-`docker compose up` 実行前に、次の4項目を確認してください。
+`docker compose up` 実行前に、次の6項目を確認してください。
 
 1. Docker Engine / Docker Compose のバージョン確認
 
@@ -63,15 +63,32 @@ docker compose version
 - Docker 20.10 以上
 - Docker Compose 2.0 以上
 
-2. 必須 secret ファイルの存在確認
+2. Docker daemon の稼働と実行権限確認
 
 ```bash
-ls -1 secrets/jwt_secret.txt
+docker info > /dev/null && echo "docker daemon: OK"
 ```
 
-必要に応じて、有効化する OAuth プロバイダーの `secrets/*.txt` も追加してください。
+失敗する場合は、Docker Desktop の起動状態と、現在ユーザーの docker 実行権限を先に確認してください。
 
-3. 主要ポートの競合確認（8000 / 5432 / 6379）
+3. 必須 secret ファイルの存在確認
+
+```bash
+ls -l secrets/jwt_secret.txt
+test -r secrets/jwt_secret.txt && echo "jwt_secret: readable"
+```
+
+必要に応じて、有効化する OAuth プロバイダーの `secrets/*.txt` も同様に確認してください。
+
+4. Compose 定義の事前検証（構文/参照解決）
+
+```bash
+docker compose --profile default config > /dev/null && echo "compose config: OK"
+```
+
+secret 名の誤字や profile 差分の不整合は、この時点で検出できます。
+
+5. 主要ポートの競合確認（8000 / 5432 / 6379）
 
 ```bash
 lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
@@ -79,11 +96,22 @@ lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
 
 競合がある場合は既存プロセスまたは既存コンテナを停止してから起動します。
 
-4. 初回確認で使用する profile の決定
+6. 初回確認で使用する profile の決定
 
 - 初回導入確認: `default`
 - 管理画面確認まで行う場合: `full`
 - CI相当確認のみ: `ci`
+
+### 起動前チェックを1コマンドで流す（任意）
+
+```bash
+docker --version \
+  && docker compose version \
+  && docker info > /dev/null \
+  && test -r secrets/jwt_secret.txt \
+  && docker compose --profile default config > /dev/null \
+  && echo "preflight: OK"
+```
 
 ### 開発環境
 
