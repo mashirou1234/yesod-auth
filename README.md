@@ -327,13 +327,25 @@ Password: (secrets/admin_password.txt の内容)
 ### セルフホスト時の最小監視項目
 
 運用開始直後は、まず次の4項目を監視対象に設定してください。
+詳細なしきい値運用は [`docs/guides/deployment.md`](docs/guides/deployment.md#oauth-callback監視チェック) を参照してください。
 
 | 項目 | 確認方法 | 異常の目安 |
 |------|----------|------------|
 | APIヘルス | `curl -sS -o /dev/null -w "%{http_code}\n" http://localhost:8000/health` | `200` 以外が連続 |
-| APIエラー率 | `docker logs --since 5m yesod-api \| rg " 5[0-9]{2} "` | 5分窓で5xxが継続発生 |
-| DB接続健全性 | `docker logs --since 5m yesod-db \| rg -i "error|fatal|panic"` | 接続エラー/再起動ループ |
-| OAuth失敗兆候 | `docker logs --since 10m yesod-api \| rg "invalid_client|Invalid state|OAuth callback failed"` | 同種エラーが短時間に複数回 |
+| APIエラー率 | `docker compose logs --since=5m api \| rg " 5[0-9]{2} "` | 5分窓で5xxが継続発生 |
+| DB接続健全性 | `docker compose logs --since=5m db \| rg -i "error|fatal|panic"` | 接続エラー/再起動ループ |
+| OAuth失敗兆候 | `docker compose logs --since=10m api \| rg "invalid_client|Invalid state|OAuth callback failed"` | 同種エラーが短時間に複数回 |
+
+初期しきい値（最小）:
+
+- 直近24時間で `invalid_client` が 1 件以上: provider secret 不整合を優先確認
+- 直近24時間で `Invalid state` が 3 件以上: callback の二重実行やセッション保持を調査開始
+
+```bash
+docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_client|Invalid state" || true
+```
+
+`Invalid state` の切り分けは [`docs/help/troubleshooting.md`](docs/help/troubleshooting.md#state-mismatch-flow) を参照してください。
 
 ### 運用時ログ確認ポイント（最小）
 
