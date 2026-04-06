@@ -124,6 +124,9 @@ sqlalchemy.exc.OperationalError: could not connect to server
 
 1. 認証フローを最初からやり直す
 2. Valkeyが正常に動作しているか確認
+   ```bash
+   docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+   ```
 
 <a id="state-mismatch-flow"></a>
 
