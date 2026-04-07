@@ -369,6 +369,12 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
    date -u
    docker compose exec api date -u
    ```
+   判定の目安として、ホストとコンテナのUTC時刻差が `5秒以上` なら clock skew を疑って対処に進みます。
+   ```bash
+   host_epoch="$(date -u +%s)"
+   api_epoch="$(docker compose exec -T api date -u +%s)"
+   echo $(( host_epoch - api_epoch ))
+   ```
 3. NTP同期状態を確認する（self-host 環境）
    ```bash
    timedatectl status
