@@ -152,7 +152,7 @@ API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報から
 
 実OAuth切替時は次の3項目だけ先に確認してください。
 
-1. `MOCK_OAUTH_ENABLED=0` になっていること（アプリ既定値は `0`。開発用 `default`/`ci` プロファイルでは Compose 側で `1` に上書きされるため、本番運用値を再確認）
+1. `MOCK_OAUTH_ENABLED=0` になっていること（アプリ既定値は `0`。Compose の `default` / `full` / `ci` プロファイルでは `1` に上書きされるため、本番運用値を再確認）
 2. 利用するOAuthプロバイダーの `*_client_id` / `*_client_secret` が本番値で設定され、不要な開発用値が混在していないこと
 3. provider管理画面の callback URL と `GET /api/v1/auth/{provider}/callback` の実運用URLが一致していること
 
@@ -162,6 +162,7 @@ API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報から
 - [トラブルシューティング: provider 未設定のまま認証導線を実行した](./troubleshooting.md#provider-未設定のまま認証導線を実行した)
 
 切り分け手順は [トラブルシューティング: state mismatch 診断フロー](./troubleshooting.md#state-mismatch-flow) と [トラブルシューティング: 401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client) を参照してください。  
+本番切替時の確認で迷ったら [トラブルシューティング: 障害時の参照順（最短導線）](./troubleshooting.md#障害時の参照順最短導線) から再開してください。  
 前提の設定差分は [インストール: profile別の環境変数優先順位](../installation.md#profile別の環境変数優先順位) を参照してください。
 
 ### 複数providerを有効化するときの順序チェックは？
