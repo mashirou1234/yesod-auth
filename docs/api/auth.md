@@ -142,6 +142,23 @@ Content-Type: application/json
 }
 ```
 
+**入力不正時の代表レスポンス（型不一致）:**
+
+```json
+{
+  "detail": [
+    {
+      "type": "string_type",
+      "loc": ["body", "refresh_token"],
+      "msg": "Input should be a valid string",
+      "input": 12345
+    }
+  ]
+}
+```
+
+使い分け: `401` は未認証・無効トークン、`400` 系（本 API では主に `422`）は JSON 入力不正を示します。
+
 !!! info "トークンローテーション"
     リフレッシュ時に新しいリフレッシュトークンが発行されます。
     古いリフレッシュトークンは無効化されます。
@@ -185,6 +202,23 @@ Content-Type: application/json
 ```
 
 ステータスコード: `401 Unauthorized`
+
+**入力不正時の代表レスポンス（`refresh_token` 欠落）:**
+
+```json
+{
+  "detail": [
+    {
+      "type": "missing",
+      "loc": ["body", "refresh_token"],
+      "msg": "Field required",
+      "input": {}
+    }
+  ]
+}
+```
+
+使い分け: `401` は未認証・無効トークン、`400` 系（本 API では主に `422`）は JSON 入力不正を示します。
 
 ## エラーコード早見表（refresh/logout）
 
