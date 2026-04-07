@@ -154,6 +154,7 @@ Base URL: `http://localhost:8000/api/v1`
 運用時の注意点（refresh token のローテーション/再ログイン方針）は [docs/installation.md](docs/installation.md#リフレッシュトークン運用時の注意) を参照してください。
 認証エラーコードの運用向け一覧は [`docs/api/auth.md`](docs/api/auth.md) を参照してください。
 `invalid_grant` が断続的に発生する場合は、[clock skew 診断手順](docs/help/troubleshooting.md#oauth-clock-skew) を参照してください。
+self-host では `timedatectl status` と `date -u` / `docker compose exec -T api date -u` で時刻差を確認し、`5秒以上` ずれる場合は先に時刻同期を修正してください。
 
 ### Users
 
