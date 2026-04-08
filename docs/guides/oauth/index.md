@@ -202,6 +202,18 @@ secrets/
 
 上記を満たすと、導入時の設定漏れを抑えつつ、OSSとして再利用しやすい説明構成を維持できます。
 
+### provider追加時の最小確認表
+
+作業を 1 provider に限定したまま短時間で確認できるよう、次の表を上から順に埋めてください。
+
+| 確認項目 | 判定基準 | 参照先 |
+|---|---|---|
+| 対象 provider を 1 つに固定した | 今回変更する provider 名を 1 つだけ決め、複数同時変更を避けている | [provider切替時の確認フロー](#provider切替時の確認フロー) |
+| ドキュメント行を追加した | [対応プロバイダー](#対応プロバイダー) の表に provider 行を追加済み | [対応プロバイダー](#対応プロバイダー) |
+| 必須 secret 名が一致している | `<provider>_client_id` / `<provider>_client_secret` の命名が一致している | [OAuth認証情報](../../installation.md#oauth-credentials) |
+| callback URL を登録した | `https://<api-domain>/api/v1/auth/<provider>/callback` を provider 側へ登録済み | [Callback確認の共通チェックリスト](#oauth-callback-checklist) |
+| 認可導線を疎通確認した | `GET /api/v1/auth/<provider>` から認可画面へ遷移できる | [トラブルシューティング](../../help/troubleshooting.md) |
+
 ### OAuthガイド共通チェックテンプレート
 
 新しいOAuthプロバイダーガイドを追加するときは、以下の4観点を必ず埋めてください。
