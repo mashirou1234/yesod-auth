@@ -453,6 +453,23 @@ docker compose up -d --build
 | `MOCK_OAUTH_ENABLED`（`default`/`ci`プロファイル） | Compose の service `environment` での指定（`1`）→ アプリ既定値（`0`） | `docker-compose.yml` と `api/app/config.py` |
 
 `read_secret()` の優先順は `api/tests/test_config.py` でテストされています（secret file 優先、次に環境変数、最後に既定値）。
+OAuth 導入時の判定フローは [OAuth設定ガイド: 有効化判定フロー](./guides/oauth/index.md#有効化判定フロー最初に確認) も参照してください。
+
+確認コマンド例（Secrets 優先読込）:
+
+```bash
+docker compose --profile default run --rm -e JWT_SECRET=env-fallback api python - <<'PY'
+from pathlib import Path
+from app.config import read_secret
+
+secret_file = Path("/run/secrets/jwt_secret").read_text().strip()
+resolved = read_secret("jwt_secret", "default")
+if resolved == secret_file:
+    print("OK: /run/secrets/jwt_secret が環境変数より優先されます")
+else:
+    raise SystemExit(f"NG: resolved={resolved!r} (secret_file と不一致)")
+PY
+```
 
 ### profile別の環境変数優先順位
 
