@@ -411,6 +411,11 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
    - `redirect_uri_normalized`: スキーム/ホスト小文字化、既定ポート除去、query 整列後の URI（機密値はマスク）
    - `redirect_uri_changed`: 正規化前後で差分があったか
 3. provider 側設定の callback URI と `redirect_uri_normalized` を突き合わせる
+4. callback URL 不一致の切り分けを 3 点で固定する（セルフホスト運用向け）
+   - provider 管理画面に登録した callback が `https://<api-domain>/api/v1/auth/{provider}/callback` と完全一致しているか確認する（スキーム・ポート・末尾スラッシュを含む）
+   - `API_URL` が実アクセスURL（reverse proxy 経由の公開URL）と一致しているか確認する
+   - OAuth 開始は必ず `GET /api/v1/auth/{provider}` から行い、callback URL を直接開いていないことを確認する
+5. 導線確認として、導入前提は [installation](../installation.md#oauth-導入前の3点チェック) を、運用時チェックは [OAuth設定ガイド](../guides/oauth/index.md#oauth-callback-checklist) を参照する
 
 | 観測シグナル | 主な原因 | 対処 |
 | --- | --- | --- |
