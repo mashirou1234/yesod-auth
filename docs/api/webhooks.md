@@ -154,3 +154,14 @@ POST /api/v1/admin/webhooks/reload
 |------|------|
 | `missing_signature_header` | `X-Webhook-Signature` ヘッダが欠落または空 |
 | `invalid_signature` | 署名検証に失敗した |
+
+### 署名検証失敗時の最小調査フロー
+
+`invalid_signature` または `hmac_mismatch` が連続する場合は、次の順で切り分けると最短で原因に到達できます。
+
+1. 直近 30 分の API ログから `webhook` / `signature` を抽出し、失敗が特定 endpoint のみかを確認する
+2. 送信側の署名鍵と、`config/webhooks.yaml` が参照する受信側シークレットが同一値かを確認する
+3. 鍵を更新した直後であれば `POST /api/v1/admin/webhooks/reload` を実行し、同一イベントを再送して結果を比較する
+4. 改善しない場合は旧鍵へ一時ロールバックし、`reload` 後に成功可否を確認して鍵不一致か実装差異かを判定する
+
+詳細なログ確認コマンドと復旧パターンは [トラブルシューティングの「署名検証に失敗する」](../help/troubleshooting.md#署名検証に失敗する) を参照してください。
