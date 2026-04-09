@@ -165,6 +165,42 @@ def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
     assert settings.GITHUB_CLIENT_SECRET == "github-client-secret"
 
 
+def test_settings_startup_fails_when_provider_secret_env_is_empty():
+    env = os.environ.copy()
+    env["GITHUB_CLIENT_ID"] = "github-client-id"
+    env["GITHUB_CLIENT_SECRET"] = ""
+
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.config import Settings; Settings()"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(Path(__file__).resolve().parents[1]),
+        check=False,
+    )
+
+    assert result.returncode != 0
+    assert "GITHUB_CLIENT_SECRET" in (result.stderr + result.stdout)
+
+
+def test_settings_startup_succeeds_when_provider_secret_env_is_non_empty():
+    env = os.environ.copy()
+    env["GITHUB_CLIENT_ID"] = "github-client-id"
+    env["GITHUB_CLIENT_SECRET"] = "github-client-secret"
+
+    result = subprocess.run(
+        [sys.executable, "-c", "from app.config import Settings; Settings(); print('ok')"],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(Path(__file__).resolve().parents[1]),
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "ok"
+
+
 def _load_compose_services() -> dict:
     compose_path = Path(__file__).resolve().parents[2] / "docker-compose.yml"
     with compose_path.open() as f:
