@@ -171,6 +171,12 @@ curl -i http://localhost:8000/health
 
 `HTTP/1.1 200 OK`（または `HTTP/2 200`）と `{"status":"healthy"}` が返れば初回ヘルスチェックは完了です。
 
+`HTTP 200` 以外、または `curl` が失敗した場合は、次の順で1回だけ再試行します。
+
+1. `docker compose --profile default ps` で `api` が `Up` か確認する（`Exited` の場合は再起動前に `docker compose --profile default logs --tail=100 api` で原因確認）
+2. `sleep 5 && curl -i http://localhost:8000/health` を実行する
+3. 2回目も失敗したら、再試行を打ち切って [初回起動トラブルシュート](help/first-start-troubleshooting.md) と [トラブルシューティング: 障害時の参照順（最短導線）](help/troubleshooting.md#障害時の参照順最短導線) に移る
+
 ### 4. Docsエンドポイントの到達を確認
 
 ```bash
