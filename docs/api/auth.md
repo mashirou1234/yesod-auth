@@ -176,6 +176,17 @@ Content-Type: application/json
 
 詳細な切り分け手順は [`トラブルシューティング > 認証エラー`](../help/troubleshooting.md#認証エラー) を参照してください。
 
+### refresh token 無効時の再認証導線（`401 Invalid or expired refresh token`）
+
+`POST /api/v1/auth/refresh` が `401` かつ `Invalid or expired refresh token` を返した場合は、次の順序で復旧します。
+
+1. 直前に保存された最新 `refresh_token` を 1 回だけ再送し、入力ミスや古いトークン送信を除外する
+2. 再送でも `401` の場合はクライアントに残っている `access_token` / `refresh_token` を破棄する
+3. `GET /api/v1/auth/{provider}` から OAuth ログインをやり直し、新しい token pair を取得する
+4. 再発時は `JWT_SECRET` の差分やノード間設定不整合を確認し、[`トラブルシューティング`](../help/troubleshooting.md#認証エラー) で切り分ける
+
+利用者向けの画面導線は [`getting-started: セッション失効時の再ログイン手順`](../getting-started.md#セッション失効時の再ログイン手順) を参照してください。
+
 ---
 
 ## ログアウト
