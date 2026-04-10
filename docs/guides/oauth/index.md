@@ -108,6 +108,25 @@ OAuthプロバイダーを「有効化できているか」を、次の順序で
    `https://<api-domain>/api/v1/auth/<provider>/callback` を登録し、旧 provider の callback 設定と混在しないことを確認します。
 5. 新プロバイダー導線だけで疎通確認する
    `GET /api/v1/auth/<provider>` から認可画面へ遷移できることを確認し、失敗時は [invalid_client 診断](../../help/troubleshooting.md#401-unauthorized--invalid_client) と [state mismatch 診断](../../help/troubleshooting.md#state-mismatch-flow) の順で切り分けます。
+6. 切替後の最小確認コマンドを実行する
+   設定変更直後は次の 4 コマンドを同じ作業端末で連続実行し、provider 切替が反映された証跡を残します。
+
+   ```bash
+   # 1) Compose 側で新 provider の secret mount が見えている
+   docker compose config | rg -n "<provider>_client_(id|secret)"
+
+   # 2) API 設定読込で old/new provider の残留差分を確認する
+   docker compose logs api --since=10m | rg -n "<old_provider>|<provider>|client_id|client_secret"
+
+   # 3) 新 provider の認可開始導線を確認する
+   curl -i "http://localhost:8000/api/v1/auth/<provider>"
+
+   # 4) 失敗時に troubleshooting の切り分け導線へ接続する
+   docker compose logs api --since=30m | rg -n "invalid_client|Invalid state|callback"
+   ```
+
+   `<provider>` と `<old_provider>` は今回の切替対象に置き換えて実行してください（例: `<old_provider>=google`, `<provider>=github`）。
+   コマンド 1 の期待値は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) の命名規約と一致すること、コマンド 4 の失敗分類は [トラブルシューティング](../../help/troubleshooting.md#401-unauthorized--invalid_client) を基準に判断します。
 
 !!! tip "旧プロバイダーの扱い"
     旧プロバイダーを無効化する場合は、対応する secret mount を Compose から削除したうえで再起動し、`docker compose config --services` と API ログで不要 provider の導線が呼ばれていないことを確認してください。
