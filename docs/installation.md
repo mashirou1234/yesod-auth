@@ -279,28 +279,38 @@ printf '%s\n' google_client_id google_client_secret discord_client_id discord_cl
 ls -1 secrets/*.txt 2>/dev/null | sed -E 's#^.*/##; s#\\.txt$##' | sort
 ```
 
-最短復旧コマンド（secret不足）:
+最短復旧コマンド（secret不足 / `MISSING_SECRET_RECOVERY`）:
 
 ```bash
-# 1) まず不足している secret 名を抽出
+# 1) 不足している secret 名を抽出
 MISSING="$(docker compose --profile default up -d 2>&1 \
   | rg -o 'secret [a-z0-9_]+ not found' \
   | sed -E 's/^secret ([a-z0-9_]+) not found$/\\1/' \
   | sort -u)"
 
-# 2) 不足分だけ secrets/<name>.txt を補完（雛形があればコピー）
+# 2) 不足分だけ secrets/<name>.txt を補完（.example がなければ空ファイルを作成）
 for name in $MISSING; do
-  [ -f "secrets/${name}.txt" ] || cp "secrets/${name}.txt.example" "secrets/${name}.txt"
+  if [ -f "secrets/${name}.txt" ]; then
+    continue
+  elif [ -f "secrets/${name}.txt.example" ]; then
+    cp "secrets/${name}.txt.example" "secrets/${name}.txt"
+  else
+    : > "secrets/${name}.txt"
+  fi
 done
 
-# 3) jwt_secret は必須。未作成なら生成して再起動
+# 3) jwt_secret は必須。未作成/空なら生成
 [ -s secrets/jwt_secret.txt ] || openssl rand -hex 32 > secrets/jwt_secret.txt
+
+# 4) 再起動して最小確認（api Up + health 200）
 docker compose --profile default up -d --force-recreate api
 docker compose --profile default ps
+curl -fsS http://localhost:8000/health
 ```
 
 期待値:
 - `docker compose --profile default ps` で `api` が `Up`（または `running`）
+- `curl -fsS http://localhost:8000/health` が成功する
 - `secret ... not found` が再発しない
 
 `invalid_client` が続く場合は、`secrets/*.txt` の値が実値であることを確認し、[`docs/help/troubleshooting.md` の `invalid_client` 手順](help/troubleshooting.md#invalid_client-or-401-from-provider-token-endpoint) を参照してください。
@@ -328,18 +338,6 @@ docker compose --profile default ps
    ```
 
 詳細な切り分けは [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery) を参照してください。
-
-対処:
-
-1. 不足している `<name>` について、`secrets/<name>.txt` を作成する
-2. `jwt_secret.txt` は必須として必ず作成する（例: `openssl rand -hex 32 > secrets/jwt_secret.txt`）
-3. OAuthは `default` で最低限 `google_*` と `discord_*` が必要（`docker-compose.yml` の `api`/`api-ci` secrets 定義）
-4. サンプル値が必要な場合は `secrets/*.example` を参照し、値を設定後に再起動する
-
-```bash
-docker compose --profile default up -d --force-recreate api
-docker compose --profile default ps
-```
 
 ### 2. `default` 以外で起動して Mock OAuth が使えない
 
