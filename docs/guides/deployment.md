@@ -122,6 +122,22 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
 
 `Invalid state` の切り分け手順は `docs/help/troubleshooting.md` の `state mismatch 診断フロー` を参照してください。プロバイダー設定の前提は `docs/guides/oauth/index.md` の `セルフホスト運用チェックリスト` と合わせて確認します。
 
+### callback監視アラート時の即時トリアージ Runbook
+
+監視しきい値を超えたら、次の 3 手順を順番固定で実施します。手順を入れ替えないことで、セルフホスト環境でも再現性を維持できます。
+
+1. callback 失敗の事実を 30 分窓で再確認する
+   ```bash
+   docker compose logs api --since=30m | rg -n "/api/v1/auth/.*/callback|invalid_client|Invalid state|redirect_uri_mismatch"
+   ```
+2. 失敗タイプごとに一次切り分けを実施する
+   - `Invalid state`: [state mismatch 診断フロー](../help/troubleshooting.md#state-mismatch-flow) に移動する
+   - `redirect_uri_mismatch`: [トラブルシューティング](../help/troubleshooting.md) の `redirect_uri_mismatch` 診断へ移動する
+   - `invalid_client`: `client_id` / `client_secret` と callback URL の一致を [OAuth設定ガイドの callback チェック](./oauth/index.md#oauth-callback-checklist) で確認する
+3. 復旧後に監視基準へ戻ったことを確認する
+   - 同じコマンドを `--since=30m` で再実行し、該当エラー件数が増加しないことを確認する
+   - `curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health` が `200` であることを確認する
+
 ## OAuthシークレットローテーション手順
 
 プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。
