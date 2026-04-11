@@ -51,6 +51,21 @@ class SessionCookieSameSiteWarningTests(unittest.TestCase):
             "staging",
         )
 
+    def test_warns_with_production_when_environment_is_empty(self) -> None:
+        logger = Mock()
+
+        warned = warn_if_session_cookie_samesite_unset(
+            logger,
+            environment="",
+            session_cookie_samesite="",
+        )
+
+        self.assertTrue(warned)
+        logger.warning.assert_called_once_with(
+            "SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=%s)",
+            "production",
+        )
+
     def test_warns_and_falls_back_when_samesite_is_unknown(self) -> None:
         logger = Mock()
 
