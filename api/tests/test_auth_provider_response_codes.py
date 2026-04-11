@@ -26,8 +26,30 @@ async def test_oauth_known_provider_disabled_returns_503(client: AsyncClient, mo
 
 
 @pytest.mark.asyncio
-async def test_oauth_unsupported_provider_path_returns_404(client: AsyncClient):
-    """Unsupported provider path should follow FastAPI route-level 404."""
+async def test_oauth_unsupported_provider_path_returns_400(client: AsyncClient):
+    """Unsupported provider path must return explicit 400 contract."""
     response = await client.get("/api/v1/auth/unknown", follow_redirects=False)
 
-    assert response.status_code == 404
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unsupported OAuth provider 'unknown'."}
+
+
+@pytest.mark.asyncio
+async def test_oauth_provider_path_case_variant_redirects_to_canonical(client: AsyncClient):
+    """Mixed-case provider path should be normalized via redirect."""
+    response = await client.get("/api/v1/auth/GitHub", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/api/v1/auth/github"
+
+
+@pytest.mark.asyncio
+async def test_oauth_callback_path_case_variant_redirects_to_canonical(client: AsyncClient):
+    """Mixed-case callback path should redirect while preserving query."""
+    response = await client.get(
+        "/api/v1/auth/GitHub/callback?code=abc&state=xyz",
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 307
+    assert response.headers["location"] == "/api/v1/auth/github/callback?code=abc&state=xyz"

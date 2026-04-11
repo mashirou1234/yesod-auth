@@ -1269,6 +1269,32 @@ async def debug_tokens(access_token: str, refresh_token: str):
 
 
 # =============================================================================
+# Provider Alias Endpoints
+# =============================================================================
+
+
+@router.get("/{provider}")
+@limiter.limit("10/minute")
+async def oauth_provider_login_alias(request: Request, provider: str):
+    """Normalize provider path casing and redirect to canonical login endpoint."""
+    normalized_provider = _validate_supported_oauth_provider(provider)
+    target_path = f"{API_V1_PREFIX}/auth/{normalized_provider}"
+    return RedirectResponse(url=target_path, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+@router.get("/{provider}/callback")
+@limiter.limit("10/minute")
+async def oauth_provider_callback_alias(request: Request, provider: str):
+    """Normalize callback path casing and redirect to canonical callback endpoint."""
+    normalized_provider = _validate_supported_oauth_provider(provider)
+    target_path = f"{API_V1_PREFIX}/auth/{normalized_provider}/callback"
+    query = request.url.query
+    if query:
+        target_path = f"{target_path}?{query}"
+    return RedirectResponse(url=target_path, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+# =============================================================================
 # Mock OAuth Endpoints (Development Only)
 # =============================================================================
 
