@@ -155,6 +155,11 @@ POST /api/v1/admin/webhooks/reload
 | `missing_signature_header` | `X-Webhook-Signature` ヘッダが欠落または空 |
 | `invalid_signature` | 署名検証に失敗した |
 
+`invalid_signature` 例外メッセージは、調査ログの構造を一定にするため次の key-value 形式を含みます。
+
+- `error_code=<failure_reason>`（例: `hmac_mismatch`, `unsupported_signature_algorithm`）
+- `signature_algorithm=<algorithm>`（例: `sha256`, `sha1`）
+
 ### 署名検証失敗時の最小調査フロー
 
 `invalid_signature` または `hmac_mismatch` が連続する場合は、次の順で切り分けると最短で原因に到達できます。

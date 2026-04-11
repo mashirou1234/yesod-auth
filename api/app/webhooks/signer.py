@@ -35,8 +35,19 @@ class InvalidWebhookSignatureError(WebhookSignatureError):
 
     error_code = "invalid_signature"
 
-    def __init__(self):
-        super().__init__("Webhook signature verification failed")
+    def __init__(
+        self,
+        *,
+        verify_error_code: str | None = None,
+        signature_algorithm: str | None = None,
+    ):
+        details: list[str] = []
+        if verify_error_code:
+            details.append(f"error_code={verify_error_code}")
+        if signature_algorithm:
+            details.append(f"signature_algorithm={signature_algorithm}")
+        detail_text = " ".join(details) if details else "error_code=invalid_signature"
+        super().__init__(f"Webhook signature verification failed {detail_text}")
 
 
 class WebhookSigner:
@@ -49,6 +60,14 @@ class WebhookSigner:
     ERROR_INVALID_SIGNATURE_FORMAT = "invalid_signature_format"
     ERROR_UNSUPPORTED_SIGNATURE_ALGORITHM = "unsupported_signature_algorithm"
     ERROR_HMAC_MISMATCH = "hmac_mismatch"
+
+    @staticmethod
+    def signature_algorithm(signature: str) -> str | None:
+        """Extract signature algorithm from '<algorithm>=<digest>' format."""
+        if "=" not in signature:
+            return None
+        algorithm, _ = signature.split("=", 1)
+        return algorithm.strip() or None
 
     @staticmethod
     def sign(payload: str, secret: str, timestamp: int | None = None) -> tuple[str, int]:
@@ -170,8 +189,17 @@ class WebhookSigner:
         """
         if signature is None or not signature.strip():
             raise MissingWebhookSignatureError()
-        if not WebhookSigner.verify(payload, secret, timestamp, signature):
-            raise InvalidWebhookSignatureError()
+        result = WebhookSigner.verify_with_error(
+            payload=payload,
+            secret=secret,
+            timestamp=timestamp,
+            signature=signature,
+        )
+        if not result.ok:
+            raise InvalidWebhookSignatureError(
+                verify_error_code=result.error_code,
+                signature_algorithm=WebhookSigner.signature_algorithm(signature),
+            )
 
     @staticmethod
     def get_headers(payload: str, secret: str, event_type: str, webhook_id: str) -> dict[str, str]:

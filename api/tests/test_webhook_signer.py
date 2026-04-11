@@ -1,6 +1,7 @@
 """Property-based tests for WebhookSigner."""
 
 import json
+import time
 import uuid
 
 import pytest
@@ -257,8 +258,23 @@ class TestWebhookSigner:
     def test_verify_or_raise_reports_invalid_signature_separately(self):
         """Invalid signature should stay distinct from missing-header error."""
         payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        timestamp = int(time.time())
 
         with pytest.raises(InvalidWebhookSignatureError) as exc_info:
-            WebhookSigner.verify_or_raise(payload, "test-secret-key", 1705297800, "sha256=deadbeef")
+            WebhookSigner.verify_or_raise(payload, "test-secret-key", timestamp, "sha256=deadbeef")
 
         assert exc_info.value.error_code == "invalid_signature"
+        assert "error_code=hmac_mismatch" in str(exc_info.value)
+        assert "signature_algorithm=sha256" in str(exc_info.value)
+
+    def test_verify_or_raise_reports_algorithm_in_error_message(self):
+        """Unsupported algorithm failures should include algorithm label for triage."""
+        payload = json.dumps({"event_id": str(uuid.uuid4()), "data": {}})
+        timestamp = int(time.time())
+
+        with pytest.raises(InvalidWebhookSignatureError) as exc_info:
+            WebhookSigner.verify_or_raise(payload, "test-secret-key", timestamp, "sha1=deadbeef")
+
+        assert exc_info.value.error_code == "invalid_signature"
+        assert "error_code=unsupported_signature_algorithm" in str(exc_info.value)
+        assert "signature_algorithm=sha1" in str(exc_info.value)
