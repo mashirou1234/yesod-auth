@@ -186,10 +186,12 @@ async def _validate_callback_url_or_raise(
     if normalized_expected == normalized_actual:
         if expected_callback_url != actual_callback_url:
             logger.info(
-                "OAuth callback URL normalized for provider=%s expected=%s actual=%s",
+                "OAuth callback URL normalized for provider=%s expected=%s actual=%s normalized_expected=%s normalized_actual=%s",
                 provider,
                 expected_callback_url,
                 actual_callback_url,
+                normalized_expected,
+                normalized_actual,
             )
         return
 

@@ -1,6 +1,7 @@
 """OAuth callback URL normalization tests."""
 
 import importlib
+import logging
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
@@ -19,8 +20,9 @@ def test_normalize_callback_url_trims_only_trailing_slash():
 
 
 @pytest.mark.asyncio
-async def test_validate_callback_url_allows_trailing_slash_difference():
+async def test_validate_callback_url_allows_trailing_slash_difference(caplog):
     """Trailing slash difference must be accepted."""
+    caplog.set_level(logging.INFO, logger=auth_router_module.logger.name)
     request = SimpleNamespace(
         url=SimpleNamespace(
             replace=lambda **kwargs: "https://api.example.com/api/v1/auth/google/callback/"
@@ -41,6 +43,13 @@ async def test_validate_callback_url_allows_trailing_slash_difference():
 
     mock_metric.assert_not_called()
     mock_log_login.assert_not_called()
+    assert (
+        "OAuth callback URL normalized for provider=google "
+        "expected=https://api.example.com/api/v1/auth/google/callback "
+        "actual=https://api.example.com/api/v1/auth/google/callback/ "
+        "normalized_expected=https://api.example.com/api/v1/auth/google/callback "
+        "normalized_actual=https://api.example.com/api/v1/auth/google/callback"
+    ) in caplog.text
 
 
 @pytest.mark.asyncio
