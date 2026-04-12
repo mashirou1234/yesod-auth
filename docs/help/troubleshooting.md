@@ -642,7 +642,18 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 | 時刻ずれや再送遅延 | 特定環境のみ断続的に失敗 | サーバー時刻同期を確認し、遅延経路を短縮 |
 | 再送イベントの重複処理 | 同じ `event_id` で副作用が複数回実行される | 受信側の冪等キーを `event_id`（必要に応じて `endpoint_id` 併用）へ統一し、`delivery id` / `attempt_count` は重複判定に使わない |
 
+**監査ログで最低限確認する項目:**
+
+| 項目 | 期待値/例 | 確認ポイント |
+| --- | --- | --- |
+| `event_type` | `webhook.signature_verification_failed` | 署名検証失敗イベントとして記録されているか |
+| `failure_reason` | `hmac_mismatch` など | 失敗分類が固定値で記録されているか |
+| `webhook_id` | `my-service` | どの送信先で失敗したか特定できるか |
+| `x_webhook_event` | `user.login` | どの通知イベントで失敗したか追跡できるか |
+| `request_id` | `req-...` | APIログと相互参照できるか |
+
 署名鍵ローテーション時の手順は [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
+監査ログ項目の完全版は [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照。
 
 ---
 
