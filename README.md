@@ -470,6 +470,23 @@ If a pull request was opened while the auto-approve / auto-merge workflows were 
 
 With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
 
+## Codex Automation Ops（commit/push と issue 処理）
+
+codex-orch 運用の基本方針は、手動レーンと自動レーンで責務を分けつつ、Issue ラベル遷移を一貫させることです。詳細テンプレートは [`docs/guides/codex-automation-ops.md`](docs/guides/codex-automation-ops.md) を参照してください。
+
+### レーン別 commit/push ルール
+
+- 自動レーン: commit/push は原則許可（Issue 指示や実行プロンプトで明示禁止がある場合のみ停止）
+- 手動レーン: ローカル確認後に 1 回 push を標準化
+- queue 着手前: linked Project の status / priority を確認（Project 未連携 repo は `N/A` を記録）
+
+### Issue 状態遷移（標準）
+
+`queue -> claimed -> (blocked | pr-opened) -> merge確認 -> close`
+
+- `blocked`: issue コメントを残して `codex:blocked` を付与
+- `pr-opened`: merge 確認後、reconcile で close（自動レーン主体）
+
 ### Generate TypeScript Types
 
 OpenAPIスキーマからTypeScript型定義を生成:
