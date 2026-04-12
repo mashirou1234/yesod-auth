@@ -475,12 +475,6 @@ codex-orch 運用の基本方針は、手動レーンと自動レーンで責務
 - `blocked`: issue コメントを残して `codex:blocked` を付与
 - `pr-opened`: merge 確認後、reconcile で close（自動レーン主体）
 
-### docs-only CI 分岐（Woodpecker）
-
-- 判定対象は `docs/`, `README.md`, `AGENTS.md` のみ
-- 変更が上記のみの場合、`.woodpecker.yml` は重い検証ステップを明示スキップ
-- それ以外の変更を含む場合は通常どおり CI を実行
-
 ### Generate TypeScript Types
 
 OpenAPIスキーマからTypeScript型定義を生成:
