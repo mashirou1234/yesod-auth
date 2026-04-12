@@ -15,14 +15,14 @@ auth_router_module = importlib.import_module("app.auth.router")
 def test_provider_registry_order_is_stable() -> None:
     """Provider registry order must stay deterministic across modules."""
     assert OAUTH_PROVIDER_ORDER == (
-        "google",
         "discord",
-        "github",
-        "x",
-        "linkedin",
         "facebook",
+        "github",
+        "google",
+        "linkedin",
         "slack",
         "twitch",
+        "x",
     )
     assert tuple(OAUTH_PROVIDER_CREDENTIAL_FIELDS.keys()) == OAUTH_PROVIDER_ORDER
     assert OAUTH_PROVIDER_CREDENTIAL_KEYS == tuple(OAUTH_PROVIDER_CREDENTIAL_FIELDS.values())
@@ -34,4 +34,4 @@ def test_provider_registry_order_is_logged(caplog) -> None:
         auth_router_module._log_provider_registry_order()
 
     assert "OAuth provider registry initialized in deterministic order" in caplog.text
-    assert "google -> discord -> github -> x -> linkedin -> facebook -> slack -> twitch" in caplog.text
+    assert "discord -> facebook -> github -> google -> linkedin -> slack -> twitch -> x" in caplog.text
