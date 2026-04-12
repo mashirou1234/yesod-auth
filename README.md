@@ -181,6 +181,18 @@ self-host では `timedatectl status` と `date -u` / `docker compose exec -T ap
 | DELETE | `/sessions/me/{session_id}` | Revoke specific session |
 | DELETE | `/sessions/me` | Revoke all sessions |
 
+`GET /api/v1/sessions` の `limit` は最大 `1000` です。`limit > 1000` の場合は `400 Bad Request` として次の本文を返します。
+
+```json
+{
+  "detail": {
+    "code": "SESSIONS_LIMIT_EXCEEDED",
+    "message": "limit must be less than or equal to 1000",
+    "max_limit": 1000
+  }
+}
+```
+
 ### Response Format
 
 #### Successful Login (Callback Response)

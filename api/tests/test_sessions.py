@@ -132,6 +132,24 @@ async def test_sessions_list_accepts_limit_at_maximum(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_sessions_list_accepts_limit_100(client: AsyncClient):
+    """Session list should keep working with common pagination boundary (limit=100)."""
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+
+    token = login_response.json()["access_token"]
+    response = await client.get(
+        "/api/v1/sessions?limit=100",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["sessions"]) <= 100
+    assert data["total"] == len(data["sessions"])
+
+
+@pytest.mark.asyncio
 async def test_sessions_openapi_limit_has_maximum(client: AsyncClient):
     """OpenAPI should expose limit maximum as 1000."""
     response = await client.get("/openapi.json")

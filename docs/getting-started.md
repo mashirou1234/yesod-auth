@@ -335,6 +335,18 @@ curl -H "Authorization: Bearer ${TOKEN}" \
 
 `limit=1/100` の境界値を含む一覧系確認を同じトークンで行う場合は、[ユーザーAPIの検証例](api/users.md#ページング境界値limit1100の検証例) を参照してください。
 
+`GET /api/v1/sessions` で `limit > 1000` を指定した場合は、`400 Bad Request` と次のエラー契約を返します。
+
+```json
+{
+  "detail": {
+    "code": "SESSIONS_LIMIT_EXCEEDED",
+    "message": "limit must be less than or equal to 1000",
+    "max_limit": 1000
+  }
+}
+```
+
 ### エラーレスポンスの確認
 
 未認証でログアウトAPIを呼ぶと、`401 Unauthorized` とエラーボディを確認できます。
