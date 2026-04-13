@@ -472,13 +472,14 @@ PY
 ### profile別の環境変数優先順位
 
 `MOCK_OAUTH_ENABLED` はアプリ既定値 `0` ですが、Compose 運用では profile ごとに環境変数で上書きされます。  
-本番誤設定を避けるため、profile 別に以下を固定値として扱ってください。
+本番誤設定を避けるため、既定値と profile 上書きを同じ表で確認してください。
 
-| profile | Compose上の期待値 | 実行時の期待値 | 根拠 |
-| --- | --- | --- | --- |
-| `default` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
-| `full` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
-| `ci` | `MOCK_OAUTH_ENABLED=1` が `api-ci.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api-ci.profiles: ci`) |
+| 実行モード | アプリ既定値（Compose なし） | Compose上の期待値 | 実行時の期待値 | 根拠 |
+| --- | --- | --- | --- | --- |
+| 単体起動（参考） | `0` | なし | `0`（Mock OAuth 無効） | `api/app/config.py` |
+| `default` | `0` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `full` | `0` | `MOCK_OAUTH_ENABLED=1` が `api.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api.profiles: default/full`) |
+| `ci` | `0` | `MOCK_OAUTH_ENABLED=1` が `api-ci.environment` に含まれる | `1`（Mock OAuth 有効） | `docker-compose.yml` (`api-ci.profiles: ci`) |
 
 確認コマンド（default/full/ci の3点を毎回実施）:
 
@@ -490,7 +491,7 @@ docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
 
 判定:
 
-- `default`/`full`/`ci` すべてで `MOCK_OAUTH_ENABLED=1` が見えること
+- `default`/`full`/`ci` すべてで `MOCK_OAUTH_ENABLED: "1"` が見えること
 - Compose を使わずアプリを単体起動する場合は既定値 `0` になること（`api/app/config.py`）
 
 ### 受け入れ基準チェックリスト（MOCK_OAUTH_ENABLED / profile差分）
