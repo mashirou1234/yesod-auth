@@ -88,7 +88,8 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 1. `docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"` で症状を確認する
 2. Linux: `stat -c '%n %a %U:%G' secrets/*.txt` / macOS: `stat -f '%N %Lp %Su:%Sg' secrets/*.txt` で権限と所有者を確認する
 3. `chmod 600 secrets/*.txt` と `sudo chown "$(id -un):$(id -gn)" secrets/*.txt` で復旧する
-4. `docker compose up -d --force-recreate api worker` 後に `curl -fsS http://localhost:8000/health` を確認する
+4. `docker compose up -d --force-recreate api worker` で反映する
+5. `docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"` と `curl -fsS http://localhost:8000/health` で再確認する
 
 詳細手順は [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./troubleshooting.md#secrets-permission-recovery) を参照してください。  
 受け入れ時は FAQ / installation / troubleshooting の3点で、コマンドと手順順が一致していることを確認してください。

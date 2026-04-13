@@ -310,18 +310,17 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
 
 **症状:** `docker compose up -d` 実行時に `permission denied` が出て起動できない。`/run/secrets/*` の読み込みエラーが API ログに残る。
 
-**確認手順（Linux/macOS）:**
+**確認手順（症状→確認）:**
 
-1. 対象 secret の所有者とパーミッションを確認する
+1. 症状をログで確認する
    ```bash
-   ls -l secrets/*.txt
+   docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"
    ```
-2. Linux の詳細確認
+2. 権限と所有者を確認する（Linux/macOS）
    ```bash
+   # Linux
    stat -c '%n %a %U:%G' secrets/*.txt
-   ```
-3. macOS の詳細確認
-   ```bash
+   # macOS
    stat -f '%N %Lp %Su:%Sg' secrets/*.txt
    ```
 
@@ -333,7 +332,7 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
    ```
 2. 所有者が現在ユーザーでない場合は修正する（Linux/macOS 共通）
    ```bash
-   sudo chown \"$(id -un):$(id -gn)\" secrets/*.txt
+   sudo chown "$(id -un):$(id -gn)" secrets/*.txt
    ```
 3. API を再作成して反映する
    ```bash
@@ -341,7 +340,7 @@ curl -sS -X POST -H "Authorization: Bearer ${TOKEN}" \
    ```
 4. 再確認する
    ```bash
-   docker compose logs --tail=100 api | rg -n \"permission denied|/run/secrets|invalid_client\"
+   docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"
    curl -fsS http://localhost:8000/health
    ```
 
