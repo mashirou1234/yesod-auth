@@ -336,6 +336,11 @@ curl -fsS http://localhost:8000/health
    sudo chown "$(id -un):$(id -gn)" secrets/*.txt
    docker compose up -d --force-recreate api worker
    ```
+4. 再確認
+   ```bash
+   docker compose logs --tail=100 api | rg -n "permission denied|/run/secrets"
+   curl -fsS http://localhost:8000/health
+   ```
 
 詳細な切り分けは [トラブルシューティング: secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery) を参照してください。
 
