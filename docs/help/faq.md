@@ -180,7 +180,11 @@ API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報から
 - クイックスタート: [2.5 コールバックURLの検証](../getting-started.md#25-コールバックurlの検証)
 - トラブルシューティング: [401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client)
 
-受け入れ時は、FAQ / installation / troubleshooting の3点同期（手順・用語・リンク先）が保たれていることを確認してください。
+受け入れ時は、次の3点を満たしていることを確認してください。
+
+1. FAQ の順序チェック項目が3つ以上あり、今回の運用順（profile固定 → secret配置 → callback一致 → 認可導線確認）を説明できる
+2. 参照リンクが [インストール](../installation.md#oauth認証情報) と [クイックスタート](../getting-started.md#25-コールバックurlの検証) を指している
+3. [FAQ](./faq.md#複数providerを有効化するときの順序チェックは) / [installation](../installation.md#oauth認証情報) / [troubleshooting](./troubleshooting.md#401-unauthorized--invalid_client) の三点同期（手順・用語・リンク先）が保たれている
 
 ### ローカルでテストするには？
 
