@@ -29,6 +29,32 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 
 `secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
 
+<a id="valkey-preflight-failure"></a>
+
+### preflight で valkey 到達確認に失敗する
+
+**症状:** `docker compose ... exec valkey ... 'valkey-cli ping || redis-cli ping'` が失敗する、または `PONG` 以外を返す。
+
+**確認手順:**
+
+1. 対象 profile で `valkey` が起動対象になっているか確認する
+   ```bash
+   docker compose --profile default config --services | rg -x 'valkey'
+   docker compose --profile full config --services | rg -x 'valkey'
+   docker compose --profile ci config --services | rg -x 'valkey'
+   ```
+2. `valkey` コンテナ状態を確認する
+   ```bash
+   docker compose ps valkey
+   docker compose logs valkey --since=30m
+   ```
+3. `PING` の再実行で復旧確認する
+   ```bash
+   docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+   ```
+
+**対処:** `valkey` が `Up` で `PING` が `PONG` になるまで、ポート競合・ボリューム破損・起動失敗ログを優先して解消します。導線は [インストール: Docker起動前チェック項目](../installation.md#docker起動前チェック項目) を基準に戻してください。
+
 ### `pg_cron`関連のエラー
 
 ```

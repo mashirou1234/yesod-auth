@@ -187,6 +187,26 @@ API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報から
 2. 参照リンクが [インストール](../installation.md#oauth認証情報) と [クイックスタート](../getting-started.md#25-コールバックurlの検証) を指している
 3. [FAQ](./faq.md#複数providerを有効化するときの順序チェックは) / [installation](../installation.md#oauth認証情報) / [troubleshooting](./troubleshooting.md#401-unauthorized--invalid_client) の三点同期（手順・用語・リンク先）が保たれている
 
+### preflight で valkey 到達確認を最短で行うには？
+
+最短では、選んだ profile で `valkey` を起動して `PING` が `PONG` を返すことだけ確認します。
+
+```bash
+PROFILE=default # full / ci でも可
+docker compose --profile "$PROFILE" up -d valkey
+docker compose --profile "$PROFILE" exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+```
+
+失敗時は次の順で切り分けると早いです。
+
+1. `docker compose --profile "$PROFILE" config --services | rg -x 'valkey'`
+2. `docker compose ps valkey`
+3. `docker compose logs valkey --since=30m`
+
+参照先:
+- [インストール: Docker起動前チェック項目](../installation.md#docker起動前チェック項目)
+- [トラブルシューティング: preflight で valkey 到達確認に失敗する](./troubleshooting.md#valkey-preflight-failure)
+
 ### ローカルでテストするには？
 
 ```bash
