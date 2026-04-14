@@ -102,6 +102,28 @@ lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
 - 管理画面確認まで行う場合: `full`
 - CI相当確認のみ: `ci`
 
+7. Valkey 到達確認（profile別）
+
+選んだ profile ごとに、`valkey` へ `PING` が通ることを先に確認します。
+
+- `default`
+  ```bash
+  docker compose --profile default up -d valkey
+  docker compose --profile default exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+  ```
+- `full`
+  ```bash
+  docker compose --profile full up -d valkey
+  docker compose --profile full exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+  ```
+- `ci`
+  ```bash
+  docker compose --profile ci up -d valkey
+  docker compose --profile ci exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+  ```
+
+期待値はすべて `PONG` です。失敗した場合は [トラブルシューティング: preflight で valkey 到達確認に失敗する](./help/troubleshooting.md#valkey-preflight-failure) を参照してください。
+
 ### 起動前チェックを1コマンドで流す（任意）
 
 ```bash
@@ -110,6 +132,8 @@ docker --version \
   && docker info > /dev/null \
   && test -r secrets/jwt_secret.txt \
   && docker compose --profile default config > /dev/null \
+  && docker compose --profile default up -d valkey \
+  && docker compose --profile default exec valkey sh -lc 'valkey-cli ping || redis-cli ping' | rg -qx 'PONG' \
   && echo "preflight: OK"
 ```
 
