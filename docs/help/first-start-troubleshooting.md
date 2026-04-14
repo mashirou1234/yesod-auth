@@ -39,6 +39,17 @@
 | `/docs` は成功、`/metrics` が失敗 | メトリクス収集設定と API ルータ有効化を確認 | [トラブルシューティング](troubleshooting.md) |
 | 3点すべて成功、OAuth 開始で失敗 | provider 設定と callback URL を確認 | [クイックスタート](../getting-started.md#oauth-callback失敗時の確認順) |
 
+### 判定ルール（分岐を一意にする）
+
+次の 4 行を上から順に評価し、最初に一致した行の次アクションだけを実行します。
+
+| 判定順 | 条件（`0`=成功, `1`=失敗） | 次に進む先 |
+| --- | --- | --- |
+| 1 | `health=1` | [トラブルシューティング: 認証エラー](troubleshooting.md#認証エラー) |
+| 2 | `health=0` かつ `docs=1` | [インストール](../installation.md) |
+| 3 | `health=0` かつ `docs=0` かつ `metrics=1` | [トラブルシューティング](troubleshooting.md) |
+| 4 | `health=0` かつ `docs=0` かつ `metrics=0` | [クイックスタート](../getting-started.md#oauth-callback失敗時の確認順) |
+
 ## 3. 文書同期チェック（受け入れ基準）
 
 このページを更新したら、以下 3 点が矛盾しないことを確認します。
@@ -46,6 +57,14 @@
 1. [FAQ](faq.md)
 2. [インストール](../installation.md)
 3. [トラブルシューティング](troubleshooting.md)
+
+同期チェック時は、次の 3 コマンドでリンク先と用語の整合を確認します。
+
+```bash
+rg -n "初回3点確認順|/health|/docs|/metrics" docs/help/first-start-troubleshooting.md
+rg -n "初回|/health|/docs" docs/help/faq.md docs/installation.md
+rg -n "障害時の参照順|first-start-troubleshooting" docs/help/troubleshooting.md
+```
 
 ## 症状1: `/health` が失敗する
 
