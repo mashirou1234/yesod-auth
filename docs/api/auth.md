@@ -69,6 +69,35 @@
 GET /api/v1/auth/google
 ```
 
+#### 最小 curl 例（認可開始と callback 確認）
+
+`API_BASE_URL` と `PROVIDER` を合わせるだけで、認可開始の到達確認と callback 失敗系の切り分けを最小手順で再現できます。
+
+```bash
+API_BASE_URL=http://localhost:8000
+PROVIDER=google
+
+# 1) 認可開始: 302 と Location ヘッダーを確認
+curl -i -sS "${API_BASE_URL}/api/v1/auth/${PROVIDER}" | sed -n '1,10p'
+```
+
+期待結果:
+
+- HTTP ステータス: `302 Found`
+- `Location:` に provider の認可 URL が含まれる
+
+```bash
+# 2) callback 失敗例: 存在しない code/state で 400 を確認
+curl -i -sS "${API_BASE_URL}/api/v1/auth/${PROVIDER}/callback?code=dummy-code&state=dummy-state" | sed -n '1,20p'
+```
+
+期待結果:
+
+- HTTP ステータス: `400 Bad Request`
+- レスポンス本文に `Invalid or expired state` または `Failed to exchange code` が含まれる
+
+上記と異なる場合は [トラブルシューティング: 認証エラー](../help/troubleshooting.md#認証エラー) を参照してください。
+
 ### OAuth provider が無効な場合
 
 対象: `GET /api/v1/auth/{provider}`（google / github / discord / x / linkedin / facebook / slack / twitch）
