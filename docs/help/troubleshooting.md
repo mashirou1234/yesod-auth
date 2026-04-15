@@ -29,6 +29,32 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 
 `secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
 
+<a id="full-profile-admin-password-missing"></a>
+
+### full profile で admin ログインできない（admin_password 未設定/空）
+
+**症状:** `--profile full` 起動後に `admin` へログインできない、または `admin` サービス起動に失敗する。
+
+**確認手順:**
+
+1. `secrets/admin_password.txt` の存在と非空を確認する
+   ```bash
+   ls -l secrets/admin_password.txt
+   test -s secrets/admin_password.txt && echo "admin_password: OK" || (echo "admin_password が未作成または空です" >&2; exit 1)
+   ```
+2. `full` プロファイルでサービス一覧を確認する
+   ```bash
+   docker compose --profile full config --services
+   ```
+3. 必要に応じて再起動する
+   ```bash
+   docker compose --profile full up -d
+   ```
+
+**参照:**
+- FAQ: [どのsecretを必須で用意すべき？](./faq.md#どのsecretを必須で用意すべき)
+- Installation: [管理画面付き](../installation.md#管理画面付き)
+
 <a id="valkey-preflight-failure"></a>
 
 ### preflight で valkey 到達確認に失敗する
