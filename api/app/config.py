@@ -46,7 +46,10 @@ def parse_bool_env(name: str, default: bool = False) -> bool:
         return False
 
     allowed_values = "1,true,yes,0,false,no"
-    raise ValueError(f"Invalid boolean value for {name}: '{raw}'. Allowed values: {allowed_values}")
+    raise ValueError(
+        f"Invalid boolean value for {name}: raw={raw!r}, normalized={normalized!r}. "
+        f"Allowed values: {allowed_values} (case-insensitive, surrounding whitespace is ignored)."
+    )
 
 
 class Settings:

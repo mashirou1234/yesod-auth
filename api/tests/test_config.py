@@ -103,8 +103,19 @@ def test_parse_bool_env_raises_clear_error_on_invalid_value(monkeypatch):
         assert False, "ValueError was not raised for invalid boolean value"
     except ValueError as exc:
         message = str(exc)
-        assert "Invalid boolean value for TESTING: 'maybe'" in message
+        assert "Invalid boolean value for TESTING: raw='maybe', normalized='maybe'" in message
         assert "Allowed values: 1,true,yes,0,false,no" in message
+
+
+def test_parse_bool_env_raises_with_raw_and_normalized_value(monkeypatch):
+    monkeypatch.setenv("TESTING", "  ON  ")
+
+    with pytest.raises(ValueError) as exc_info:
+        parse_bool_env("TESTING")
+
+    message = str(exc_info.value)
+    assert "raw='  ON  '" in message
+    assert "normalized='on'" in message
 
 
 def test_resolve_cors_origins_raises_when_empty_element_is_present():
