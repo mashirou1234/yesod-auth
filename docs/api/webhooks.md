@@ -134,6 +134,21 @@ POST /api/v1/admin/webhooks/reload
 
 ---
 
+## 再試行上限到達時の監査ログ
+
+Webhook 配信が再試行上限に到達した場合、ワーカーは固定キー
+`webhook_delivery_retry_exhausted` を含むエラーログを出力します。
+
+最低限、次の key-value を確認してください。
+
+- `attempts`: 実際に試行した回数
+- `max_attempts`: 設定上の最大試行回数
+- `failure_reason`: 失敗理由（HTTP エラー本文または `Request timeout` など）
+- `http_status`: HTTP ステータス（取得できない場合は `None`）
+- `endpoint_id` / `event_id`: 影響範囲の追跡キー
+
+---
+
 ## 署名検証エラー分類
 
 受信側の署名検証では、以下の `failure_reason` を固定値として扱うことを推奨します。
