@@ -205,6 +205,13 @@ Content-Type: application/json
 
 詳細な切り分け手順は [`トラブルシューティング > 認証エラー`](../help/troubleshooting.md#認証エラー) を参照してください。
 
+`AuthEventType.TOKEN_REFRESH_FAILED` の監査ログ詳細は次のキーで固定します。
+
+| キー | 例 | 説明 |
+| --- | --- | --- |
+| `failure_reason` | `invalid_or_expired_refresh_token` | refresh 失敗の大分類（固定値） |
+| `token_status` | `not_found` / `revoked` / `expired` | 失敗 token の分類 |
+
 ### refresh token 無効時の再認証導線（`401 Invalid or expired refresh token`）
 
 `POST /api/v1/auth/refresh` が `401` かつ `Invalid or expired refresh token` を返した場合は、次の順序で復旧します。
