@@ -4,6 +4,7 @@ import re
 import uuid
 from unittest.mock import AsyncMock, call, patch
 
+import httpx
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
@@ -270,7 +271,10 @@ class TestWebhookWorkerRetry:
         assert f"endpoint_id={sample_endpoint.id}" in exhausted_log
         assert f"event_id={sample_event.event_id}" in exhausted_log
         assert "attempts=3" in exhausted_log
+        assert "max_attempts=3" in exhausted_log
+        assert "failure_reason=Server Error" in exhausted_log
         assert "signature_algo=sha256" in exhausted_log
+        assert "http_status=500" in exhausted_log
         assert "error=Server Error" in exhausted_log
 
     @pytest.mark.asyncio
@@ -310,6 +314,46 @@ class TestWebhookWorkerRetry:
         assert result.success is False
         assert result.attempt_count == 5
         assert mock_sleep.await_args_list == [call(10), call(15), call(15), call(15)]
+
+    @pytest.mark.asyncio
+    async def test_logs_retry_exhausted_timeout_reason(
+        self,
+        caplog,
+        sample_endpoint,
+        sample_event,
+        sample_config,
+    ):
+        """タイムアウト時の exhausted ログに失敗理由と試行回数を残す。"""
+        worker = WebhookWorker()
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=sample_config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            caplog.at_level("ERROR", logger="app.webhooks.worker"),
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+
+            result = await worker._deliver_to_endpoint(sample_event, sample_endpoint)
+
+        assert result.success is False
+        assert result.attempt_count == 3
+        exhausted_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if MAX_RETRY_EXHAUSTED_LOG_KEY in record.getMessage()
+        )
+        assert "attempts=3" in exhausted_log
+        assert "max_attempts=3" in exhausted_log
+        assert "failure_reason=Request timeout" in exhausted_log
+        assert "http_status=None" in exhausted_log
+        assert "error=Request timeout" in exhausted_log
 
 
 class TestWebhookWorkerOrdering:

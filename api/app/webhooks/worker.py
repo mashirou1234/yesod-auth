@@ -177,10 +177,16 @@ class WebhookWorker:
                 break
 
         if not result.success:
+            failure_reason = result.error_message or (
+                f"http_status_{result.http_status}"
+                if result.http_status is not None
+                else "unknown_error"
+            )
             logger.error(
                 (
                     "%s delivery_id=%s endpoint_id=%s event_id=%s attempts=%d "
-                    "max_attempts=%d signature_algo=%s http_status=%s error=%s"
+                    "max_attempts=%d failure_reason=%s signature_algo=%s "
+                    "http_status=%s error=%s"
                 ),
                 MAX_RETRY_EXHAUSTED_LOG_KEY,
                 delivery_id,
@@ -188,6 +194,7 @@ class WebhookWorker:
                 event.event_id,
                 result.attempt_count,
                 max_retries + 1,
+                failure_reason,
                 result.signature_algorithm,
                 result.http_status,
                 result.error_message,
