@@ -149,6 +149,14 @@ def _missing_oauth_callback_params_reason(
     )
 
 
+def _build_refresh_failure_audit_details(token_status: str) -> dict[str, str]:
+    """Build stable audit log keys for refresh failures."""
+    return {
+        "failure_reason": "invalid_or_expired_refresh_token",
+        "token_status": token_status,
+    }
+
+
 def _normalize_callback_url(url: str) -> str:
     """Normalize callback URL by dropping only trailing slash and query/fragment."""
     parsed = urlsplit(url)
@@ -1161,7 +1169,7 @@ async def refresh_tokens(
             db,
             AuthEventType.TOKEN_REFRESH_FAILED,
             None,
-            {"reason": "Invalid or expired token", "token_status": token_status},
+            _build_refresh_failure_audit_details(token_status),
             ip_address,
             device_info,
         )

@@ -214,7 +214,7 @@ async def test_refresh_rejects_revoked_session_token(
 async def test_refresh_reuse_logs_revoked_token_status(
     client: AsyncClient, db_session: AsyncSession
 ):
-    """Reusing a rotated refresh token should log token_status=revoked."""
+    """Reusing a rotated refresh token should log stable failure keys."""
     user = User()
     user.emails.append(
         UserEmail(
@@ -248,7 +248,7 @@ async def test_refresh_reuse_logs_revoked_token_status(
     failed_call = mock_log_event.await_args_list[1]
     assert failed_call.args[2] is None
     assert failed_call.args[3] == {
-        "reason": "Invalid or expired token",
+        "failure_reason": "invalid_or_expired_refresh_token",
         "token_status": "revoked",
     }
 
