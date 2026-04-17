@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import random
 import time
 import uuid
 from dataclasses import dataclass
@@ -124,6 +125,7 @@ class WebhookWorker:
         max_retries = config.settings.max_retries
         base_delay = config.settings.retry_base_delay_seconds
         max_delay = config.settings.retry_max_delay_seconds
+        jitter_ratio = config.settings.retry_jitter_ratio
         timeout = config.settings.delivery_timeout_seconds
         delivery_id = uuid.uuid4()
 
@@ -133,13 +135,17 @@ class WebhookWorker:
             result.attempt_count = attempt + 1
 
             if attempt > 0:
-                # Exponential backoff
                 raw_delay = base_delay * (2 ** (attempt - 1))
-                delay = min(raw_delay, max_delay)
+                delay = self._calculate_retry_delay(
+                    attempt=attempt,
+                    base_delay=base_delay,
+                    max_delay=max_delay,
+                    jitter_ratio=jitter_ratio,
+                )
                 logger.info(
                     (
                         "Retrying webhook delivery to %s (attempt %d/%d) after %ds "
-                        "(raw_delay=%ds, max_delay=%ds)"
+                        "(raw_delay=%ds, max_delay=%ds, jitter_ratio=%.3f)"
                     ),
                     endpoint.id,
                     attempt + 1,
@@ -147,6 +153,7 @@ class WebhookWorker:
                     delay,
                     raw_delay,
                     max_delay,
+                    jitter_ratio,
                 )
                 await asyncio.sleep(delay)
 
@@ -204,6 +211,26 @@ class WebhookWorker:
         await self._log_delivery(delivery_id, event, endpoint, result)
 
         return result
+
+    @staticmethod
+    def _calculate_retry_delay(
+        attempt: int,
+        base_delay: int,
+        max_delay: int,
+        jitter_ratio: float,
+    ) -> int:
+        """Calculate retry delay with capped exponential backoff and bounded jitter."""
+        raw_delay = base_delay * (2 ** (attempt - 1))
+        capped_delay = min(raw_delay, max_delay)
+        if jitter_ratio <= 0 or capped_delay <= 0:
+            return capped_delay
+
+        jitter_span = int(capped_delay * jitter_ratio)
+        if jitter_span <= 0:
+            return capped_delay
+
+        jitter = random.randint(-jitter_span, jitter_span)
+        return max(0, min(max_delay, capped_delay + jitter))
 
     async def _attempt_delivery(
         self,

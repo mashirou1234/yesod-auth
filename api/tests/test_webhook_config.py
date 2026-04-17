@@ -528,3 +528,32 @@ class TestWebhookConfigValidation:
                     WebhookConfigLoader.load()
         finally:
             config_path.unlink()
+
+    @pytest.mark.parametrize("invalid_jitter_ratio", [-0.1, 1.1, "0.5"])
+    def test_retry_jitter_ratio_invalid_raises_startup_error(self, invalid_jitter_ratio):
+        """retry_jitter_ratio が範囲外または非数値なら設定エラーにする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "secret",
+                    "events": ["user.created"],
+                }
+            ],
+            "settings": {
+                "retry_jitter_ratio": invalid_jitter_ratio,
+            },
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                with pytest.raises(ValueError, match="settings\\.retry_jitter_ratio"):
+                    WebhookConfigLoader.load()
+        finally:
+            config_path.unlink()
