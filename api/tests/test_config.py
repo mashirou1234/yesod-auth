@@ -176,6 +176,28 @@ def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
     assert settings.GITHUB_CLIENT_SECRET == "github-client-secret"
 
 
+def test_settings_raises_when_provider_client_id_is_duplicated(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "shared-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
+    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_ID", "shared-client-id")
+    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_SECRET", "google-client-secret")
+
+    with pytest.raises(ValueError, match="duplicated across enabled providers"):
+        Settings()
+
+
+def test_settings_allows_when_provider_client_ids_are_unique(monkeypatch):
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
+    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_ID", "google-client-id")
+    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_SECRET", "google-client-secret")
+
+    settings = Settings()
+
+    assert settings.GITHUB_CLIENT_ID == "github-client-id"
+    assert settings.GOOGLE_CLIENT_ID == "google-client-id"
+
+
 def test_settings_startup_fails_when_provider_secret_env_is_empty():
     env = os.environ.copy()
     env["GITHUB_CLIENT_ID"] = "github-client-id"
