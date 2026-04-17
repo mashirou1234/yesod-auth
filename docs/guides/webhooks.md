@@ -50,6 +50,8 @@ settings:
   max_retries: 5
   retry_base_delay_seconds: 2
   retry_max_delay_seconds: 60
+  # 任意: ジッタ比率（0.0-1.0）。未指定または0でジッタ無効
+  retry_jitter_ratio: 0.0
   # 任意: 再送バックオフを明示する場合は非負・単調増加（ms）
   retry_backoff_ms: [500, 1000, 2000]
   delivery_timeout_seconds: 30

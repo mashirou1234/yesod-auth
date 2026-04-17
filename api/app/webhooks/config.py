@@ -41,6 +41,7 @@ class WebhookSettings:
     max_retries: int = 5
     retry_base_delay_seconds: int = 2
     retry_max_delay_seconds: int = 60
+    retry_jitter_ratio: float = 0.0
     delivery_timeout_seconds: int = 30
     log_retention_days: int = 30
 
@@ -95,6 +96,7 @@ class WebhookConfigLoader:
             max_retries=settings_data.get("max_retries", 5),
             retry_base_delay_seconds=settings_data.get("retry_base_delay_seconds", 2),
             retry_max_delay_seconds=settings_data.get("retry_max_delay_seconds", 60),
+            retry_jitter_ratio=float(settings_data.get("retry_jitter_ratio", 0.0)),
             delivery_timeout_seconds=settings_data.get("delivery_timeout_seconds", 30),
             log_retention_days=settings_data.get("log_retention_days", 30),
         )
@@ -124,6 +126,11 @@ class WebhookConfigLoader:
                 "settings.retry_max_delay_seconds must be greater than or equal to "
                 "settings.retry_base_delay_seconds"
             )
+        retry_jitter_ratio = settings_data.get("retry_jitter_ratio", 0.0)
+        if not isinstance(retry_jitter_ratio, int | float):
+            raise ValueError("settings.retry_jitter_ratio must be a number")
+        if retry_jitter_ratio < 0 or retry_jitter_ratio > 1:
+            raise ValueError("settings.retry_jitter_ratio must be in range [0, 1]")
 
         retry_backoff_ms = settings_data.get("retry_backoff_ms")
         if retry_backoff_ms is None:

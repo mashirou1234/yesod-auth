@@ -118,6 +118,38 @@ class TestWebhookWorkerRetry:
             assert delays[i] >= delays[i - 1]
             assert delays[i] == base_delay * (2**i)
 
+    def test_calculate_retry_delay_without_jitter(self):
+        """ジッタ比率0では従来どおりの指数バックオフ遅延を返す。"""
+        delay = WebhookWorker._calculate_retry_delay(
+            attempt=3,
+            base_delay=2,
+            max_delay=60,
+            jitter_ratio=0.0,
+        )
+        assert delay == 8
+
+    def test_calculate_retry_delay_with_jitter_is_bounded(self):
+        """ジッタ付き遅延は [0, max_delay] の範囲に収まる。"""
+        with patch("app.webhooks.worker.random.randint", return_value=5):
+            delay = WebhookWorker._calculate_retry_delay(
+                attempt=2,
+                base_delay=10,
+                max_delay=25,
+                jitter_ratio=0.5,
+            )
+        assert delay == 25
+
+    def test_calculate_retry_delay_with_negative_jitter_is_non_negative(self):
+        """負方向ジッタでも遅延は負値にならない。"""
+        with patch("app.webhooks.worker.random.randint", return_value=-10):
+            delay = WebhookWorker._calculate_retry_delay(
+                attempt=1,
+                base_delay=1,
+                max_delay=10,
+                jitter_ratio=1.0,
+            )
+        assert delay == 0
+
     @pytest.mark.asyncio
     async def test_no_retry_on_4xx(self, sample_endpoint, sample_event, sample_config):
         """Test that 4xx errors don't trigger retries."""
