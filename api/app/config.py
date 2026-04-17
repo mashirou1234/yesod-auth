@@ -3,7 +3,7 @@
 import os
 from functools import lru_cache
 
-from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_KEYS
+from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_FIELDS, OAUTH_PROVIDER_CREDENTIAL_KEYS
 
 DEFAULT_CORS_ORIGINS = "http://localhost:3000,http://localhost:5173"
 TRUE_VALUES = {"1", "true", "yes"}
@@ -123,6 +123,7 @@ class Settings:
 
     def __init__(self) -> None:
         self._validate_oauth_provider_secrets()
+        self._validate_oauth_provider_client_ids_are_unique()
 
     def _validate_oauth_provider_secrets(self) -> None:
         for client_id_key, client_secret_key in OAUTH_PROVIDER_CREDENTIAL_KEYS:
@@ -132,6 +133,29 @@ class Settings:
                 raise ValueError(
                     f"OAuth provider secret is empty. Set non-empty value for {client_secret_key}."
                 )
+
+    def _validate_oauth_provider_client_ids_are_unique(self) -> None:
+        normalized_client_id_providers: dict[str, list[str]] = {}
+
+        for provider, credential_keys in OAUTH_PROVIDER_CREDENTIAL_FIELDS.items():
+            client_id_key, _ = credential_keys
+            client_id = str(getattr(self, client_id_key, "")).strip()
+            if not client_id:
+                continue
+            normalized = client_id.casefold()
+            normalized_client_id_providers.setdefault(normalized, []).append(provider)
+
+        duplicate_provider_groups = sorted(
+            sorted(providers)
+            for providers in normalized_client_id_providers.values()
+            if len(providers) > 1
+        )
+        if duplicate_provider_groups:
+            duplicate_message = ", ".join("/".join(providers) for providers in duplicate_provider_groups)
+            raise ValueError(
+                "OAuth provider client_id is duplicated across enabled providers. "
+                f"Resolve duplicates for: {duplicate_message}."
+            )
 
 
 @lru_cache
