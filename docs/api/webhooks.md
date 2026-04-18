@@ -38,6 +38,26 @@ GET /api/v1/admin/webhooks/endpoints
 GET /api/v1/admin/webhooks/deliveries
 ```
 
+`event_type` に未対応値を指定した場合は `422` を返します。
+
+```json
+{
+  "detail": {
+    "code": "unsupported_event_type",
+    "message": "Unsupported webhook event_type",
+    "event_type": "user.unknown",
+    "supported_event_types": [
+      "user.created",
+      "user.updated",
+      "user.deleted",
+      "user.login",
+      "user.oauth_linked",
+      "user.oauth_unlinked"
+    ]
+  }
+}
+```
+
 **レスポンス:**
 
 ```json
