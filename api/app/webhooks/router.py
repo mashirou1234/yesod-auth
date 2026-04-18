@@ -14,6 +14,15 @@ from app.webhooks.schemas import (
 )
 
 router = APIRouter(prefix="/webhooks", tags=["webhooks-admin"])
+SUPPORTED_WEBHOOK_EVENT_TYPES = (
+    "user.created",
+    "user.updated",
+    "user.deleted",
+    "user.login",
+    "user.oauth_linked",
+    "user.oauth_unlinked",
+)
+UNSUPPORTED_WEBHOOK_EVENT_TYPE_CODE = "unsupported_event_type"
 
 
 @router.post("/reload", response_model=WebhookReloadResponse)
@@ -67,6 +76,17 @@ async def list_deliveries(
 
     Returns delivery history with status, latency, and error details.
     """
+    if event_type and event_type not in SUPPORTED_WEBHOOK_EVENT_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "code": UNSUPPORTED_WEBHOOK_EVENT_TYPE_CODE,
+                "message": "Unsupported webhook event_type",
+                "event_type": event_type,
+                "supported_event_types": list(SUPPORTED_WEBHOOK_EVENT_TYPES),
+            },
+        )
+
     query = select(WebhookDelivery).order_by(desc(WebhookDelivery.created_at))
 
     if event_type:
