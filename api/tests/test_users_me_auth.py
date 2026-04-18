@@ -82,3 +82,45 @@ async def test_users_me_rejects_token_without_kid_header(client: AsyncClient):
             "token_header_fields": ["alg", "typ"],
         }
     }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("jwt_headers", "expected_header_fields"),
+    [
+        ({"kid": ""}, ["alg", "kid", "typ"]),
+        ({"kid": 123}, ["alg", "kid", "typ"]),
+    ],
+)
+async def test_users_me_rejects_token_with_invalid_kid_header_value(
+    client: AsyncClient,
+    jwt_headers: dict[str, object],
+    expected_header_fields: list[str],
+):
+    """GET /api/v1/users/me keeps invalid_token_header for invalid kid values."""
+    settings = get_settings()
+    token = jwt.encode(
+        {
+            "sub": "00000000-0000-0000-0000-000000000001",
+            "email": "user@example.com",
+            "exp": datetime.now(UTC) + timedelta(minutes=5),
+            "type": "access",
+        },
+        settings.JWT_SECRET,
+        algorithm=settings.JWT_ALGORITHM,
+        headers=jwt_headers,
+    )
+
+    response = await client.get(
+        "/api/v1/users/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 401
+    assert response.json() == {
+        "detail": {
+            "code": "invalid_token_header",
+            "message": "Invalid token header",
+            "token_header_fields": expected_header_fields,
+        }
+    }

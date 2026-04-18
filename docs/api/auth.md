@@ -47,6 +47,25 @@
 
 `/api/v1/auth/logout` や `/api/v1/auth/refresh` でトークン検証に失敗した場合は `401` を返します。`403` は「誰かは特定できるが、その操作は許可しない」ケースで返します。
 
+### 保護エンドポイントの JWT ヘッダー検証（`kid`）
+
+`Authorization: Bearer <access_token>` を受け取る保護エンドポイント（例: `GET /api/v1/users/me`）では、JWT ヘッダーの `kid` を必須として扱います。
+
+- `kid` 欠落、空文字、非文字列の場合: `401 Unauthorized`
+- エラー本文:
+
+```json
+{
+  "detail": {
+    "code": "invalid_token_header",
+    "message": "Invalid token header",
+    "token_header_fields": ["alg", "typ"]
+  }
+}
+```
+
+`token_header_fields` は受信 JWT ヘッダーのキー一覧（ソート済み）で、切り分け用に返されます。
+
 ---
 
 ## OAuth認証フロー
