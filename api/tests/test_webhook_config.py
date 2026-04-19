@@ -487,9 +487,9 @@ class TestWebhookConfigValidation:
             default_path.unlink()
             override_path.unlink()
 
-    @pytest.mark.parametrize("invalid_backoff_ms", [-1])
-    def test_retry_backoff_ms_negative_raises_startup_error(self, invalid_backoff_ms: int):
-        """retry_backoff_ms が負値なら起動時に設定エラーとする。"""
+    @pytest.mark.parametrize("invalid_backoff_ms", [0, -1])
+    def test_retry_backoff_ms_non_positive_raises_startup_error(self, invalid_backoff_ms: int):
+        """retry_backoff_ms が 0/負値なら起動時に設定エラーとする。"""
         config = {
             "endpoints": [
                 {
@@ -520,6 +520,7 @@ class TestWebhookConfigValidation:
         ("retry_backoff_ms", "error_key"),
         [
             ([], "settings.retry_backoff_ms"),
+            ([0, 100, 300], "settings.retry_backoff_ms\\[0\\]"),
             ([100, -1, 300], "settings.retry_backoff_ms\\[1\\]"),
             ([300, 100, 500], "settings.retry_backoff_ms\\[1\\]"),
         ],
@@ -529,7 +530,7 @@ class TestWebhookConfigValidation:
         retry_backoff_ms: list[int],
         error_key: str,
     ):
-        """retry_backoff_ms 配列が非負・単調増加でなければ起動時に設定エラーとする。"""
+        """retry_backoff_ms 配列が正の整数・単調増加でなければ起動時に設定エラーとする。"""
         config = {
             "endpoints": [
                 {
@@ -557,7 +558,7 @@ class TestWebhookConfigValidation:
             config_path.unlink()
 
     def test_retry_backoff_ms_list_non_decreasing_is_accepted(self):
-        """retry_backoff_ms 配列が非負かつ単調増加なら設定を受理する。"""
+        """retry_backoff_ms 配列が正の整数かつ単調増加なら設定を受理する。"""
         config = {
             "endpoints": [
                 {

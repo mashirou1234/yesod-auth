@@ -152,8 +152,8 @@ class WebhookConfigLoader:
             return
 
         if isinstance(retry_backoff_ms, int):
-            if retry_backoff_ms < 0:
-                raise ValueError("settings.retry_backoff_ms must be a non-negative integer")
+            if retry_backoff_ms <= 0:
+                raise ValueError("settings.retry_backoff_ms must be a positive integer")
             return
 
         if not isinstance(retry_backoff_ms, list) or not retry_backoff_ms:
@@ -161,9 +161,9 @@ class WebhookConfigLoader:
 
         prev_value = -1
         for idx, value in enumerate(retry_backoff_ms):
-            if not isinstance(value, int) or value < 0:
+            if not isinstance(value, int) or value <= 0:
                 raise ValueError(
-                    f"settings.retry_backoff_ms[{idx}] must be a non-negative integer"
+                    f"settings.retry_backoff_ms[{idx}] must be a positive integer"
                 )
             if idx > 0 and value < prev_value:
                 raise ValueError(
