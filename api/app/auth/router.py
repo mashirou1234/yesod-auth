@@ -89,7 +89,7 @@ def _validate_supported_oauth_provider(provider: str) -> str:
     if normalized_provider not in OAUTH_PROVIDER_CREDENTIAL_FIELDS:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unsupported OAuth provider '{normalized_provider}'.",
+            detail="Unsupported OAuth provider 'unknown'.",
         )
     return normalized_provider
 

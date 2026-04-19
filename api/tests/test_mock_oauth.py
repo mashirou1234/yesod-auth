@@ -43,7 +43,7 @@ async def test_mock_login_invalid_provider(client: AsyncClient):
     """Test mock login with invalid provider."""
     response = await client.get("/api/v1/auth/mock/login?provider=invalid")
     assert response.status_code == 400
-    assert response.json() == {"detail": "Unsupported OAuth provider 'invalid'."}
+    assert response.json() == {"detail": "Unsupported OAuth provider 'unknown'."}
 
 
 @pytest.mark.asyncio
@@ -52,6 +52,14 @@ async def test_mock_login_provider_is_case_insensitive(client: AsyncClient):
     response = await client.get("/api/v1/auth/mock/login?provider=GitHub")
     assert response.status_code == 200
     assert response.json()["provider"] == "github"
+
+
+@pytest.mark.asyncio
+async def test_mock_login_unknown_provider_keeps_fixed_detail(client: AsyncClient):
+    """Unknown provider variants should keep a fixed 400 detail."""
+    response = await client.get("/api/v1/auth/mock/login?provider=%20InVaLiD%20")
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Unsupported OAuth provider 'unknown'."}
 
 
 @pytest.mark.asyncio
