@@ -1,12 +1,14 @@
 """OAuth account linking/unlinking router."""
 
 import secrets
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.audit import AuditLogger, AuthEventType
 from app.auth.jwt import get_current_user
 from app.auth.oauth import DiscordOAuth, GoogleOAuth
 from app.auth.pkce import generate_code_challenge, generate_code_verifier
@@ -22,6 +24,39 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
+
+
+def _get_request_id(request: Request | None) -> str:
+    """Extract request-id header or generate a fallback ID."""
+    if request is None:
+        return str(uuid.uuid4())
+    request_id = request.headers.get("X-Request-Id")
+    if request_id:
+        return request_id
+    return str(uuid.uuid4())
+
+
+def _build_audit_actor(actor_id: str | None) -> str:
+    """Build actor value with stable fallback."""
+    if isinstance(actor_id, str) and actor_id.strip():
+        return actor_id
+    return "unknown-actor"
+
+
+def _build_audit_target(provider: str, provider_user_id: str | None) -> str:
+    """Build target value with stable fallback."""
+    if isinstance(provider_user_id, str) and provider_user_id.strip():
+        return f"oauth-account:{provider}:{provider_user_id}"
+    return f"oauth-account:{provider}:unknown-target"
+
+
+def _get_client_info(request: Request | None) -> tuple[str | None, str | None]:
+    """Extract device info and IP address from request."""
+    if request is None:
+        return None, None
+    device_info = request.headers.get("User-Agent")
+    ip_address = request.client.host if request.client else None
+    return device_info, ip_address
 
 
 @router.get("", response_model=list[OAuthAccountResponse])
@@ -74,6 +109,7 @@ async def start_link_account(
 
 @router.get("/link/google/callback")
 async def google_link_callback(
+    request: Request,
     code: str,
     state: str,
     db: AsyncSession = Depends(get_db),
@@ -124,6 +160,22 @@ async def google_link_callback(
     db.add(oauth_account)
     await db.commit()
 
+    device_info, ip_address = _get_client_info(request)
+    await AuditLogger.log_event(
+        db,
+        AuthEventType.ACCOUNT_LINKED,
+        oauth_account.user_id,
+        {
+            "provider": "google",
+            "provider_user_id": user_info.get("id"),
+            "request_id": _get_request_id(request),
+            "actor": _build_audit_actor(user_id),
+            "target": _build_audit_target("google", user_info.get("id")),
+        },
+        ip_address,
+        device_info,
+    )
+
     return RedirectResponse(
         url=f"{settings.FRONTEND_URL}/settings/accounts?status=linked&provider=google"
     )
@@ -131,6 +183,7 @@ async def google_link_callback(
 
 @router.get("/link/discord/callback")
 async def discord_link_callback(
+    request: Request,
     code: str,
     state: str,
     db: AsyncSession = Depends(get_db),
@@ -180,6 +233,22 @@ async def discord_link_callback(
     db.add(oauth_account)
     await db.commit()
 
+    device_info, ip_address = _get_client_info(request)
+    await AuditLogger.log_event(
+        db,
+        AuthEventType.ACCOUNT_LINKED,
+        oauth_account.user_id,
+        {
+            "provider": "discord",
+            "provider_user_id": user_info.get("id"),
+            "request_id": _get_request_id(request),
+            "actor": _build_audit_actor(user_id),
+            "target": _build_audit_target("discord", user_info.get("id")),
+        },
+        ip_address,
+        device_info,
+    )
+
     return RedirectResponse(
         url=f"{settings.FRONTEND_URL}/settings/accounts?status=linked&provider=discord"
     )
@@ -187,6 +256,7 @@ async def discord_link_callback(
 
 @router.delete("/{provider}", response_model=UnlinkResponse)
 async def unlink_account(
+    request: Request,
     provider: str,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -220,6 +290,22 @@ async def unlink_account(
 
     await db.delete(oauth_account)
     await db.commit()
+
+    device_info, ip_address = _get_client_info(request)
+    await AuditLogger.log_event(
+        db,
+        AuthEventType.ACCOUNT_UNLINKED,
+        current_user.id,
+        {
+            "provider": provider,
+            "provider_user_id": oauth_account.provider_user_id,
+            "request_id": _get_request_id(request),
+            "actor": _build_audit_actor(str(current_user.id)),
+            "target": _build_audit_target(provider, oauth_account.provider_user_id),
+        },
+        ip_address,
+        device_info,
+    )
 
     return UnlinkResponse(
         message=f"Successfully unlinked {provider} account",

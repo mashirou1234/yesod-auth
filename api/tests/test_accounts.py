@@ -1,5 +1,7 @@
 """Accounts API tests."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -82,3 +84,68 @@ async def test_unlink_account_returns_400_when_last_authentication_method(
     assert response.status_code == 400
     data = response.json()
     assert data["detail"] == "Cannot unlink the last authentication method"
+
+
+def test_build_audit_actor_uses_fallback_for_empty_value():
+    """Actor fallback should be stable for empty inputs."""
+    from app.accounts.router import _build_audit_actor
+
+    assert _build_audit_actor("") == "unknown-actor"
+    assert _build_audit_actor("   ") == "unknown-actor"
+    assert _build_audit_actor(None) == "unknown-actor"
+
+
+def test_build_audit_target_uses_fallback_for_empty_provider_user_id():
+    """Target fallback should be stable for missing provider user id."""
+    from app.accounts.router import _build_audit_target
+
+    assert _build_audit_target("google", "") == "oauth-account:google:unknown-target"
+    assert _build_audit_target("google", "   ") == "oauth-account:google:unknown-target"
+    assert _build_audit_target("google", None) == "oauth-account:google:unknown-target"
+
+
+@pytest.mark.asyncio
+async def test_unlink_account_logs_audit_with_request_actor_target(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """Unlink success should keep request_id/actor/target audit contract."""
+    user = User()
+    db_session.add(user)
+    await db_session.flush()
+    db_session.add(
+        OAuthAccount(
+            user_id=user.id,
+            provider="google",
+            provider_user_id="google-user-audit-1",
+            access_token="google-token-audit-1",
+        )
+    )
+    db_session.add(
+        OAuthAccount(
+            user_id=user.id,
+            provider="discord",
+            provider_user_id="discord-user-audit-2",
+            access_token="discord-token-audit-2",
+        )
+    )
+    await db_session.commit()
+
+    access_token = create_access_token(str(user.id), "accounts-audit@example.com")
+
+    with patch("app.accounts.router.AuditLogger.log_event", new=AsyncMock()) as mock_log_event:
+        response = await client.delete(
+            "/api/v1/accounts/google",
+            headers={
+                "Authorization": f"Bearer {access_token}",
+                "X-Request-Id": "req-accounts-unlink-123",
+            },
+        )
+
+    assert response.status_code == 200
+    mock_log_event.assert_awaited_once()
+    _, event_type, event_user_id, details, *_ = mock_log_event.await_args.args
+    assert event_type.value == "account_unlinked"
+    assert str(event_user_id) == str(user.id)
+    assert details["request_id"] == "req-accounts-unlink-123"
+    assert details["actor"] == str(user.id)
+    assert details["target"] == "oauth-account:google:google-user-audit-1"
