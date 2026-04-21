@@ -2,8 +2,9 @@
 
 import uuid
 from datetime import datetime
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class OAuthAccountInfo(BaseModel):
@@ -47,6 +48,29 @@ class UserUpdateRequest(BaseModel):
     avatar_url: str | None = Field(
         None, max_length=500, description="New avatar URL (max 500 characters)"
     )
+
+    @field_validator("display_name")
+    @classmethod
+    def validate_display_name(cls, value: str | None) -> str | None:
+        """Normalize display_name and reject blank-only input."""
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("display_name must not be blank")
+        return normalized
+
+    @field_validator("avatar_url")
+    @classmethod
+    def validate_avatar_url(cls, value: str | None) -> str | None:
+        """Normalize avatar_url and allow only http(s) URLs."""
+        if value is None:
+            return None
+        normalized = value.strip()
+        parsed = urlparse(normalized)
+        if not normalized or parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("avatar_url must be a valid http(s) URL")
+        return normalized
 
 
 class UserDeleteResponse(BaseModel):
