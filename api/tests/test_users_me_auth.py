@@ -10,6 +10,13 @@ from app.auth.tokens import settings as token_settings
 from app.config import get_settings
 
 
+async def _login_auth_header(client: AsyncClient) -> dict[str, str]:
+    login_response = await client.get("/api/v1/auth/mock/login")
+    assert login_response.status_code == 200
+    access_token = login_response.json()["access_token"]
+    return {"Authorization": f"Bearer {access_token}"}
+
+
 @pytest.mark.asyncio
 async def test_users_me_requires_valid_token(client: AsyncClient):
     """GET /api/v1/users/me returns fixed 401 contract for invalid JWT."""
@@ -124,3 +131,54 @@ async def test_users_me_rejects_token_with_invalid_kid_header_value(
             "token_header_fields": expected_header_fields,
         }
     }
+
+
+@pytest.mark.asyncio
+async def test_users_me_update_rejects_blank_display_name(client: AsyncClient):
+    auth_header = await _login_auth_header(client)
+
+    response = await client.patch(
+        "/api/v1/users/me",
+        headers=auth_header,
+        json={"display_name": "   "},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "display_name"]
+    assert "display_name must not be blank" in response.json()["detail"][0]["msg"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("avatar_url", ["not-a-url", "ftp://example.com/avatar.png"])
+async def test_users_me_update_rejects_invalid_avatar_url_with_stable_error(
+    client: AsyncClient, avatar_url: str
+):
+    auth_header = await _login_auth_header(client)
+
+    response = await client.patch(
+        "/api/v1/users/me",
+        headers=auth_header,
+        json={"avatar_url": avatar_url},
+    )
+
+    assert response.status_code == 422
+    assert response.json()["detail"][0]["loc"] == ["body", "avatar_url"]
+    assert "avatar_url must be a valid http(s) URL" in response.json()["detail"][0]["msg"]
+
+
+@pytest.mark.asyncio
+async def test_users_me_update_normalizes_trimmed_profile_fields(client: AsyncClient):
+    auth_header = await _login_auth_header(client)
+
+    response = await client.patch(
+        "/api/v1/users/me",
+        headers=auth_header,
+        json={
+            "display_name": "  Updated Name  ",
+            "avatar_url": "  https://example.com/avatar.png  ",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["display_name"] == "Updated Name"
+    assert response.json()["avatar_url"] == "https://example.com/avatar.png"
