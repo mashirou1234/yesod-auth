@@ -16,23 +16,49 @@ OUTPUT_DIR="${1:-./generated}"
 API_URL="${API_URL:-http://localhost:8000}"
 OPENAPI_URL="${API_URL}/openapi.json"
 DOC_REF="docs/api/auth.md"
+DOC_INDEX_REF="docs/index.md"
+MISSING_ITEMS=()
 
 print_help_hint() {
     echo "   次の確認手順: ${DOC_REF} を参照してください。"
 }
 
+add_missing() {
+    MISSING_ITEMS+=("$1")
+}
+
 require_cmd() {
     local cmd="$1"
     if ! command -v "${cmd}" >/dev/null 2>&1; then
-        echo "❌ Error: '${cmd}' コマンドが見つかりません"
-        echo "   復旧手順: 必要コマンドをインストール後に再実行してください。"
+        add_missing "コマンド: ${cmd}"
+    fi
+}
+
+require_file() {
+    local path="$1"
+    if [ ! -f "${path}" ]; then
+        add_missing "ファイル: ${path}"
+    fi
+}
+
+run_preflight() {
+    require_cmd curl
+    require_cmd npx
+    require_file "${DOC_REF}"
+    require_file "${DOC_INDEX_REF}"
+
+    if [ "${#MISSING_ITEMS[@]}" -gt 0 ]; then
+        echo "❌ Error: preflight check failed (不足項目あり)"
+        for item in "${MISSING_ITEMS[@]}"; do
+            echo "   - ${item}"
+        done
+        echo "   復旧手順: 不足項目を解消してから再実行してください。"
         print_help_hint
         exit 1
     fi
 }
 
-require_cmd curl
-require_cmd npx
+run_preflight
 
 echo "🔍 Fetching OpenAPI schema from ${OPENAPI_URL}..."
 
