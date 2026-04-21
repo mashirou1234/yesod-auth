@@ -12,7 +12,12 @@ from app.auth.jwt import get_current_user
 from app.db.session import get_db
 from app.models import RefreshToken, User
 
-from .schemas import RevokeResponse, SessionListResponse, SessionResponse
+from .schemas import (
+    RevokeAllSessionsResponse,
+    RevokeSessionResponse,
+    SessionListResponse,
+    SessionResponse,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 SESSIONS_LIMIT_MAX = 1000
@@ -78,7 +83,7 @@ async def list_sessions(
     )
 
 
-@router.delete("/{session_id}", response_model=RevokeResponse)
+@router.delete("/{session_id}", response_model=RevokeSessionResponse)
 async def revoke_session(
     request: Request,
     session_id: uuid.UUID,
@@ -118,13 +123,13 @@ async def revoke_session(
         device_info,
     )
 
-    return RevokeResponse(
+    return RevokeSessionResponse(
         message="Session revoked successfully",
         session_id=session_id,
     )
 
 
-@router.delete("", response_model=RevokeResponse)
+@router.delete("", response_model=RevokeAllSessionsResponse)
 async def revoke_all_sessions(
     request: Request,
     current_user: User = Depends(get_current_user),
@@ -161,7 +166,7 @@ async def revoke_all_sessions(
         device_info,
     )
 
-    return RevokeResponse(
-        message=f"Revoked {revoked_count} sessions",
+    return RevokeAllSessionsResponse(
+        message="Sessions revoked successfully",
         revoked_count=revoked_count,
     )

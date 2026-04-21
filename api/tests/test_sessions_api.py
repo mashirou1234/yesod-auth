@@ -99,7 +99,11 @@ async def test_revoke_all_sessions_logs_audit_with_revoked_count_and_user_id(
     response = await client.delete("/api/v1/sessions", headers=auth_header)
 
     assert response.status_code == 200
-    assert response.json()["revoked_count"] == 2
+    assert response.json() == {
+        "message": "Sessions revoked successfully",
+        "session_id": None,
+        "revoked_count": 2,
+    }
     mock_log_event.assert_awaited_once()
 
     _, event_type, user_id, details, *_ = mock_log_event.await_args.args
@@ -108,3 +112,26 @@ async def test_revoke_all_sessions_logs_audit_with_revoked_count_and_user_id(
     assert details["audit_key"] == "revoked_count"
     assert details["revoked_count"] == 2
     assert details["user_id"] == str(user.id)
+
+
+@pytest.mark.asyncio
+async def test_revoke_all_sessions_without_active_tokens_returns_schema_contract(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """DELETE /api/v1/sessions keeps response keys stable when revoked_count is zero."""
+    user = User()
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    access_token = create_access_token(str(user.id), "revoke-all-empty@example.com")
+    auth_header = {"Authorization": f"Bearer {access_token}"}
+
+    response = await client.delete("/api/v1/sessions", headers=auth_header)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "message": "Sessions revoked successfully",
+        "session_id": None,
+        "revoked_count": 0,
+    }
