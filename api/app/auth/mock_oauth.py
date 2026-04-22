@@ -9,6 +9,13 @@ import uuid
 from dataclasses import dataclass
 
 
+def _stable_mock_github_numeric_id(seed: str) -> int:
+    """Build a deterministic numeric GitHub mock user id with low collision risk."""
+    namespace = uuid.uuid5(uuid.NAMESPACE_DNS, "yesod-auth.mock.github")
+    value = uuid.uuid5(namespace, seed).int
+    return (value % 9_000_000_000) + 1_000_000_000
+
+
 def is_mock_oauth_enabled() -> bool:
     """Check if mock OAuth is enabled."""
     return os.getenv("MOCK_OAUTH_ENABLED", "").lower() in ("1", "true", "yes")
@@ -45,8 +52,7 @@ class MockOAuthUser:
 
     def to_github_format(self) -> dict:
         """Convert to GitHub userinfo format."""
-        # Generate a numeric ID from the mock ID
-        numeric_id = int(self.id.split("-")[-1]) if "-" in self.id else 12345
+        numeric_id = _stable_mock_github_numeric_id(self.id)
         return {
             "id": numeric_id,
             "login": self.name.lower().replace(" ", ""),
