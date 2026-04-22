@@ -30,3 +30,6 @@ class UnlinkResponse(BaseModel):
 
     message: str
     provider: AccountProvider
+
+
+UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL = "Cannot unlink the last authentication method"
