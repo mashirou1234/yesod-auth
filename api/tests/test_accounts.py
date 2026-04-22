@@ -6,6 +6,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.accounts.schemas import UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL
 from app.auth.tokens import create_access_token
 from app.models import OAuthAccount, User
 
@@ -127,7 +128,7 @@ async def test_unlink_account_returns_400_when_last_authentication_method(
 
     assert response.status_code == 400
     data = response.json()
-    assert data["detail"] == "Cannot unlink the last authentication method"
+    assert data["detail"] == UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL
 
 
 def test_build_audit_actor_uses_fallback_for_empty_value():

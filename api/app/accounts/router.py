@@ -17,7 +17,12 @@ from app.db.session import get_db
 from app.models import OAuthAccount, User
 from app.valkey import OAuthStateStore
 
-from .schemas import OAuthAccountResponse, SUPPORTED_ACCOUNT_PROVIDERS, UnlinkResponse
+from .schemas import (
+    OAuthAccountResponse,
+    SUPPORTED_ACCOUNT_PROVIDERS,
+    UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL,
+    UnlinkResponse,
+)
 
 settings = get_settings()
 router = APIRouter(prefix="/accounts", tags=["accounts"])
@@ -274,7 +279,7 @@ async def unlink_account(
     account_count = count_result.scalar()
 
     if account_count <= 1:
-        raise HTTPException(status_code=400, detail="Cannot unlink the last authentication method")
+        raise HTTPException(status_code=400, detail=UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL)
 
     # Find and delete the OAuth account
     result = await db.execute(
