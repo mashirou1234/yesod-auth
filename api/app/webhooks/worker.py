@@ -145,12 +145,15 @@ class WebhookWorker:
                 logger.info(
                     (
                         "Retrying webhook delivery to %s (attempt %d/%d) after %ds "
-                        "(raw_delay=%ds, max_delay=%ds, jitter_ratio=%.3f)"
+                        "(delivery_id=%s event_id=%s raw_delay=%ds, max_delay=%ds, "
+                        "jitter_ratio=%.3f)"
                     ),
                     endpoint.id,
                     attempt + 1,
                     max_retries + 1,
                     delay,
+                    delivery_id,
+                    event.event_id,
                     raw_delay,
                     max_delay,
                     jitter_ratio,
@@ -175,10 +178,12 @@ class WebhookWorker:
                 logger.warning(
                     (
                         "Webhook delivery to %s failed with client error %d, not retrying "
-                        "(signature_algo=%s)"
+                        "(delivery_id=%s event_id=%s signature_algo=%s)"
                     ),
                     endpoint.id,
                     result.http_status,
+                    delivery_id,
+                    event.event_id,
                     result.signature_algorithm,
                 )
                 break
