@@ -3,6 +3,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.auth.mock_oauth import MockOAuthUser
+
 
 @pytest.mark.asyncio
 async def test_mock_login_alice(client: AsyncClient):
@@ -90,3 +92,38 @@ async def test_authenticated_request(client: AsyncClient):
 
     data = response.json()
     assert data["email"] == "alice@example.com"
+
+
+@pytest.mark.asyncio
+async def test_mock_login_github_avoids_provider_user_id_collision(client: AsyncClient, monkeypatch):
+    """GitHub mock provider_user_id must avoid collisions even with same numeric suffix IDs."""
+    collision_users = {
+        "alice": MockOAuthUser(
+            id="mock-alice-999",
+            email="alice@example.com",
+            name="Alice Developer",
+            picture=None,
+        ),
+        "dup-a": MockOAuthUser(
+            id="mock-dup-a-123",
+            email="dup-a@example.com",
+            name="Duplicate A",
+            picture=None,
+        ),
+        "dup-b": MockOAuthUser(
+            id="mock-dup-b-123",
+            email="dup-b@example.com",
+            name="Duplicate B",
+            picture=None,
+        ),
+    }
+    monkeypatch.setattr("app.auth.mock_oauth.MOCK_USERS", collision_users)
+
+    response_a = await client.get("/api/v1/auth/mock/login?provider=github&user=dup-a")
+    response_b = await client.get("/api/v1/auth/mock/login?provider=github&user=dup-b")
+
+    assert response_a.status_code == 200
+    assert response_b.status_code == 200
+    assert response_a.json()["email"] == "dup-a@example.com"
+    assert response_b.json()["email"] == "dup-b@example.com"
+    assert response_a.json()["user_id"] != response_b.json()["user_id"]
