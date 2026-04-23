@@ -24,13 +24,25 @@ def resolve_cors_origins(raw_value: str | None) -> tuple[list[str], bool]:
     if raw_value is None or not raw_value.strip():
         return DEFAULT_CORS_ORIGINS.split(","), True
 
-    origins = [origin.strip() for origin in raw_value.split(",")]
-    if any(not origin for origin in origins):
+    raw_origins = [origin.strip() for origin in raw_value.split(",")]
+    if any(not origin for origin in raw_origins):
         raise ValueError(
             "CORS_ORIGINS contains empty element. "
             "Set non-empty comma-separated values for CORS_ORIGINS."
         )
-    return origins, False
+
+    # Normalize slash/case notation drift and deduplicate while preserving first-seen order.
+    normalized_origins: list[str] = []
+    seen_origins: set[str] = set()
+    for origin in raw_origins:
+        normalized_origin = origin.rstrip("/")
+        canonical_key = normalized_origin.casefold()
+        if canonical_key in seen_origins:
+            continue
+        seen_origins.add(canonical_key)
+        normalized_origins.append(normalized_origin)
+
+    return normalized_origins, False
 
 
 def parse_bool_env(name: str, default: bool = False) -> bool:
