@@ -277,9 +277,10 @@ environment:
 1. `secrets/*.txt` を正しい値へ更新（例: `secrets/github_client_id.txt`, `secrets/github_client_secret.txt`）
 2. Compose を再起動して設定を反映
    ```bash
-   docker compose up -d --force-recreate api admin
+   docker compose --profile default up -d --force-recreate api
    ```
-3. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
+3. `docker compose --profile default ps` と `curl -fsS http://localhost:8000/health` で復旧確認する
+4. 認証を再実行し、失敗時は provider 側アプリ設定（redirect URI / secret再発行）も確認
 
 #### invalid_client 再発防止チェック（デプロイ前後で毎回実施）
 
