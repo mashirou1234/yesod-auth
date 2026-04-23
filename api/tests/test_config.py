@@ -77,6 +77,22 @@ def test_resolve_cors_origins_uses_env_value_when_set():
     assert using_default is False
 
 
+def test_resolve_cors_origins_normalizes_and_deduplicates_origins():
+    origins, using_default = resolve_cors_origins(
+        " https://Example.com/ ,https://example.com,https://admin.example.com/ "
+    )
+
+    assert origins == ["https://Example.com", "https://admin.example.com"]
+    assert using_default is False
+
+
+def test_resolve_cors_origins_keeps_http_and_https_as_distinct_origins():
+    origins, using_default = resolve_cors_origins("http://example.com,https://example.com,http://example.com/")
+
+    assert origins == ["http://example.com", "https://example.com"]
+    assert using_default is False
+
+
 def test_parse_bool_env_accepts_truthy_value(monkeypatch):
     monkeypatch.setenv("TESTING", "YeS")
 
