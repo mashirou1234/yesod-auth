@@ -12,6 +12,26 @@
 | Docker Compose | 2.0+ |
 
 障害時の確認手順は[トラブルシューティング: 障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線)を参照してください。
+Webhook 設定変更後の反映不良は、[Webhook reload 障害の最短導線](#webhook-reload-障害の最短導線) から着手してください。
+
+<a id="webhook-reload-障害の最短導線"></a>
+
+## Webhook reload 障害の最短導線
+
+`config/webhooks.yaml` や secrets を変更したのに webhook 挙動が変わらない場合は、次の 3 手順で確認します。
+
+1. 現在の読み込み状態を確認
+   - `curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints`
+2. 設定リロードを実行
+   - `curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload`
+3. 同一イベントを再送し、API ログで `webhook` / `reload` / `signature` を確認
+   - `docker compose logs api --since=30m | rg -n "webhook|reload|signature|invalid"`
+
+補助導線:
+
+- [FAQ: Webhook reload が効かないときの確認順は？](./help/faq.md#webhook-reload-が効かないときの確認順は)
+- [トラブルシューティング: Webhook reload 後も反映されない](./help/troubleshooting.md#webhook-reload-後も反映されない)
+- [Webhook API: `reload` 失敗時の最短確認手順](./api/webhooks.md#reload-失敗時の最短確認手順)
 
 ## Docker Composeプロファイル
 

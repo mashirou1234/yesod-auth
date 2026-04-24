@@ -111,6 +111,21 @@ POST /api/v1/admin/webhooks/reload
 - 切替後に署名検証失敗が増えた場合は、旧鍵へ戻して再度 `reload` することで復旧できます。
 - 詳細手順は [Webhook設定ガイドの署名鍵ローテーション最小手順](../guides/webhooks.md#署名鍵ローテーション最小手順) を参照してください。
 
+<a id="reload-失敗時の最短確認手順"></a>
+
+### `reload` 失敗時の最短確認手順
+
+`POST /api/v1/admin/webhooks/reload` 実行後も webhook の挙動が改善しない場合は、次の順で確認してください。
+
+1. 設定ファイルと読み込み状態を確認する
+   - `config/webhooks.yaml` の構文・参照 secrets
+   - `GET /api/v1/admin/webhooks/endpoints` の応答
+2. 設定変更直後なら `reload` を再実行し、同一イベントを再送して差分を見る
+3. API ログで `webhook` / `reload` / `signature` を確認して、失敗分類を特定する
+4. 改善しない場合は旧設定へ一時ロールバックし、`reload` 後に再送して原因を切り分ける
+
+詳細な切り分けコマンドは [トラブルシューティング: Webhook reload 後も反映されない](../help/troubleshooting.md#webhook-reload-後も反映されない) を参照してください。
+
 ---
 
 ## イベントタイプ

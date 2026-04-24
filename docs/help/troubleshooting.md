@@ -624,6 +624,34 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 
 ---
 
+<a id="webhook-reload-後も反映されない"></a>
+
+### Webhook reload 後も反映されない
+
+**切り分け手順（最短）:**
+
+1. 現在の設定が読み込まれているか確認する
+   ```bash
+   curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints
+   ```
+2. `reload` を実行し、同一イベントを再送して挙動差分を確認する
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
+   ```
+3. API ログで `webhook` / `reload` / `signature` を抽出して失敗分類を確認する
+   ```bash
+   docker compose logs api --since=30m | rg -n "webhook|reload|signature|invalid"
+   ```
+4. 直らない場合は旧設定へ一時ロールバックし、再度 `reload` と再送で差分を確認する
+
+**参照導線:**
+
+- API 仕様側: [Webhook API: `reload` 失敗時の最短確認手順](../api/webhooks.md#reload-失敗時の最短確認手順)
+- FAQ 側: [Webhook reload が効かないときの確認順は？](./faq.md#webhook-reload-が効かないときの確認順は)
+- 導入手順側: [インストール: Webhook reload 障害の最短導線](../installation.md#webhook-reload-障害の最短導線)
+
+---
+
 ### 署名検証に失敗する
 
 **診断手順（最小）:**
