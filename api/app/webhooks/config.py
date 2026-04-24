@@ -202,6 +202,27 @@ class WebhookConfigLoader:
             raise ValueError(f"Endpoint '{endpoint_id}' missing 'secret' field")
         if not events:
             raise ValueError(f"Endpoint '{endpoint_id}' missing 'events' field")
+        if not isinstance(events, list):
+            raise ValueError(f"Endpoint '{endpoint_id}' events must be an array")
+
+        normalized_events: list[str] = []
+        seen_events: set[str] = set()
+        for idx, event in enumerate(events):
+            if not isinstance(event, str):
+                raise ValueError(
+                    f"Endpoint '{endpoint_id}' events[{idx}] must be a string"
+                )
+            normalized_event = event.strip()
+            if not normalized_event:
+                raise ValueError(
+                    f"Endpoint '{endpoint_id}' events contains empty element at index {idx}"
+                )
+            if normalized_event in seen_events:
+                raise ValueError(
+                    f"Endpoint '{endpoint_id}' events contains duplicated element: {normalized_event}"
+                )
+            seen_events.add(normalized_event)
+            normalized_events.append(normalized_event)
 
         # Validate HTTPS
         if not url.startswith("https://"):
@@ -219,7 +240,7 @@ class WebhookConfigLoader:
             id=endpoint_id,
             url=url,
             secret=secret,
-            events=events,
+            events=normalized_events,
             enabled=enabled,
             description=description,
         )
