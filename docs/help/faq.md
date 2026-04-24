@@ -242,10 +242,27 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 2. エンドポイントが`enabled: true`になっているか確認
 3. URLがHTTPSで始まっているか確認
 4. 配信履歴を確認：`GET /api/v1/admin/webhooks/deliveries`
+5. 設定変更直後は `POST /api/v1/admin/webhooks/reload` を実行し、同一イベントを再送して結果を比較
 
 ### 署名検証の方法は？
 
 [Webhook設定ガイド](../guides/webhooks.md#署名検証)を参照してください。
+
+<a id="webhook-reload-が効かないときの確認順は"></a>
+
+### Webhook reload が効かないときの確認順は？
+
+次の順で確認すると最短で切り分けできます。
+
+1. `GET /api/v1/admin/webhooks/endpoints` で読み込み状態を確認
+2. `POST /api/v1/admin/webhooks/reload` を実行
+3. 同一イベントを再送し、失敗が継続するか確認
+4. API ログ（`webhook` / `reload` / `signature`）を確認
+
+詳細手順:
+
+- [トラブルシューティング: Webhook reload 後も反映されない](./troubleshooting.md#webhook-reload-後も反映されない)
+- [Webhook API: `reload` 失敗時の最短確認手順](../api/webhooks.md#reload-失敗時の最短確認手順)
 
 ---
 
