@@ -214,6 +214,56 @@ class TestWebhookConfigValidation:
         finally:
             config_path.unlink()
 
+    def test_events_with_empty_element_is_rejected(self):
+        """events 配列に空要素がある endpoint は読み込み対象外にする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "test-secret",
+                    "events": ["user.created", "  ", "user.updated"],
+                }
+            ]
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                result = WebhookConfigLoader.load()
+            assert len(result.endpoints) == 0
+        finally:
+            config_path.unlink()
+
+    def test_events_with_duplicated_element_is_rejected(self):
+        """events 配列に重複がある endpoint は読み込み対象外にする。"""
+        config = {
+            "endpoints": [
+                {
+                    "id": "test-endpoint",
+                    "url": "https://example.com/webhook",
+                    "secret": "test-secret",
+                    "events": ["user.created", "user.created"],
+                }
+            ]
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                result = WebhookConfigLoader.load()
+            assert len(result.endpoints) == 0
+        finally:
+            config_path.unlink()
+
     def test_env_var_secret_resolution(self):
         """Test that environment variable secrets are resolved."""
         config = {
