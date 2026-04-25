@@ -57,6 +57,8 @@ settings:
   delivery_timeout_seconds: 30
 ```
 
+`endpoints[].id` は設定全体で一意である必要があります。重複すると `POST /api/v1/admin/webhooks/reload` を含む設定ロードは失敗します。
+
 ### 2. シークレットの設定
 
 #### 本番環境（Docker Secrets推奨）
