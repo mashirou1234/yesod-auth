@@ -81,8 +81,11 @@ class WebhookConfigLoader:
             cls._config = WebhookConfig()
             return cls._config
 
+        raw_endpoints = raw_config.get("endpoints", [])
+        cls._validate_unique_endpoint_ids(raw_endpoints)
+
         endpoints = []
-        for ep_data in raw_config.get("endpoints", []):
+        for ep_data in raw_endpoints:
             try:
                 endpoint = cls._parse_endpoint(ep_data)
                 if endpoint:
@@ -112,6 +115,18 @@ class WebhookConfigLoader:
             CONFIG_PATH,
         )
         return cls._config
+
+    @staticmethod
+    def _validate_unique_endpoint_ids(endpoints: list[dict[str, Any]]) -> None:
+        """Reject duplicate endpoint IDs to keep operational references unambiguous."""
+        seen_ids: set[str] = set()
+        for endpoint in endpoints:
+            endpoint_id = endpoint.get("id")
+            if not endpoint_id:
+                continue
+            if endpoint_id in seen_ids:
+                raise ValueError(f"Duplicate webhook endpoint id detected: {endpoint_id}")
+            seen_ids.add(endpoint_id)
 
     @classmethod
     def _validate_settings(cls, settings_data: dict[str, Any]) -> None:

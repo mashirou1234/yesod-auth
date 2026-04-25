@@ -353,6 +353,40 @@ class TestWebhookConfigValidation:
         finally:
             config_path.unlink()
 
+    def test_duplicate_endpoint_id_is_rejected(self):
+        """Duplicate endpoint IDs should fail load to avoid ambiguous routing."""
+        config = {
+            "endpoints": [
+                {
+                    "id": "duplicate-id",
+                    "url": "https://example.com/webhook-a",
+                    "secret": "secret-a",
+                    "events": ["user.created"],
+                },
+                {
+                    "id": "duplicate-id",
+                    "url": "https://example.com/webhook-b",
+                    "secret": "secret-b",
+                    "events": ["user.updated"],
+                },
+            ]
+        }
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(config, f)
+            config_path = Path(f.name)
+
+        try:
+            with patch.object(config_module, "CONFIG_PATH", config_path):
+                WebhookConfigLoader._config = None
+                with pytest.raises(
+                    ValueError,
+                    match="Duplicate webhook endpoint id detected: duplicate-id",
+                ):
+                    WebhookConfigLoader.load()
+        finally:
+            config_path.unlink()
+
     def test_get_endpoints_for_event(self):
         """Test filtering endpoints by event type."""
         config = {
