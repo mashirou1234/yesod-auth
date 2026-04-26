@@ -1,14 +1,20 @@
 """Accounts API tests."""
 
+import importlib
+import logging
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.accounts.schemas import UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL
 from app.auth.tokens import create_access_token
 from app.models import OAuthAccount, User
+
+accounts_router_module = importlib.import_module("app.accounts.router")
 
 
 @pytest.mark.asyncio
@@ -194,3 +200,58 @@ async def test_unlink_account_logs_audit_with_request_actor_target(
     assert details["request_id"] == "req-accounts-unlink-123"
     assert details["actor"] == str(user.id)
     assert details["target"] == "oauth-account:google:google-user-audit-1"
+
+
+def test_link_normalize_callback_url_trims_only_trailing_slash():
+    """Only trailing slash should be normalized for account-link callback."""
+    normalized = accounts_router_module._normalize_callback_url(
+        "https://api.example.com/api/v1/accounts/link/google/callback/?code=abc#frag"
+    )
+    assert normalized == "https://api.example.com/api/v1/accounts/link/google/callback"
+
+
+def test_link_validate_callback_url_allows_trailing_slash_difference(caplog):
+    """Trailing slash difference must be accepted for account-link callback."""
+    caplog.set_level(logging.INFO, logger=accounts_router_module.logger.name)
+    request = SimpleNamespace(
+        url=SimpleNamespace(
+            replace=lambda **kwargs: (
+                "https://api.example.com/api/v1/accounts/link/google/callback/"
+            )
+        )
+    )
+
+    accounts_router_module._validate_link_callback_url_or_raise(
+        request=request,
+        provider="google",
+        expected_callback_url="https://api.example.com/api/v1/accounts/link/google/callback",
+    )
+
+    assert (
+        "OAuth account-link callback URL normalized for provider=google "
+        "expected=https://api.example.com/api/v1/accounts/link/google/callback "
+        "actual=https://api.example.com/api/v1/accounts/link/google/callback/ "
+        "normalized_expected=https://api.example.com/api/v1/accounts/link/google/callback "
+        "normalized_actual=https://api.example.com/api/v1/accounts/link/google/callback"
+    ) in caplog.text
+
+
+def test_link_validate_callback_url_rejects_real_mismatch():
+    """Real mismatch should keep stable 400 contract."""
+    request = SimpleNamespace(
+        url=SimpleNamespace(
+            replace=lambda **kwargs: (
+                "https://api.example.com/api/v1/accounts/link/google/other-callback"
+            )
+        )
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        accounts_router_module._validate_link_callback_url_or_raise(
+            request=request,
+            provider="google",
+            expected_callback_url="https://api.example.com/api/v1/accounts/link/google/callback",
+        )
+
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "OAuth callback URL mismatch"

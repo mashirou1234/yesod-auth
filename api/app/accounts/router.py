@@ -1,7 +1,9 @@
 """OAuth account linking/unlinking router."""
 
+import logging
 import secrets
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
@@ -26,6 +28,7 @@ from .schemas import (
 
 settings = get_settings()
 router = APIRouter(prefix="/accounts", tags=["accounts"])
+logger = logging.getLogger(__name__)
 
 # API prefix for building URLs
 API_V1_PREFIX = "/api/v1"
@@ -62,6 +65,52 @@ def _get_client_info(request: Request | None) -> tuple[str | None, str | None]:
     device_info = request.headers.get("User-Agent")
     ip_address = request.client.host if request.client else None
     return device_info, ip_address
+
+
+def _normalize_callback_url(url: str) -> str:
+    """Normalize callback URL by dropping only trailing slash and query/fragment."""
+    parsed = urlsplit(url)
+    path = parsed.path
+    if path.endswith("/") and path != "/":
+        path = path[:-1]
+    return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+
+def _build_link_redirect_uri(provider: str) -> str:
+    """Build canonical redirect URI for account-link callback."""
+    return (
+        f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/accounts/link/{provider}/callback"
+    )
+
+
+def _validate_link_callback_url_or_raise(
+    *, request: Request, provider: str, expected_callback_url: str
+) -> None:
+    """Validate account-link callback URL with trailing-slash normalization."""
+    actual_callback_url = str(request.url.replace(query="", fragment=""))
+    normalized_expected = _normalize_callback_url(expected_callback_url)
+    normalized_actual = _normalize_callback_url(actual_callback_url)
+    if normalized_expected == normalized_actual:
+        if expected_callback_url != actual_callback_url:
+            logger.info(
+                "OAuth account-link callback URL normalized for provider=%s expected=%s actual=%s normalized_expected=%s normalized_actual=%s",
+                provider,
+                expected_callback_url,
+                actual_callback_url,
+                normalized_expected,
+                normalized_actual,
+            )
+        return
+
+    logger.warning(
+        "OAuth account-link callback URL mismatch for provider=%s expected=%s actual=%s normalized_expected=%s normalized_actual=%s",
+        provider,
+        expected_callback_url,
+        actual_callback_url,
+        normalized_expected,
+        normalized_actual,
+    )
+    raise HTTPException(status_code=400, detail="OAuth callback URL mismatch")
 
 
 @router.get("", response_model=list[OAuthAccountResponse])
@@ -101,12 +150,12 @@ async def start_link_account(
 
         await OAuthStateStore.save_with_data(state, state_data)
 
-        redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/google/callback"
+        redirect_uri = _build_link_redirect_uri("google")
         authorize_url = GoogleOAuth.get_authorize_url(redirect_uri, state, code_challenge)
     else:
         await OAuthStateStore.save_with_data(state, state_data)
 
-        redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/discord/callback"
+        redirect_uri = _build_link_redirect_uri("discord")
         authorize_url = DiscordOAuth.get_authorize_url(redirect_uri, state)
 
     return RedirectResponse(url=authorize_url)
@@ -127,7 +176,12 @@ async def google_link_callback(
     user_id = state_data.get("user_id")
     code_verifier = state_data.get("code_verifier")
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/google/callback"
+    redirect_uri = _build_link_redirect_uri("google")
+    _validate_link_callback_url_or_raise(
+        request=request,
+        provider="google",
+        expected_callback_url=redirect_uri,
+    )
     token_data = await GoogleOAuth.exchange_code(code, redirect_uri, code_verifier)
     if not token_data:
         raise HTTPException(status_code=400, detail="Failed to exchange code")
@@ -200,7 +254,12 @@ async def discord_link_callback(
 
     user_id = state_data.get("user_id")
 
-    redirect_uri = f"{settings.API_URL}{API_V1_PREFIX}/accounts/link/discord/callback"
+    redirect_uri = _build_link_redirect_uri("discord")
+    _validate_link_callback_url_or_raise(
+        request=request,
+        provider="discord",
+        expected_callback_url=redirect_uri,
+    )
     token_data = await DiscordOAuth.exchange_code(code, redirect_uri)
     if not token_data:
         raise HTTPException(status_code=400, detail="Failed to exchange code")
