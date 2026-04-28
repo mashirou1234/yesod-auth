@@ -80,6 +80,7 @@ nav:
     - FAQ: help/faq.md
     - 初回起動トラブルシュート: help/first-start-troubleshooting.md
     - トラブルシューティング: help/troubleshooting.md
+    - 週次Git棚卸し Runbook: help/weekly-git-inventory.md
 
 extra:
   social:
