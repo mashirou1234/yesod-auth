@@ -188,6 +188,7 @@ organization 制限が必要な場合は、次を追加実装してください�
 
 API 契約とレスポンス例は [ユーザーAPI: プロバイダ情報からプロフィール復元](../api/users.md#プロバイダ情報からプロフィール復元) を参照してください。  
 切り分け手順は [トラブルシューティング: sync-from-provider で 400/404 が返る](./troubleshooting.md#sync-from-provider-errors) を参照してください。
+provider 未設定の初動は [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順) を参照してください。
 
 ---
 
