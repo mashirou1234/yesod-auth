@@ -86,6 +86,29 @@ GET /api/v1/admin/webhooks/deliveries
 - 受信側は `event_id`（必要に応じて `endpoint_id` も併用）を冪等キーにして重複処理を防止してください。
 - タイムアウトや 5xx の場合は再送が発生するため、同一 `event_id` の処理は再実行しても結果が変わらない実装を推奨します。
 
+<a id="webhook-audit-key-map"></a>
+
+### 監査キーの読み方（再送・重複調査）
+
+Webhook の再送、重複受信、署名失敗を調査するときは、最初に次のキーを同じ調査メモへ集約してください。
+
+| キー | 取得元 | 用途 |
+|------|--------|------|
+| `event_id` | 配信履歴の JSON ボディ / 受信 payload | 同一イベントの再送かを判断する主キー |
+| `endpoint_id` | 配信履歴 / `X-Webhook-ID` / payload の `webhook_id` | どの送信先で発生したかを絞り込む |
+| `request_id` | API ログ / 受信側アクセスログ | API ログと受信側ログを突合する |
+| `X-Webhook-ID` | 受信リクエストヘッダー | 受信側ログで endpoint を確認する |
+| `X-Webhook-Event` | 受信リクエストヘッダー | イベント種別の偏りを確認する |
+| `id` | 配信履歴の delivery レコード | 個別配信レコードを参照する。冪等キーには使わない |
+| `attempt_count` | 配信履歴 | 何回目の試行かを確認する。冪等キーには使わない |
+
+再送調査では `event_id` が同じで `attempt_count` が増えている場合を同一イベントの再試行として扱います。
+`endpoint_id` が異なる場合は別送信先への配信なので、受信側の重複判定では `event_id` と `endpoint_id` を組み合わせてください。
+`request_id` は payload には含まれないため、API ログまたは受信側アクセスログで同時刻・同一 `event_id` と突き合わせます。
+
+関連する調査順は [Webhook設定ガイド: 配信失敗時のログ確認項目](../guides/webhooks.md#配信失敗時のログ確認項目) と
+[トラブルシューティング: Webhook](../help/troubleshooting.md#webhook) を参照してください。
+
 ---
 
 ## 設定リロード
