@@ -275,6 +275,10 @@ API 契約の詳細は [Webhook API: 冪等性の注意点（再送時）](../ap
 docker compose logs api --since=30m | rg "webhook|delivery|retry|timeout|request_id"
 ```
 
+再送・重複受信の調査では、`event_id` を主キーにし、送信先別の切り分けが必要な場合だけ `endpoint_id` を組み合わせます。
+`X-Webhook-ID` と `X-Webhook-Event` は受信側ログの検索キーとして残し、`request_id` は API ログと受信側ログの突合に使います。
+各キーの取得元と使い分けは [Webhook API: 監査キーの読み方（再送・重複調査）](../api/webhooks.md#webhook-audit-key-map) を参照してください。
+
 詳細な切り分け手順は [トラブルシューティング: Webhook](../help/troubleshooting.md#webhook) を参照してください。
 
 ## 管理API

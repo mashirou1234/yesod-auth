@@ -686,6 +686,8 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 | `x_webhook_event` | `user.login` | どの通知イベントで失敗したか追跡できるか |
 | `request_id` | `req-...` | APIログと相互参照できるか |
 
+再送・重複処理の調査では、`event_id` と `endpoint_id` の組み合わせを先に確定し、delivery レコードの `id` や `attempt_count` は個別試行の確認だけに使います。
+キーごとの取得元は [Webhook API: 監査キーの読み方（再送・重複調査）](../api/webhooks.md#webhook-audit-key-map) を参照してください。
 署名鍵ローテーション時の手順は [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
 監査ログ項目の完全版は [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照。
 
