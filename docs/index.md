@@ -24,6 +24,18 @@
 2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
 3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
 
+## 運用者向け最短導線
+
+セルフホスト運用では、入口を次の 3 文書に固定すると初動確認と障害切り分けがぶれにくくなります。
+
+| 目的 | 最初に見る文書 | 確認すること |
+|---|---|---|
+| 導入前提を固める | [インストール](installation.md) | 必要要件、profile 選択、OAuth secret 配置 |
+| 起動後の異常を切り分ける | [トラブルシューティング](help/troubleshooting.md) | callback / state mismatch / secret 不備の初動 |
+| 運用中のよくある確認を引く | [FAQ](help/faq.md) | token、provider、再起動、Webhook の横断確認 |
+
+`README.md` はリポジトリ概要と最短起動手順、`docs/index.md` は上記 3 文書への入口として扱います。
+
 ## クイックスタート
 
 ```bash
@@ -46,6 +58,9 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
 主要ドキュメント:
 
 - [Quick Start](getting-started.md)
+- [インストール](installation.md)
+- [トラブルシューティング](help/troubleshooting.md)
+- [FAQ](help/faq.md)
 - [OAuth設定ガイド](guides/oauth/index.md)
 
 起動直後の最小確認は [インストール手順の「docker compose利用時の最小確認手順」](installation.md#docker-compose利用時の最小確認手順) を参照してください。
