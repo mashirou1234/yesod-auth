@@ -19,6 +19,17 @@
 > Source of truth for provider support notation: `docs/guides/oauth/index.md`.
 > Source of truth for top-level feature descriptions: `docs/index.md`.
 
+## Documentation Entry Points
+
+Use this README for the repository overview and shortest local startup path.
+For self-hosted operation, use [`docs/index.md`](docs/index.md) as the documentation entrance:
+
+| Need | Start here |
+|------|------------|
+| Installation requirements, profiles, and secret layout | [`docs/installation.md`](docs/installation.md) |
+| Callback, state mismatch, and startup troubleshooting | [`docs/help/troubleshooting.md`](docs/help/troubleshooting.md) |
+| Frequently checked operational questions | [`docs/help/faq.md`](docs/help/faq.md) |
+
 ## Quick Start
 
 ### 1. Clone the repository
