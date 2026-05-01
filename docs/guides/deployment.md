@@ -2,6 +2,19 @@
 
 ## 本番環境の準備
 
+本番切替では、`docs/installation.md` と `docs/help/faq.md` と同じ順で確認します。順序を固定すると、Mock OAuth の残留、secret 不足、callback URL 不一致を切り分けやすくなります。
+
+1. `MOCK_OAUTH_ENABLED=0` を本番構成で確認する
+2. 有効化する provider 分だけ `*_client_id` / `*_client_secret` と `jwt_secret` を確認する
+3. provider 管理画面の callback URL を `https://<api-domain>/api/v1/auth/{provider}/callback` に更新する
+4. API を再起動/再デプロイし、`/health` と callback 監視の最小3点を確認する
+
+関連導線:
+
+- [インストール: profile別の環境変数優先順位](../installation.md#profile別の環境変数優先順位)
+- [インストール: OAuth認証情報](../installation.md#oauth認証情報)
+- [FAQ: 本番環境で必要な設定は？](../help/faq.md#本番環境で必要な設定は)
+
 ### 1. 環境変数の設定
 
 ```bash
@@ -13,9 +26,16 @@ export FRONTEND_URL=https://your-frontend.com
 export MOCK_OAUTH_ENABLED=0  # 本番では無効化
 ```
 
+`MOCK_OAUTH_ENABLED` のアプリ既定値は `0` ですが、Compose の `default` / `full` / `ci` profile は開発・CI 向けに `1` へ上書きします。本番用の `compose.prod.yml` やホスティング設定では `0` を明示し、実際の解決結果を確認してください。
+
+```bash
+docker compose config | rg -n "MOCK_OAUTH_ENABLED"
+# compose.prod.yml などの本番用 overlay を使う場合は `-f` を追加して同じ確認を実行します。
+```
+
 ### 2. シークレットの管理
 
-本番環境ではDocker Secretsを使用してください：
+本番環境では Docker Secrets を使用してください。YESOD Auth は `/run/secrets/<name>` を環境変数より優先して読み込みます。必須なのは `jwt_secret` と、有効化する provider 分の `*_client_id` / `*_client_secret` です。
 
 ```bash
 # Docker Swarmモードの場合
@@ -24,12 +44,19 @@ echo "your-google-client-id" | docker secret create google_client_id -
 # ...
 ```
 
+Compose 運用では、対象 provider の secret mount が本番構成に含まれることを確認します。
+
+```bash
+docker compose config | rg -n "jwt_secret|<provider>_client_(id|secret)"
+# compose.prod.yml などの本番用 overlay を使う場合は `-f` を追加して同じ確認を実行します。
+```
+
 ### 3. OAuthリダイレクトURIの更新
 
 使用する各OAuthプロバイダーの管理画面で、リダイレクトURIを本番ドメインへ更新：
 
 ```
-https://api.your-domain.com/api/v1/auth/{provider}/callback
+https://<api-domain>/api/v1/auth/{provider}/callback
 ```
 
 代表例:
@@ -38,6 +65,8 @@ https://api.your-domain.com/api/v1/auth/{provider}/callback
 - `https://api.your-domain.com/api/v1/auth/github/callback`
 - `https://api.your-domain.com/api/v1/auth/discord/callback`
 - `https://api.your-domain.com/api/v1/auth/x/callback`
+
+更新後は provider 管理画面の登録値と、実際に利用者が到達する API ドメイン・scheme・path が完全一致していることを確認します。callback URL の切り分けは [OAuth設定ガイドの callback チェック](./oauth/index.md#oauth-callback-checklist) と [FAQ の本番設定](../help/faq.md#本番環境で必要な設定は) に接続します。
 
 ---
 
