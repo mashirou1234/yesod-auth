@@ -62,6 +62,7 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 
 再開ポイント:
 - 起動確認の継続: [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- provider 選択と callback URL 確認: [OAuth設定: 初回導入の読み順](../guides/oauth/index.md#oauth-first-setup-order)
 - 実 OAuth の再開: [Mock OAuthから実OAuthへ切り替える最小確認は？](#mock-oauthから実oauthへ切り替える最小確認は)
 - 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./troubleshooting.md#provider-未設定のまま認証導線を実行した)
 - 詳細手順: [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
@@ -188,6 +189,7 @@ callback URL 不一致が疑われる場合は [トラブルシューティン�
 導線は次の順で参照してください。
 
 - インストール: [OAuth認証情報](../installation.md#oauth認証情報)
+- OAuth設定: [初回導入の読み順](../guides/oauth/index.md#oauth-first-setup-order)
 - クイックスタート: [2.5 コールバックURLの検証](../getting-started.md#25-コールバックurlの検証)
 - トラブルシューティング: [401 Unauthorized / invalid_client](./troubleshooting.md#401-unauthorized--invalid_client)
 - トラブルシューティング: [redirect_uri_mismatch（callback URL 不一致の診断フロー）](./troubleshooting.md#oauth-callback-url-mismatch)

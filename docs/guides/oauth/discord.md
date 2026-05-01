@@ -15,6 +15,19 @@
     ```
 3. 「Client ID」と「Client Secret」をコピー
 
+## 2.1 Callback URL の登録値
+
+Discord Developer Portal には、利用環境ごとに次の callback URL を登録します。
+本番では `localhost` を残さず、API の公開ドメインに置き換えてください。
+
+| 環境 | 登録する callback URL | 確認先 |
+|------|------------------------|--------|
+| ローカル開発 | `http://localhost:8000/api/v1/auth/discord/callback` | OAuth2 の `Redirects` |
+| セルフホスト本番 | `https://<api-domain>/api/v1/auth/discord/callback` | 本番アプリの OAuth2 `Redirects` |
+
+開始エンドポイントは `GET /api/v1/auth/discord` です。callback URL を直接開かず、必ず開始エンドポイントから Discord 認可画面へ遷移することを確認してください。
+共通の確認順は [OAuth設定: Callback確認の共通チェックリスト](index.md#oauth-callback-checklist) を参照してください。
+
 ## 3. シークレットファイルの設定
 
 ```bash
