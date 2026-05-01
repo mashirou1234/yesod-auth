@@ -80,6 +80,19 @@
 
 `redirect_uri_mismatch` を最短で確認する手順は [クイックスタート](../getting-started.md#25-redirect_uri_mismatch-の最短確認5ステップ) を参照してください。失敗時の切り分けは [トラブルシューティング](../help/troubleshooting.md#認証エラー) へ接続してください。
 
+#### callback 障害時の参照順
+
+callback / state mismatch / `invalid_client` の切り分けは、トラブルシューティングと同じ `health` -> `auth` -> `provider` -> `webhook` の順で進めます。
+
+| 段階 | 確認すること | 最小コマンド/参照先 |
+| --- | --- | --- |
+| `health` | API と依存サービスが起動しているか | `curl -fsS http://localhost:8000/health` |
+| `auth` | callback が二重実行・期限切れ state・認可コード交換失敗のどれか | `docker compose logs api --since=30m \| rg -n "Invalid state\|/api/v1/auth/.*/callback\|Failed to exchange code"` |
+| `provider` | `client_id` / `client_secret` / provider 側 callback URL が一致しているか | [トラブルシューティング: `401 Unauthorized` / `invalid_client`](../help/troubleshooting.md#401-unauthorized--invalid_client) |
+| `webhook` | 認証後イベントの配送遅延・失敗が別問題として起きていないか | [Webhook設定ガイド](../guides/webhooks.md#ローカルテスト) |
+
+`auth` 段階で `Invalid or expired state` が返る場合は [state mismatch の最小診断例](#state-mismatch-の最小診断例) に進み、`invalid_client` が見える場合は `provider` 段階へ進んで secret と provider 管理画面の callback URL を確認してください。
+
 ### 1. 認証開始
 
 ユーザーを認証エンドポイントにリダイレクト：
@@ -377,7 +390,7 @@ Content-Type: application/json
 
 ### `state mismatch` の最小診断例
 
-`GET /api/v1/auth/{provider}/callback` で `400 Invalid or expired state` が返った場合は、次の2コマンドで「再送」か「状態消失」かを先に切り分けます。
+`GET /api/v1/auth/{provider}/callback` で `400 Invalid or expired state` が返った場合は、[callback 障害時の参照順](#callback-障害時の参照順) の `auth` 段階として、次の2コマンドで「再送」か「状態消失」かを先に切り分けます。
 
 ```bash
 # 1) callback の重複実行有無を確認
