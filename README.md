@@ -454,7 +454,7 @@ This repository includes GitHub Actions workflows for automatic PR approval and 
 ```
 
 This script ensures the repository keeps the labels used by Codex / codex-orch automation:
-`codex`, `codex-automation`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened`.
+`codex`, `codex-automation`, `codex:priority`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened`.
 
 ### Bench-80 Queue Inventory Normalization
 
@@ -489,6 +489,7 @@ codex-orch 運用の基本方針は、手動レーンと自動レーンで責務
 
 - 自動レーン: commit/push は原則許可（Issue 指示や実行プロンプトで明示禁止がある場合のみ停止）
 - 手動レーン: ローカル確認後に 1 回 push を標準化
+- issue 選定: `codex:blocked` を最優先し、次に `codex:priority` + `codex:queue`、最後に通常の `codex:queue` を処理
 - queue 着手前: linked Project の status / priority を確認（Project 未連携 repo は `N/A` を記録）
 
 ### Issue 状態遷移（標準）
@@ -497,6 +498,12 @@ codex-orch 運用の基本方針は、手動レーンと自動レーンで責務
 
 - `blocked`: issue コメントを残して `codex:blocked` を付与
 - `pr-opened`: merge 確認後、reconcile で close（自動レーン主体）
+
+### docs-only CI 分岐の対象
+
+docs-only として扱う対象は `docs/**`, `README.md`, `AGENTS.md` に固定します。
+これ以外のファイルが 1 つでも含まれる場合、または判定できない場合は通常 CI を実行します。
+branch protection の必須チェック例は `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` です。
 
 ### Generate TypeScript Types
 
