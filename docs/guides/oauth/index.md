@@ -4,32 +4,49 @@ YESOD Authは複数のOAuthプロバイダーに対応しています。各プ�
 
 ## 対応プロバイダー
 
-| プロバイダー | 公式PKCE | 独自PKCE | OpenID Connect | 備考 |
-|-------------|----------|----------|----------------|------|
-| [Google](google.md) | ✅ | - | ✅ | 推奨 |
-| [GitHub](github.md) | ✅ | - | ❌ | |
-| [X (Twitter)](x.md) | ✅ | - | ❌ | メールアドレス取得不可 |
-| [LinkedIn](linkedin.md) | ✅ | - | ✅ | |
-| [Facebook](facebook.md) | ✅ | - | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
-| [Discord](discord.md) | - | ✅ | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
-| [Slack](slack.md) | - | ✅ | ✅ | |
-| [Twitch](twitch.md) | - | ✅ | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+初回導入では、利用する provider を1つ決めてから個別ガイドへ進んでください。
+Callback URL は provider 名だけを差し替え、ローカルと本番で同じパス形式に揃えます。
 
-## provider別必須環境変数一覧
+| プロバイダー | 個別ガイド | ローカル callback URL | 本番 callback URL | PKCE | OpenID Connect | 備考 |
+|-------------|------------|----------------------|-------------------|------|----------------|------|
+| Google | [google.md](google.md) | `http://localhost:8000/api/v1/auth/google/callback` | `https://<api-domain>/api/v1/auth/google/callback` | 公式 | ✅ | 推奨 |
+| GitHub | [github.md](github.md) | `http://localhost:8000/api/v1/auth/github/callback` | `https://<api-domain>/api/v1/auth/github/callback` | 公式 | ❌ | |
+| Discord | [discord.md](discord.md) | `http://localhost:8000/api/v1/auth/discord/callback` | `https://<api-domain>/api/v1/auth/discord/callback` | 独自 | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
+| X (Twitter) | [x.md](x.md) | `http://localhost:8000/api/v1/auth/x/callback` | `https://<api-domain>/api/v1/auth/x/callback` | 公式 | ❌ | メールアドレス取得不可 |
+| LinkedIn | [linkedin.md](linkedin.md) | `http://localhost:8000/api/v1/auth/linkedin/callback` | `https://<api-domain>/api/v1/auth/linkedin/callback` | 公式 | ✅ | |
+| Facebook | [facebook.md](facebook.md) | `http://localhost:8000/api/v1/auth/facebook/callback` | `https://<api-domain>/api/v1/auth/facebook/callback` | 公式 | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
+| Slack | [slack.md](slack.md) | `http://localhost:8000/api/v1/auth/slack/callback` | `https://<api-domain>/api/v1/auth/slack/callback` | 独自 | ✅ | |
+| Twitch | [twitch.md](twitch.md) | `http://localhost:8000/api/v1/auth/twitch/callback` | `https://<api-domain>/api/v1/auth/twitch/callback` | 独自 | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+
+<a id="初回導入の読み順"></a>
+
+## 初回導入の読み順 {#oauth-first-setup-order}
+
+セルフホストで最短導入する場合は、次の順で読み進めます。
+
+1. [インストール: provider 未設定時の最短スキップ手順](../../installation.md#provider-未設定時の最短スキップ手順) で、先に `/health` と `/docs` の到達確認を終える
+2. 本ページの [provider別必須環境変数一覧](#oauth-provider-credentials) で、有効化する provider の secret 名と callback URL を確認する
+3. [Callback確認の共通チェックリスト](#oauth-callback-checklist) で、provider 管理画面へ登録する URL を確定する
+4. 対象 provider の個別ガイドを開き、scope / secret / callback の provider 固有差分だけ確認する
+5. 迷った場合は [FAQ: 複数providerを有効化するときの順序チェックは？](../../help/faq.md#複数providerを有効化するときの順序チェックは) から再確認する
+
+<a id="provider別必須環境変数一覧"></a>
+
+## provider別必須環境変数一覧 {#oauth-provider-credentials}
 
 実OAuthで必要なのは、`jwt_secret` と「有効化して使う provider 分の `*_client_id` / `*_client_secret`」だけです。
 `MOCK_OAUTH_ENABLED=1` はローカル疎通用であり、実運用では `MOCK_OAUTH_ENABLED=0` を使用します。
 
-| provider | 必須 secret 名 | 環境変数名（secret未使用時） | 個別ガイド |
-|---|---|---|---|
-| Google | `google_client_id` / `google_client_secret` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | [google.md](google.md) |
-| GitHub | `github_client_id` / `github_client_secret` | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | [github.md](github.md) |
-| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | [discord.md](discord.md) |
-| X (Twitter) | `x_client_id` / `x_client_secret` | `X_CLIENT_ID` / `X_CLIENT_SECRET` | [x.md](x.md) |
-| LinkedIn | `linkedin_client_id` / `linkedin_client_secret` | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | [linkedin.md](linkedin.md) |
-| Facebook | `facebook_client_id` / `facebook_client_secret` | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | [facebook.md](facebook.md) |
-| Slack | `slack_client_id` / `slack_client_secret` | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | [slack.md](slack.md) |
-| Twitch | `twitch_client_id` / `twitch_client_secret` | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | [twitch.md](twitch.md) |
+| provider | 必須 secret 名 | 環境変数名（secret未使用時） | callback URL パス | 個別ガイド |
+|---|---|---|---|---|
+| Google | `google_client_id` / `google_client_secret` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `/api/v1/auth/google/callback` | [google.md](google.md) |
+| GitHub | `github_client_id` / `github_client_secret` | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/v1/auth/github/callback` | [github.md](github.md) |
+| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | `/api/v1/auth/discord/callback` | [discord.md](discord.md) |
+| X (Twitter) | `x_client_id` / `x_client_secret` | `X_CLIENT_ID` / `X_CLIENT_SECRET` | `/api/v1/auth/x/callback` | [x.md](x.md) |
+| LinkedIn | `linkedin_client_id` / `linkedin_client_secret` | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | `/api/v1/auth/linkedin/callback` | [linkedin.md](linkedin.md) |
+| Facebook | `facebook_client_id` / `facebook_client_secret` | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `/api/v1/auth/facebook/callback` | [facebook.md](facebook.md) |
+| Slack | `slack_client_id` / `slack_client_secret` | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | `/api/v1/auth/slack/callback` | [slack.md](slack.md) |
+| Twitch | `twitch_client_id` / `twitch_client_secret` | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | `/api/v1/auth/twitch/callback` | [twitch.md](twitch.md) |
 
 一覧の定義元は [インストールガイド（OAuth認証情報）](../../installation.md#oauth-credentials) です。
 クイックスタートでの初回導入順は [getting-started](../../getting-started.md#2-シークレットファイルの作成) を参照してください。

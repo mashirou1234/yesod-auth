@@ -25,6 +25,19 @@
     ```
 4. クライアントIDとシークレットを保存
 
+## 3.1 Callback URL の登録値
+
+Google Cloud Console には、利用環境ごとに次の callback URL を登録します。
+本番では `localhost` を残さず、API の公開ドメインに置き換えてください。
+
+| 環境 | 登録する callback URL | 確認先 |
+|------|------------------------|--------|
+| ローカル開発 | `http://localhost:8000/api/v1/auth/google/callback` | Google Cloud Console の「承認済みのリダイレクト URI」 |
+| セルフホスト本番 | `https://<api-domain>/api/v1/auth/google/callback` | 本番 OAuth クライアントの「承認済みのリダイレクト URI」 |
+
+開始エンドポイントは `GET /api/v1/auth/google` です。callback URL を直接開かず、必ず開始エンドポイントから Google 認可画面へ遷移することを確認してください。
+共通の確認順は [OAuth設定: Callback確認の共通チェックリスト](index.md#oauth-callback-checklist) を参照してください。
+
 ## 4. シークレットファイルの設定
 
 ```bash

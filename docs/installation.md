@@ -64,6 +64,7 @@ OAuth provider をまだ一部用意できていない場合は、次の手順�
 
 再開ポイント:
 - 起動確認の継続: [docker compose利用時の最小確認手順](#docker-compose利用時の最小確認手順)
+- provider 選択と callback URL 確認: [OAuth設定: 初回導入の読み順](./guides/oauth/index.md#oauth-first-setup-order)
 - 実 OAuth の再開: [クイックスタート: Mock OAuthから実OAuthへ切り替える最小チェック](./getting-started.md#mock-oauthから実oauthへ切り替える最小チェック)
 - 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
 - FAQ での要点確認: [Mock OAuthから実OAuthへ切り替える最小確認は？](./help/faq.md#mock-oauthから実oauthへ切り替える最小確認は)

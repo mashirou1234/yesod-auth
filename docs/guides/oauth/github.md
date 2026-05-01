@@ -10,6 +10,19 @@
     - Authorization callback URL: `http://localhost:8000/api/v1/auth/github/callback`
 4. 「Register application」をクリック
 
+## 1.1 Callback URL の登録値
+
+GitHub OAuth App には、利用環境ごとに次の callback URL を登録します。
+本番では `localhost` を残さず、API の公開ドメインに置き換えてください。
+
+| 環境 | 登録する callback URL | 確認先 |
+|------|------------------------|--------|
+| ローカル開発 | `http://localhost:8000/api/v1/auth/github/callback` | OAuth App の `Authorization callback URL` |
+| セルフホスト本番 | `https://<api-domain>/api/v1/auth/github/callback` | 本番 OAuth App の `Authorization callback URL` |
+
+開始エンドポイントは `GET /api/v1/auth/github` です。callback URL を直接開かず、必ず開始エンドポイントから GitHub 認可画面へ遷移することを確認してください。
+共通の確認順は [OAuth設定: Callback確認の共通チェックリスト](index.md#oauth-callback-checklist) を参照してください。
+
 ## 2. クライアントシークレットの生成
 
 1. 作成したアプリの設定ページを開く
