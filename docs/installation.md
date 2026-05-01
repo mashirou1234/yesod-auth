@@ -39,19 +39,19 @@ YESOD Authは3つのプロファイルを提供しています：
 
 | プロファイル | 用途 | サービス |
 |-------------|------|---------|
-| `default` | ローカル開発 | db, api, docs (`valkey` は常時有効) |
-| `full` | 管理画面含む | db, api, admin, docs (`valkey` は常時有効) |
-| `ci` | CI/CD | db-ci, api-ci (`valkey` は常時有効) |
+| `default` | ローカル開発 | db, valkey, api, docs |
+| `full` | 管理画面含む | db, valkey, admin, api, docs |
+| `ci` | CI/CD | db-ci, valkey, api-ci |
 
 ### profile選択チェック表
 
-初回導入時は、用途に応じて次の表で profile を選択してください。実行前後に [profile整合確認手順](#profile整合確認手順) で定義との差分を確認すると安全です。
+初回導入時は、用途に応じて次の表で profile を選択してください。`valkey` はすべての profile で起動対象です。実行前後に [profile整合確認手順](#profile整合確認手順) で定義との差分を確認すると安全です。
 
 | profile | この条件なら選ぶ | 最小確認コマンド |
 |---|---|---|
 | `default` | ローカルで API/Docs を最短で確認したい | `docker compose --profile default up -d`<br>`docker compose --profile default ps`<br>`curl -fsS http://localhost:8000/health` |
-| `full` | 管理画面 (`admin`) まで含めて導入確認したい | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full config --services` |
-| `ci` | CI 相当の軽量構成だけ確認したい | `docker compose --profile ci up -d`<br>`docker compose --profile ci config --services`<br>`docker compose --profile ci ps` |
+| `full` | 管理画面 (`admin`) まで含めて導入確認したい | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full ps`<br>`curl -fsS http://localhost:8000/health` |
+| `ci` | CI 相当の軽量構成だけ確認したい | `docker compose --profile ci up -d`<br>`docker compose --profile ci ps`<br>`curl -fsS http://localhost:8001/health` |
 
 ### provider 未設定時の最短スキップ手順
 
@@ -70,7 +70,7 @@ OAuth provider をまだ一部用意できていない場合は、次の手順�
 
 ## Docker起動前チェック項目
 
-`docker compose up` 実行前に、次の6項目を確認してください。
+`docker compose up` 実行前に、次の7項目を確認してください。
 
 1. Docker Engine / Docker Compose のバージョン確認
 
@@ -121,6 +121,8 @@ lsof -nP -iTCP:8000 -iTCP:5432 -iTCP:6379 -sTCP:LISTEN
 - 初回導入確認: `default`
 - 管理画面確認まで行う場合: `full`
 - CI相当確認のみ: `ci`
+
+選択した profile の起動後確認は、[クイックスタート: profile別の初回確認コマンド表](getting-started.md#profile別の初回確認コマンド表) と同じ順序で実行してください。
 
 7. Valkey 到達確認（profile別）
 

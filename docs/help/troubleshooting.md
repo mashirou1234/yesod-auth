@@ -43,15 +43,17 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
    docker compose --profile full config --services | rg -x 'valkey'
    docker compose --profile ci config --services | rg -x 'valkey'
    ```
-2. `valkey` コンテナ状態を確認する
+2. 選択した profile で `valkey` コンテナ状態を確認する
    ```bash
-   docker compose ps valkey
-   docker compose logs valkey --since=30m
+   docker compose --profile default ps valkey
+   docker compose --profile default logs valkey --since=30m
    ```
-3. `PING` の再実行で復旧確認する
+   `full` または `ci` を使っている場合は、`--profile default` を対象 profile に置き換えてください。
+3. 同じ profile で `PING` の再実行により復旧確認する
    ```bash
-   docker compose exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
+   docker compose --profile default exec valkey sh -lc 'valkey-cli ping || redis-cli ping'
    ```
+   `PONG` が返れば `health` の依存サービス確認へ戻れます。
 
 **対処:** `valkey` が `Up` で `PING` が `PONG` になるまで、ポート競合・ボリューム破損・起動失敗ログを優先して解消します。導線は [インストール: Docker起動前チェック項目](../installation.md#docker起動前チェック項目) を基準に戻してください。
 

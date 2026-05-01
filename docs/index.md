@@ -20,8 +20,8 @@
 
 初回導入時は、次の順序で確認すると最短で環境を立ち上げられます。
 
-1. [インストール](installation.md): 必要要件と `default` / `full` / `ci` プロファイル差分を確認
-2. [クイックスタート](getting-started.md): シークレット作成から起動・ヘルスチェックまで実施
+1. [インストール](installation.md): 必要要件、`default` / `full` / `ci` の profile 選択、`valkey` 前提を確認
+2. [クイックスタート](getting-started.md): 選択した profile でシークレット作成から起動・ヘルスチェックまで実施
 3. [OAuth設定ガイド](guides/oauth/index.md): 使用するプロバイダーだけを有効化
 
 ## 運用者向け最短導線
