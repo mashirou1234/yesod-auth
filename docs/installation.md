@@ -556,6 +556,32 @@ docker compose --profile ci config | rg -n "MOCK_OAUTH_ENABLED"
    - Installation: [profile別の環境変数優先順位](#profile別の環境変数優先順位)  
    - Troubleshooting: [secrets 権限不備で `Permission denied` が出る](./help/troubleshooting.md#secrets-permission-recovery)
 
+<a id="production-cutover-check"></a>
+
+### 本番切替前チェック（deployment / FAQ 同期）
+
+本番へ切り替える前は、[デプロイ: 本番環境の準備](guides/deployment.md#本番環境の準備) と [FAQ: 本番環境で必要な設定は？](help/faq.md#本番環境で必要な設定は) と同じ順で確認してください。
+
+1. `MOCK_OAUTH_ENABLED=0` を本番構成で確認する
+   - アプリ既定値は `0` ですが、Compose の `default` / `full` / `ci` profile は `1` に上書きします。
+   - 本番用 overlay やホスティング設定で `0` を明示し、`docker compose config` の結果を保存します。
+2. secret の入力元を固定する
+   - Docker Secrets を第一候補にし、`jwt_secret` と有効化する provider 分の `*_client_id` / `*_client_secret` だけを必須にします。
+   - `secret/環境変数の解決優先順位` のとおり、`/run/secrets/<name>` が環境変数より優先されます。
+3. callback URL を本番 API ドメインへ更新する
+   - provider 管理画面には `https://<api-domain>/api/v1/auth/{provider}/callback` を登録します。
+   - ローカル値、古いドメイン、末尾 `/` の差分が残っていないか確認します。
+4. 再起動/再デプロイ後に最小確認を実施する
+   - `/health` が `200` を返すこと
+   - `GET /api/v1/auth/{provider}` が認可画面へ遷移すること
+   - callback 監視の最小3点（失敗ログ件数、4xx/5xx 増加、処理遅延）を deployment から追えること
+
+確認コマンド例:
+
+```bash
+rg -n "MOCK_OAUTH_ENABLED|callback|secret|production|本番" docs/guides/deployment.md docs/installation.md docs/help/faq.md
+```
+
 ## リフレッシュトークン運用時の注意
 
 `/api/v1/auth/refresh` は「アクセストークンの延命」ではなく「ローテーションを伴う再発行」です。導入時は次の3点を必ず満たしてください。

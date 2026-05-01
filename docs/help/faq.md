@@ -279,10 +279,28 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 
 ### 本番環境で必要な設定は？
 
-1. `MOCK_OAUTH_ENABLED=0`に設定
-2. OAuthリダイレクトURIを本番ドメインに更新
-3. Docker Secretsでシークレットを管理
-4. HTTPSを有効化
+本番切替前は、インストールとデプロイの手順と同じ順で確認してください。
+
+1. `MOCK_OAUTH_ENABLED=0` を本番構成で確認する
+   - アプリ既定値は `0` ですが、Compose の `default` / `full` / `ci` profile は開発・CI 向けに `1` へ上書きします。
+   - 本番用 overlay、ホスティング環境変数、Secret Store のいずれかで `0` を明示してください。
+2. secret は Docker Secrets を第一候補にする
+   - 必須なのは `jwt_secret` と、有効化する OAuth provider 分の `*_client_id` / `*_client_secret` です。
+   - `/run/secrets/<name>` は同名の環境変数より優先されます。
+3. OAuth callback URL を本番 API ドメインに更新する
+   - provider 管理画面では `https://<api-domain>/api/v1/auth/{provider}/callback` に統一します。
+   - `localhost`、古いドメイン、scheme 差分、末尾 `/` の差分が残っていないか確認します。
+4. 再起動/再デプロイ後に疎通と監視を確認する
+   - `/health` が `200` を返すこと
+   - `GET /api/v1/auth/{provider}` が認可画面へ遷移すること
+   - callback 失敗ログ件数、callback URL の 4xx/5xx、callback 処理遅延の最小3点を監視できること
+5. HTTPS を有効化し、`FRONTEND_URL` と `CORS_ORIGINS` を本番 URL に合わせる
+
+関連手順:
+
+- [デプロイ: 本番環境の準備](../guides/deployment.md#本番環境の準備)
+- [インストール: 本番切替前チェック](../installation.md#production-cutover-check)
+- [OAuth設定: Callback確認の共通チェックリスト](../guides/oauth/index.md#oauth-callback-checklist)
 
 ### スケールアウトできる？
 
