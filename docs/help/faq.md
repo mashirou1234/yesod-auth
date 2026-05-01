@@ -55,12 +55,16 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 
 可能です。次の順で進めると最短で起動確認できます。
 
-1. `default` profile で起動し、`jwt_secret` と有効化する provider 分だけ先に設定する
-2. 未設定 provider の認証導線は呼ばず、`/health` と `/docs` の到達確認を先に完了する
-3. OAuth 設定がそろった時点で `docker compose --profile default up -d --force-recreate api` を実行して再開する
+1. `default` profile で起動し、Mock OAuth で疎通確認する
+2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
+3. 未設定 provider の認証導線（`GET /api/v1/auth/<provider>`）は呼ばず、`/health` と `/docs` の到達確認を先に完了する
+4. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で実 OAuth を再開する
 
-再開ポイントは [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順) を参照してください。  
-導線全体は [インストール](../installation.md#provider-未設定時の最短スキップ手順) と [トラブルシューティング](./troubleshooting.md#provider-未設定のまま認証導線を実行した) で同期しています。
+再開ポイント:
+- 起動確認の継続: [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- 実 OAuth の再開: [Mock OAuthから実OAuthへ切り替える最小確認は？](#mock-oauthから実oauthへ切り替える最小確認は)
+- 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./troubleshooting.md#provider-未設定のまま認証導線を実行した)
+- 詳細手順: [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
 
 ### OAuth secretを更新したら再起動は必要？
 

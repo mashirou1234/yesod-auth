@@ -229,13 +229,13 @@ environment:
 **最短対応:**
 
 1. 未設定 provider の導線呼び出しを一度止める
-2. `curl -fsS http://localhost:8000/health` と `curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs` で起動確認を先に完了する
-3. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+2. `default` profile のまま、`curl -fsS http://localhost:8000/health` と `curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs` で起動確認を先に完了する
+3. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で実 OAuth を再開する
 
 再開ポイント:
-- [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
-- [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
-- [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](./faq.md#mock-oauthから実oauthへ切り替える最小確認は)
+- 起動確認の継続: [クイックスタート: provider 未設定時の最短スキップ手順](../getting-started.md#provider-未設定時の最短スキップ手順)
+- 実 OAuth の再開: [FAQ: Mock OAuthから実OAuthへ切り替える最小確認は？](./faq.md#mock-oauthから実oauthへ切り替える最小確認は)
+- 詳細手順: [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
 
 ---
 

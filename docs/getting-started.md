@@ -43,17 +43,18 @@ providerごとの必須 secret 名は [OAuth設定ハブの一覧](guides/oauth/
 
 ### provider 未設定時の最短スキップ手順
 
-未設定の provider がある場合でも、初回起動確認は中断せずに進められます。
+OAuth provider をまだ一部用意できていない場合でも、初回起動確認は中断せずに進められます。
 
-1. 起動対象を `default` profile に固定する（Mock OAuth 前提）
+1. `default` profile で起動し、Mock OAuth で疎通確認する
 2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
-3. 未設定 provider は触らず、[3. 起動](#3-起動) と [4. 動作確認](#4-動作確認) まで先に完了させる
-4. 実 OAuth を使うタイミングで、対象 provider の `*_client_id` / `*_client_secret` を追加して再起動する
+3. 未設定 provider の認証導線（`GET /api/v1/auth/<provider>`）は呼ばず、[3. 起動](#3-起動) と [4. 動作確認](#4-動作確認) で `/health` と `/docs` の到達確認を先に完了する
+4. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で実 OAuth を再開する
 
 再開ポイント:
-- 起動確認を先に進める場合は [4. 動作確認](#4-動作確認)
-- 実 OAuth を再開する場合は [Mock OAuthから実OAuthへ切り替える最小チェック](#mock-oauthから実oauthへ切り替える最小チェック)
-- 失敗時の切り分けは [トラブルシューティング](help/troubleshooting.md#provider-未設定のまま認証導線を実行した) を参照
+- 起動確認の継続: [4. 動作確認](#4-動作確認)
+- 実 OAuth の再開: [Mock OAuthから実OAuthへ切り替える最小チェック](#mock-oauthから実oauthへ切り替える最小チェック)
+- 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
+- FAQ での要点確認: [provider 未設定のまま初回導入を進めてもよい？](help/faq.md#provider-未設定のまま初回導入を進めてもよい)
 
 ### FAQ / installation / troubleshooting 同期チェックコマンド
 
