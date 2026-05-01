@@ -10,8 +10,8 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 | `<ORCH_RUN_COMMAND>` | 自動レーン実行コマンド | 実行環境ごとの orch 実コマンド |
 | `<REPO_SLUG>` | `owner/repo` 形式 | `mashirou1234/yesod-auth` |
 | `<BASE_BRANCH>` | 既定マージ先ブランチ | `main` |
-| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `Woodpecker CI`, `PR Auto Merge` など |
-| `<LABEL_SET>` | codex 系ラベルセット | `codex`, `codex-automation`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened` |
+| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` など |
+| `<LABEL_SET>` | codex 系ラベルセット | `codex`, `codex-automation`, `codex:priority`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened` |
 
 ## 2. 標準運用ルール（テンプレ文面）
 
@@ -19,6 +19,7 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 
 - 自動レーン: commit/push は原則許可。Issue 指示やプロンプトで明示禁止がある場合のみ停止
 - 手動レーン: ローカル確認後に 1 回 push を標準化
+- issue 選定: `codex:blocked` を最優先し、次に `codex:priority` + `codex:queue`、最後に通常の `codex:queue` を処理
 - queue 着手前: linked Project の status / priority を確認し、Project 未連携 repo は `N/A` を記録
 
 ### 2.2 Issue 状態遷移
@@ -60,3 +61,4 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 - [ ] README と AGENTS の文言が矛盾していない
 - [ ] CI 定義（Woodpecker）と README の docs-only 条件が一致している
 - [ ] `queue -> claimed -> (blocked | pr-opened) -> merge確認 -> close` が運用文書で一致している
+- [ ] `codex:priority` を含む issue 選定順が README / AGENTS / 実行プロンプトと矛盾していない
