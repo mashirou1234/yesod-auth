@@ -136,12 +136,13 @@ docker compose --profile ci config | rg "MOCK_OAUTH_ENABLED|api-ci:"
 ### profile別の初回確認コマンド表
 
 初回導入では、使う profile を1つ決めてから次の表の順で実行すると、確認漏れを防げます。
+`valkey` は `default` / `full` / `ci` のすべてで起動対象です。`/health` が失敗する場合は、先に [トラブルシューティング: preflight で valkey 到達確認に失敗する](help/troubleshooting.md#valkey-preflight-failure) で対象 profile の `valkey` を確認してください。
 
 | profile | 使う場面 | 初回確認コマンド（順番どおり） | 合格基準 |
 | --- | --- | --- | --- |
 | `default` | API と Docs の最短導入確認 | `docker compose --profile default up -d`<br>`docker compose --profile default ps`<br>`curl -fsS http://localhost:8000/health` | `db` `valkey` `api` `docs` が `Up`、`{"status":"healthy"}` が返る |
-| `full` | 管理画面 (`admin`) を含めて確認 | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full config --services` | `secrets/admin_password.txt` が存在し、`admin` が services 一覧に出る |
-| `ci` | CI相当の軽量構成で確認 | `docker compose --profile ci up -d`<br>`docker compose --profile ci config --services`<br>`docker compose --profile ci ps` | `db-ci` `valkey` `api-ci` が起動し、不要な `admin` が含まれない |
+| `full` | 管理画面 (`admin`) を含めて確認 | `ls -l secrets/admin_password.txt`<br>`docker compose --profile full up -d`<br>`docker compose --profile full ps`<br>`curl -fsS http://localhost:8000/health` | `db` `valkey` `admin` `api` `docs` が `Up`、`{"status":"healthy"}` が返る |
+| `ci` | CI相当の軽量構成で確認 | `docker compose --profile ci up -d`<br>`docker compose --profile ci ps`<br>`curl -fsS http://localhost:8001/health` | `db-ci` `valkey` `api-ci` が `Up`、`{"status":"healthy"}` が返る |
 
 詳細な profile 判定観点は [インストール: profile選択チェック表](installation.md#profile選択チェック表) を参照してください。
 ## 3.5 初回ヘルスチェック（推奨）
