@@ -13,7 +13,7 @@
 
 ```bash
 curl -fsS http://localhost:8000/health
-docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_client|401"
+docker compose logs api --since=30m | rg -n "Invalid state|/api/v1/auth/.*/callback|invalid_client|401"
 ```
 
 段階ごとの参照先ショートカット:
@@ -21,7 +21,7 @@ docker compose logs api --since=30m | rg -n "Invalid state|callback|invalid_clie
 | 段階 | まず見る場所 | 最小確認コマンド |
 | --- | --- | --- |
 | `health` | [初回起動トラブルシュート](./first-start-troubleshooting.md#症状1-health-が失敗する) | `curl -fsS http://localhost:8000/health` |
-| `auth` | [state mismatch 診断フロー](#state-mismatch-flow) | `docker compose logs api --since=30m \| rg "Invalid state\|/auth/.*/callback"` |
+| `auth` | [state mismatch 診断フロー](#state-mismatch-flow) | `docker compose logs api --since=30m \| rg "Invalid state\|/api/v1/auth/.*/callback"` |
 | `provider` | [`401 Unauthorized` / `invalid_client`](#401-unauthorized--invalid_client) | `docker compose logs --tail=100 api \| rg -n "invalid_client\|401\|client_secret\|client_id"` |
 | `webhook` | [Webhook設定ガイド](../guides/webhooks.md#ローカルテスト) | `curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints` |
 
@@ -163,14 +163,14 @@ sqlalchemy.exc.OperationalError: could not connect to server
 0. ログ採取ウィンドウを統一する（推奨値）
    ```bash
    SINCE=30m
-   docker compose logs api --since="$SINCE" | rg -n "Invalid state|/auth/.*/callback"
+   docker compose logs api --since="$SINCE" | rg -n "Invalid state|/api/v1/auth/.*/callback"
    docker compose logs valkey --since="$SINCE"
    ```
    - API/Valkey は同一 `--since` を使い、時系列比較を容易にする
    - 例外調査で範囲を広げる場合も、両ログで同じ値にそろえる
 1. 発生時刻とリクエストを特定する（APIログ）
    ```bash
-   docker compose logs api --since="$SINCE" | rg "Invalid state|/auth/.*/callback"
+   docker compose logs api --since="$SINCE" | rg "Invalid state|/api/v1/auth/.*/callback"
    ```
 2. `state` が一度だけ消費される前提を確認する（再送/二重callbackの有無）
    - 同一ブラウザ操作で callback が複数回呼ばれていないか
@@ -285,24 +285,37 @@ environment:
 
 #### invalid_client 再発防止チェック（デプロイ前後で毎回実施）
 
-次の 4 項目を上から順に実施し、すべて満たした場合のみ OAuth 設定変更を完了とします。
+次の 7 項目を上から順に実施し、必要な段階を満たした場合のみ OAuth 設定変更を完了とします。順序は [障害時の参照順](#障害時の参照順最短導線) と同じく `health` -> `auth` -> `provider` -> `webhook` を維持します。
 
-1. 対象 provider の secret ファイルが 2 つとも存在することを確認する
+1. `health` と API ドキュメントの到達性を先に確認する
+   ```bash
+   curl -fsS http://localhost:8000/health
+   curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/docs
+   ```
+2. `auth` callback の失敗ログを抽出し、`Invalid state` と `invalid_client` を分ける
+   ```bash
+   docker compose logs api --since=30m | rg -n "Invalid state|/api/v1/auth/.*/callback|invalid_client|401"
+   ```
+3. `provider` の secret ファイルが 2 つとも存在することを確認する
    ```bash
    ls -l secrets/github_client_id.txt secrets/github_client_secret.txt
    ```
-2. 変更後の Compose 定義に対象 secret が含まれることを確認する
+4. 変更後の Compose 定義に対象 secret が含まれることを確認する
    ```bash
    docker compose config | rg -n "github_client_id|github_client_secret"
    ```
-3. API 再作成後に `invalid_client` が新規発生していないことを確認する
+5. API 再作成後に `invalid_client` が新規発生していないことを確認する
    ```bash
    docker compose up -d --force-recreate api
    docker compose logs api --since=10m | rg -n "invalid_client|401"
    ```
-4. callback URL が現在の公開 API URL と一致していることを provider 管理画面で確認する
+6. callback URL が現在の公開 API URL と一致していることを provider 管理画面で確認する
    - 形式: `https://<api-domain>/api/v1/auth/{provider}/callback`
    - self-host 運用時の基準は [OAuth設定ガイド](../guides/oauth/index.md#セルフホスト運用チェックリスト) を参照
+7. 認証後の通知が絡む場合だけ `webhook` の配送状態へ進む
+   ```bash
+   curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints
+   ```
 
 上記チェックを実施しても再発する場合は、[インストール時の secret 不足診断](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を再実行し、secret 名と実ファイル名の不一致を先に解消してください。
 

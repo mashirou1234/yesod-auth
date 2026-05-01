@@ -120,17 +120,20 @@ organization 制限が必要な場合は、次を追加実装してください�
 
 ### 認証失敗時の一次分類は？
 
-まずは次の順で確認すると、OAuth 導入初期やセルフホスト運用でも誤判定を減らせます。
+まずはトラブルシューティングと同じ `health` -> `auth` -> `provider` -> `webhook` の順で確認すると、OAuth 導入初期やセルフホスト運用でも誤判定を減らせます。
 
-1. 失敗した API の HTTP ステータスを確定する
-2. API ログから代表メッセージ（`detail` / エラーコード）を拾う
-3. 下表で一次分類し、対応するドキュメントへ遷移する
+1. `health`: `curl -fsS http://localhost:8000/health` で API と依存サービスの生存を確認する
+2. `auth`: 失敗した API の HTTP ステータスを確定し、API ログから `Invalid state` / callback / `invalid_client` を拾う
+3. `provider`: `client_id` / `client_secret` と provider 管理画面の callback URL を確認する
+4. `webhook`: 認証後イベントの配送遅延・失敗が別問題として起きていないか確認する
+5. 下表で一次分類し、対応するドキュメントへ遷移する
 
 | 一次分類 | 典型シグナル | 主な原因 | 初動アクション | 最初に見る場所 |
 | --- | --- | --- | --- | --- |
 | 入力不正（422） | `Field required` / `Input should be a valid string` | `refresh_token` の欠落・型不正 | リクエスト JSON と型を修正して再送 | [`認証API: refresh失敗時エラー分類`](../api/auth.md#refresh失敗時エラー分類) |
 | 認証失敗（401） | `Not authenticated` / `Could not validate credentials` | access/refresh token の期限切れ・失効・改ざん | `/api/v1/auth/refresh` を1回試し、失敗なら再ログイン | [`トラブルシューティング: 認証エラー`](./troubleshooting.md#認証エラー) |
 | state不整合（400） | `Invalid or expired state` | callback 二重実行、Valkey不安定、環境不一致 | 同一 host/scheme で認証開始からやり直し、Valkey ログ確認 | [`トラブルシューティング: state mismatch 診断フロー`](./troubleshooting.md#state-mismatch-flow) |
+| provider設定不整合（400/401） | `invalid_client` / `Failed to exchange code` | provider 側 secret・callback URL・redirect URI の不一致 | secret と provider 管理画面の callback URL を確認 | [`トラブルシューティング: 401 Unauthorized / invalid_client`](./troubleshooting.md#401-unauthorized--invalid_client) |
 | レート制限（429） | `Rate limit exceeded` / `Too Many Requests` | 短時間の連続アクセス、制限値過小 | 連続試行を止め、制限値とアクセス集中を確認 | [`トラブルシューティング: 429 Too Many Requests`](./troubleshooting.md#auth-rate-limit-429) |
 
 運用メモとして、分類時は「発生時刻」「対象エンドポイント」「利用プロバイダー（mock/google/github等）」をセットで記録すると再現調査が容易です。
