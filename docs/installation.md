@@ -59,8 +59,8 @@ OAuth provider をまだ一部用意できていない場合は、次の手順�
 
 1. `default` profile で起動し、Mock OAuth で疎通確認する
 2. 必須 secret は `jwt_secret` と、今回有効化する provider 分だけ作成する
-3. 未設定 provider は `GET /api/v1/auth/<provider>` を呼ばず、先に health/docs 到達確認を完了する
-4. OAuth 設定完了後に provider の secret を追加し、`docker compose --profile default up -d --force-recreate api` で再開する
+3. 未設定 provider の認証導線（`GET /api/v1/auth/<provider>`）は呼ばず、先に `/health` と `/docs` の到達確認を完了する
+4. 対象 provider の `*_client_id` / `*_client_secret` を追加し、`docker compose --profile default up -d --force-recreate api` で実 OAuth を再開する
 
 再開ポイント:
 - 起動確認の継続: [docker compose利用時の最小確認手順](#docker-compose利用時の最小確認手順)
