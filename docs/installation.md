@@ -19,6 +19,7 @@ Webhook 設定変更後の反映不良は、[Webhook reload 障害の最短導�
 ## Webhook reload 障害の最短導線
 
 `config/webhooks.yaml` や secrets を変更したのに webhook 挙動が変わらない場合は、次の 3 手順で確認します。
+署名鍵ローテーション直後も同じ導線を使い、旧鍵へ戻す前に現在値、`reload` 結果、同一イベント再送結果をそろえてください。
 
 1. 現在の読み込み状態を確認
    - `curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints`
@@ -31,6 +32,7 @@ Webhook 設定変更後の反映不良は、[Webhook reload 障害の最短導�
 
 - [FAQ: Webhook reload が効かないときの確認順は？](./help/faq.md#webhook-reload-が効かないときの確認順は)
 - [トラブルシューティング: Webhook reload 後も反映されない](./help/troubleshooting.md#webhook-reload-後も反映されない)
+- [Webhook設定ガイド: 署名鍵ローテーション最小手順](./guides/webhooks.md#署名鍵ローテーション最小手順)
 - [Webhook API: `reload` 失敗時の最短確認手順](./api/webhooks.md#reload-失敗時の最短確認手順)
 
 ## Docker Composeプロファイル
@@ -689,6 +691,7 @@ rg -n "/api/v1/auth/\\{provider\\}/callback|invalid_client|Invalid or expired st
       google_client_secret.txt
       discord_client_id.txt
       discord_client_secret.txt
+      webhook_secret_my_service.txt
       jwt_secret.txt
       admin_password.txt   # --profile full を使う場合のみ
 ```
@@ -699,6 +702,7 @@ rg -n "/api/v1/auth/\\{provider\\}/callback|invalid_client|Invalid or expired st
 mkdir -p /opt/yesod-auth/secrets/current
 cp secrets/*.example /opt/yesod-auth/secrets/current/
 openssl rand -hex 32 > /opt/yesod-auth/secrets/current/jwt_secret.txt
+openssl rand -hex 32 > /opt/yesod-auth/secrets/current/webhook_secret_my_service.txt
 openssl rand -base64 24 > /opt/yesod-auth/secrets/current/admin_password.txt
 chmod 600 /opt/yesod-auth/secrets/current/*.txt
 
@@ -712,6 +716,8 @@ ln -sfn ../secrets/current secrets
 docker compose --profile default config >/dev/null
 docker compose --profile full config >/dev/null
 ```
+
+Webhook 署名鍵を切り替える場合は、`config/webhooks.yaml` の参照名を維持したまま `webhook_secret_<endpoint>.txt` の値を更新し、[Webhook reload 障害の最短導線](#webhook-reload-障害の最短導線) の順で `reload` と同一イベント再送を確認してください。
 
 ### secret/環境変数の解決優先順位
 

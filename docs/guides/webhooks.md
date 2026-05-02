@@ -182,11 +182,33 @@ curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
 ## 署名鍵ローテーション最小手順
 
 `api/app/webhooks/signer.py` のとおり、送信署名は常に単一シークレットで生成されます。切替時は受信側を先に更新し、失敗時は旧鍵へ戻してください。
+初回導入直後に鍵を切り替える場合も、[インストール: Webhook reload 障害の最短導線](../installation.md#webhook-reload-障害の最短導線) と同じ順で、現在値確認 -> `reload` -> 同一イベント再送 -> ログ確認の順序を守ります。
+
+### 切替前
 
 1. 新しい署名鍵を作成し、受信側を「新旧どちらの鍵でも検証可能」な状態にしてからデプロイする。
-2. `secrets/webhook_secret_<endpoint>.txt`（または `WEBHOOK_SECRET_<endpoint>`）を新しい鍵へ更新し、`config/webhooks.yaml` の参照先が変わっていないことを確認する。
-3. `POST /api/v1/admin/webhooks/reload` を実行して設定を再読み込みし、テストイベントを1件送って受信側検証が通ることを確認する。
-4. 確認完了後、受信側の旧鍵受け入れ期間を終了し、運用鍵を新鍵に一本化する。
+2. `config/webhooks.yaml` の `secret` 参照先（例: `${WEBHOOK_SECRET_MY_SERVICE}`）を控え、切替で参照名を変えない方針にする。
+3. 現在の読み込み状態を確認する。
+   ```bash
+   curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints
+   ```
+
+### 切替後
+
+1. `secrets/webhook_secret_<endpoint>.txt`（または `WEBHOOK_SECRET_<endpoint>`）の値だけを新しい鍵へ更新する。
+2. `POST /api/v1/admin/webhooks/reload` を実行して設定を再読み込みする。
+   ```bash
+   curl -X POST http://localhost:8000/api/v1/admin/webhooks/reload
+   ```
+3. テストイベントを1件送って受信側検証が通ることを確認する。
+4. 配信履歴と受信側ログで、同一 `event_id` の署名失敗が増えていないことを確認する。
+   ```bash
+   curl -fsS http://localhost:8000/api/v1/admin/webhooks/deliveries
+   docker compose logs api --since=30m | rg -n "webhook|reload|signature|hmac_mismatch"
+   ```
+5. 確認完了後、受信側の旧鍵受け入れ期間を終了し、運用鍵を新鍵に一本化する。
+
+`MOCK_OAUTH_ENABLED` は OAuth 導線の切替値であり、Webhook 署名鍵の解決順には影響しません。署名鍵の切替は `config/webhooks.yaml` と webhook 用 secret の読み込み状態で確認してください。
 
 ### 切替失敗時の戻し手順
 
