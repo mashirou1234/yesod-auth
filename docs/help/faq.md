@@ -177,14 +177,25 @@ callback URL 不一致が疑われる場合は [トラブルシューティン�
 本番切替時の確認で迷ったら [トラブルシューティング: 障害時の参照順（最短導線）](./troubleshooting.md#障害時の参照順最短導線) から再開してください。  
 前提の設定差分は [インストール: profile別の環境変数優先順位](../installation.md#profile別の環境変数優先順位) を参照してください。
 
+### `redirect_uri_mismatch` や callback URL mismatch が出たら最初に何を確認する？
+
+FAQ では次の3手順だけ先に確認してください。
+
+1. provider 管理画面の callback URL が `https://<api-domain>/api/v1/auth/{provider}/callback` と完全一致していることを確認する（スキーム、ホスト、ポート、末尾スラッシュを含む）
+2. `API_URL` と実アクセスURLが一致していることを [インストール: OAuth provider追加時の事前チェック](../installation.md#oauth-provider追加時の事前チェック) で確認する
+3. API ログと復旧手順を [トラブルシューティング: redirect_uri_mismatch（callback URL 不一致の診断フロー）](./troubleshooting.md#oauth-callback-url-mismatch) で確認する
+
+認可開始は必ず `GET /api/v1/auth/{provider}` から行い、callback URL を直接開いて動作確認しないでください。
+provider 別の登録値は [OAuth設定: Callback確認の共通チェックリスト](../guides/oauth/index.md#oauth-callback-checklist) を参照してください。
+
 ### 複数providerを有効化するときの順序チェックは？
 
 複数 provider を導入するときは、次の順で確認すると取りこぼしを防げます。
 
 1. profile を先に固定する（`default` / `full` / `ci` のどれで起動するかを決める）
 2. 実際に有効化する provider 分だけ `secrets/<provider>_client_id.txt` / `secrets/<provider>_client_secret.txt` を用意する
-3. provider 管理画面の callback URL を `https://<api-domain>/api/v1/auth/<provider>/callback` に一致させる
-4. `GET /api/v1/auth/<provider>` の開始と callback を同じ環境（同一 host/scheme）で通す
+3. provider 管理画面の callback URL を `https://<api-domain>/api/v1/auth/{provider}/callback` に一致させる
+4. `GET /api/v1/auth/{provider}` の開始と callback を同じ環境（同一 host/scheme）で通す
 
 導線は次の順で参照してください。
 
