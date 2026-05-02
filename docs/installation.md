@@ -13,6 +13,7 @@
 
 障害時の確認手順は[トラブルシューティング: 障害時の参照順](help/troubleshooting.md#障害時の参照順最短導線)を参照してください。
 Webhook 設定変更後の反映不良は、[Webhook reload 障害の最短導線](#webhook-reload-障害の最短導線) から着手してください。
+配信履歴や API ログで `failure_reason` を確認した場合は、[トラブルシューティング: `failure_reason` の読み替え表](help/troubleshooting.md#webhook-failure-reason-map) へ進み、API 文書と同じ分類で切り分けてください。
 
 <a id="webhook-reload-障害の最短導線"></a>
 
@@ -32,6 +33,7 @@ Webhook 設定変更後の反映不良は、[Webhook reload 障害の最短導�
 
 - [FAQ: Webhook reload が効かないときの確認順は？](./help/faq.md#webhook-reload-が効かないときの確認順は)
 - [トラブルシューティング: Webhook reload 後も反映されない](./help/troubleshooting.md#webhook-reload-後も反映されない)
+- [トラブルシューティング: `failure_reason` の読み替え表](./help/troubleshooting.md#webhook-failure-reason-map)
 - [Webhook設定ガイド: 署名鍵ローテーション最小手順](./guides/webhooks.md#署名鍵ローテーション最小手順)
 - [Webhook API: `reload` 失敗時の最短確認手順](./api/webhooks.md#reload-失敗時の最短確認手順)
 
