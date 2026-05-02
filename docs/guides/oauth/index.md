@@ -206,6 +206,16 @@ secrets/
 5. 本番では `MOCK_OAUTH_ENABLED=0` を確認する
 6. デプロイ後に `GET /health` と実際の OAuth ログイン（最低1プロバイダー）を疎通確認する
 
+### セルフホスト運用時の参照順
+
+セルフホストで OAuth 設定に迷った場合は、次の順に戻ると確認範囲を絞れます。
+
+1. 起動前提: [インストール: provider 未設定時の最短スキップ手順](../../installation.md#provider-未設定時の最短スキップ手順)
+2. provider 選定: [provider別必須環境変数一覧](#oauth-provider-credentials)
+3. callback 登録: [Callback確認の共通チェックリスト](#oauth-callback-checklist)
+4. 本番切替: [インストール: 本番切替前チェック](../../installation.md#production-cutover-check)
+5. 障害時: [トラブルシューティング: 障害時の参照順](../../help/troubleshooting.md#障害時の参照順最短導線)
+
 !!! tip "PKCE"
     PKCEに対応しているプロバイダーでは、YESOD Authが自動的にPKCEを使用してセキュリティを強化します。
 
