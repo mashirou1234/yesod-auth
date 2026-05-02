@@ -209,6 +209,8 @@ POST /api/v1/admin/webhooks/reload
 
 ---
 
+<a id="webhook-retry-exhausted-log"></a>
+
 ## 再試行上限到達時の監査ログ
 
 Webhook 配信が再試行上限に到達した場合、ワーカーは固定キー
@@ -223,6 +225,8 @@ Webhook 配信が再試行上限に到達した場合、ワーカーは固定キ
 - `endpoint_id` / `event_id`: 影響範囲の追跡キー
 
 ---
+
+<a id="webhook-signature-failure-reasons"></a>
 
 ## 署名検証エラー分類
 
@@ -262,3 +266,4 @@ Webhook 配信が再試行上限に到達した場合、ワーカーは固定キ
 詳細なログ確認コマンドと復旧パターンは [トラブルシューティングの「署名検証に失敗する」](../help/troubleshooting.md#署名検証に失敗する) を参照してください。
 調査時に最低限確認する監査ログ項目（`event_type`, `failure_reason`, `webhook_id`, `x_webhook_event`, `request_id`）は、
 [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照してください。
+`failure_reason` ごとの初動分類は [トラブルシューティング: `failure_reason` の読み替え表](../help/troubleshooting.md#webhook-failure-reason-map) に対応させています。

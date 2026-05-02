@@ -266,6 +266,8 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 4. 配信履歴を確認：`GET /api/v1/admin/webhooks/deliveries`
 5. 設定変更直後は `POST /api/v1/admin/webhooks/reload` を実行し、同一イベントを再送して結果を比較
 
+配信履歴に `failure_reason` がある場合は、[トラブルシューティング: `failure_reason` の読み替え表](./troubleshooting.md#webhook-failure-reason-map) で API 文書と同じ分類へ戻してから確認してください。
+
 ### 署名検証の方法は？
 
 [Webhook設定ガイド](../guides/webhooks.md#署名検証)を参照してください。
@@ -285,6 +287,7 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 
 - [トラブルシューティング: Webhook reload 後も反映されない](./troubleshooting.md#webhook-reload-後も反映されない)
 - [Webhook API: `reload` 失敗時の最短確認手順](../api/webhooks.md#reload-失敗時の最短確認手順)
+- [トラブルシューティング: `failure_reason` の読み替え表](./troubleshooting.md#webhook-failure-reason-map)
 
 ### Webhook 署名鍵をローテーションするときの最短順は？
 

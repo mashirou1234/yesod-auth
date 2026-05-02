@@ -625,6 +625,24 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 
 API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む読み順](../api/webhooks.md#delivery-history-troubleshooting-flow) を参照してください。
 
+<a id="webhook-failure-reason-map"></a>
+
+### `failure_reason` の読み替え表
+
+署名検証失敗では、API 文書の [署名検証エラー分類](../api/webhooks.md#webhook-signature-failure-reasons) を正本にして、`failure_reason` を次の順で読み替えます。HTTP 失敗やタイムアウト由来の `failure_reason` は [再試行上限到達時の監査ログ](../api/webhooks.md#webhook-retry-exhausted-log) を先に見て、署名失敗の固定分類と混ぜないでください。
+
+| `failure_reason` | 初動分類 | 次に見る場所 |
+| --- | --- | --- |
+| `missing_signature_header` | 送信元が `X-Webhook-Signature` を付けていない、またはプロキシで落ちている | [Webhookが発火しない](#webhook-not-triggered) で endpoint と受信ログを確認 |
+| `missing_timestamp_header` | 送信元が `X-Webhook-Timestamp` を付けていない | [署名検証に失敗する](#webhook-signature-verification-failure) で送信元ヘッダーを確認 |
+| `timestamp_skew` | 送信元と受信側の時刻差が許容範囲を超えている | [署名検証に失敗する](#webhook-signature-verification-failure) で時刻同期と再送遅延を確認 |
+| `invalid_signature_format` | `algorithm=digest` 形式でない署名値が届いている | [署名検証に失敗する](#webhook-signature-verification-failure) で署名ヘッダー形式を確認 |
+| `unsupported_signature_algorithm` | 未対応アルゴリズムが指定されている | [署名検証に失敗する](#webhook-signature-verification-failure) で送信元の署名方式を `sha256` 系へ戻す |
+| `hmac_mismatch` | payload と署名鍵が一致していない | [Webhook reload 後も反映されない](#webhook-reload-後も反映されない) で secret 反映と再送を確認 |
+| `replay_detected` | 同じ署名/timestamp の再利用が疑われる | [配信履歴から初動を決める](#webhook-delivery-history-triage) で `event_id` と `attempt_count` を確認 |
+
+アプリ内例外として `invalid_signature` だけが見える場合は、例外メッセージの `error_code=<failure_reason>` をこの表へ戻してから初動分類してください。
+
 <a id="webhook-not-triggered"></a>
 
 ### Webhookが発火しない
@@ -725,6 +743,7 @@ API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む�
 
 再送・重複処理の調査では、`event_id` と `endpoint_id` の組み合わせを先に確定し、delivery レコードの `id` や `attempt_count` は個別試行の確認だけに使います。
 キーごとの取得元は [Webhook API: 監査キーの読み方（再送・重複調査）](../api/webhooks.md#webhook-audit-key-map) を参照してください。
+`failure_reason` の固定値と初動分類は [`failure_reason` の読み替え表](#webhook-failure-reason-map) を参照してください。
 署名鍵ローテーション時の手順は [Webhook設定ガイド](../guides/webhooks.md#署名鍵ローテーション最小手順) と [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
 監査ログ項目の完全版は [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照。
 
