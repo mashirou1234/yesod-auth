@@ -257,6 +257,8 @@ HTTP 4xx エラーはリトライしません（クライアントエラーの�
 配信履歴の `id` や `attempt_count` は再送ごとに変わるため、重複判定には使えません。  
 API 契約の詳細は [Webhook API: 冪等性の注意点（再送時）](../api/webhooks.md#冪等性の注意点再送時) を参照してください。
 
+<a id="webhook-delivery-log-checklist"></a>
+
 ### 配信失敗時のログ確認項目
 
 再試行設定の見直し前に、最低でも次の項目を同一 `request_id` 単位で確認してください。
@@ -294,6 +296,10 @@ curl http://localhost:8000/api/v1/admin/webhooks/endpoints
 ```bash
 curl http://localhost:8000/api/v1/admin/webhooks/deliveries
 ```
+
+失敗を調査するときは、まず配信履歴で `event_id` / `endpoint_id` / `attempt_count` を控えてください。
+`event_id` は同一イベントの再送確認、`endpoint_id` は送信先の絞り込み、`attempt_count` は再送状況の把握に使います。
+その後の復旧判断は [Webhook API: 配信履歴から障害対応へ進む読み順](../api/webhooks.md#delivery-history-troubleshooting-flow) から [トラブルシューティング: Webhook](../help/troubleshooting.md#webhook-delivery-history-triage) へ進めます。
 
 ### 設定リロード
 

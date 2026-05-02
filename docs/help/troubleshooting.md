@@ -611,6 +611,22 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 
 ## Webhook
 
+<a id="webhook-delivery-history-triage"></a>
+
+### 配信履歴から初動を決める
+
+`GET /api/v1/admin/webhooks/deliveries` で失敗を見つけた場合は、API 文書だけで判断を閉じず、次の 3 キーを先にそろえてから症状別の節へ進んでください。
+
+| キー | 初動での使い方 | 次の確認 |
+| --- | --- | --- |
+| `event_id` | 同じイベントの再送か、重複処理が起きていないかを確認する | 署名失敗や重複処理なら [署名検証に失敗する](#webhook-signature-verification-failure) |
+| `endpoint_id` | 特定の送信先だけ失敗しているかを切り分ける | 設定未読込なら [Webhookが発火しない](#webhook-not-triggered) |
+| `attempt_count` | 初回失敗か再送中かを判断する。冪等キーには使わない | 上限到達が疑われる場合は API ログの `webhook_delivery_retry_exhausted` を確認 |
+
+API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む読み順](../api/webhooks.md#delivery-history-troubleshooting-flow) を参照してください。
+
+<a id="webhook-not-triggered"></a>
+
 ### Webhookが発火しない
 
 **確認事項:**
@@ -666,6 +682,8 @@ FAQ での方針説明は [FAQ: Adminで未翻訳キーが出たときの表示�
 - 導入手順側: [インストール: Webhook reload 障害の最短導線](../installation.md#webhook-reload-障害の最短導線)
 
 ---
+
+<a id="webhook-signature-verification-failure"></a>
 
 ### 署名検証に失敗する
 
