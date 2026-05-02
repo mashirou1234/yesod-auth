@@ -675,6 +675,8 @@ API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む�
    ```
 4. 直らない場合は旧設定へ一時ロールバックし、再度 `reload` と再送で差分を確認する
 
+署名鍵ローテーション直後の障害では、旧鍵へ戻す前に `endpoints` の読み込み状態、`reload` 実行結果、同一イベント再送結果、API ログの `hmac_mismatch` 有無を同じ調査メモに残してください。
+
 **参照導線:**
 
 - API 仕様側: [Webhook API: `reload` 失敗時の最短確認手順](../api/webhooks.md#reload-失敗時の最短確認手順)
@@ -709,6 +711,8 @@ API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む�
 | 時刻ずれや再送遅延 | 特定環境のみ断続的に失敗 | サーバー時刻同期を確認し、遅延経路を短縮 |
 | 再送イベントの重複処理 | 同じ `event_id` で副作用が複数回実行される | 受信側の冪等キーを `event_id`（必要に応じて `endpoint_id` 併用）へ統一し、`delivery id` / `attempt_count` は重複判定に使わない |
 
+ローテーション中に `hmac_mismatch` が増えた場合は、送受信の新旧鍵受け入れ状態を先に確認し、必要なら旧鍵へ戻して `reload` と同一イベント再送で復旧を確認してください。手順の正本は [Webhook設定ガイド: 署名鍵ローテーション最小手順](../guides/webhooks.md#署名鍵ローテーション最小手順) です。
+
 **監査ログで最低限確認する項目:**
 
 | 項目 | 期待値/例 | 確認ポイント |
@@ -721,7 +725,7 @@ API 側の項目定義は [Webhook API: 配信履歴から障害対応へ進む�
 
 再送・重複処理の調査では、`event_id` と `endpoint_id` の組み合わせを先に確定し、delivery レコードの `id` や `attempt_count` は個別試行の確認だけに使います。
 キーごとの取得元は [Webhook API: 監査キーの読み方（再送・重複調査）](../api/webhooks.md#webhook-audit-key-map) を参照してください。
-署名鍵ローテーション時の手順は [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
+署名鍵ローテーション時の手順は [Webhook設定ガイド](../guides/webhooks.md#署名鍵ローテーション最小手順) と [Webhook API の `reload` 説明](../api/webhooks.md#署名鍵ローテーション時の利用) を参照。
 監査ログ項目の完全版は [Webhook設定ガイド: 署名検証失敗時の監査ログ項目](../guides/webhooks.md#署名検証失敗時の監査ログ項目) を参照。
 
 ---

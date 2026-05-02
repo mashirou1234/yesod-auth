@@ -286,6 +286,22 @@ curl "http://localhost:8000/api/v1/auth/mock/login?user=alice&provider=google"
 - [トラブルシューティング: Webhook reload 後も反映されない](./troubleshooting.md#webhook-reload-後も反映されない)
 - [Webhook API: `reload` 失敗時の最短確認手順](../api/webhooks.md#reload-失敗時の最短確認手順)
 
+### Webhook 署名鍵をローテーションするときの最短順は？
+
+本番では受信側を先に新旧どちらの鍵でも検証できる状態にしてから、yesod-auth 側の webhook secret 値だけを切り替えます。
+
+1. `config/webhooks.yaml` の `secret` 参照名を変えないことを確認
+2. `secrets/webhook_secret_<endpoint>.txt` または `WEBHOOK_SECRET_<endpoint>` の値を新鍵へ更新
+3. `POST /api/v1/admin/webhooks/reload` を実行
+4. 同一イベントを再送し、配信履歴と受信側ログで `hmac_mismatch` が増えていないことを確認
+5. 失敗時は旧鍵へ戻して再度 `reload` し、復旧後に原因を直して再実施
+
+詳細手順:
+
+- [Webhook設定ガイド: 署名鍵ローテーション最小手順](../guides/webhooks.md#署名鍵ローテーション最小手順)
+- [インストール: Webhook reload 障害の最短導線](../installation.md#webhook-reload-障害の最短導線)
+- [トラブルシューティング: 署名検証に失敗する](./troubleshooting.md#webhook-signature-verification-failure)
+
 ---
 
 ## デプロイ
