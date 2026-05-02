@@ -79,6 +79,23 @@ GET /api/v1/admin/webhooks/deliveries
 ]
 ```
 
+<a id="delivery-history-troubleshooting-flow"></a>
+
+### 配信履歴から障害対応へ進む読み順
+
+配信履歴は個別試行の状態を確認する入口です。失敗が続く場合は、この API だけで復旧判断を完結させず、次の順で [トラブルシューティング: Webhook](../help/troubleshooting.md#webhook-delivery-history-triage) へ引き継いでください。
+
+1. `event_id` で同一イベントの再送かを確認する。
+2. `endpoint_id` で影響を受けている送信先を絞り込む。
+3. `attempt_count` で初回失敗か、再送中か、上限到達に近いかを判断する。
+4. `status` / `http_status` / `error_message` を控え、API ログと受信側ログを同じ時間帯で確認する。
+
+| 配信履歴の項目 | 読み方 | 次に見る場所 |
+| --- | --- | --- |
+| `event_id` | 同じ値なら同一イベントの再送。重複処理や冪等性の確認に使う | [署名検証に失敗する](../help/troubleshooting.md#webhook-signature-verification-failure) |
+| `endpoint_id` | 失敗している送信先の単位。受信側ログでは `X-Webhook-ID` または payload の `webhook_id` と突合する | [Webhookが発火しない](../help/troubleshooting.md#webhook-not-triggered) |
+| `attempt_count` | 何回目の試行かを示す。冪等キーには使わず、再送状況の判断に限定する | [配信失敗時のログ確認項目](../guides/webhooks.md#webhook-delivery-log-checklist) |
+
 ### 冪等性の注意点（再送時）
 
 - 同一イベントの再送では、`event_id` は同じ値のまま `attempt_count` だけ増加します。
