@@ -181,8 +181,8 @@ callback URL 不一致が疑われる場合は [トラブルシューティン�
 
 FAQ では次の3手順だけ先に確認してください。
 
-1. provider 管理画面の callback URL が `https://<api-domain>/api/v1/auth/{provider}/callback` と完全一致していることを確認する（スキーム、ホスト、ポート、末尾スラッシュを含む）
-2. `API_URL` と実アクセスURLが一致していることを [インストール: OAuth provider追加時の事前チェック](../installation.md#oauth-provider追加時の事前チェック) で確認する
+1. provider 管理画面の callback URL が `https://<api-domain>/api/v1/auth/{provider}/callback` と完全一致していることを確認する（README の [self-hosted production callback format](../../README.md#2-set-up-oauth-credentials-client-id--client-secret) と同じ形式）
+2. `API_URL` と実アクセスURLが一致していることを [インストール: OAuth provider追加時の事前チェック](../installation.md#oauth-provider追加時の事前チェック) で確認する（スキーム、ホスト、ポート、末尾スラッシュを含む）
 3. API ログと復旧手順を [トラブルシューティング: redirect_uri_mismatch（callback URL 不一致の診断フロー）](./troubleshooting.md#oauth-callback-url-mismatch) で確認する
 
 認可開始は必ず `GET /api/v1/auth/{provider}` から行い、callback URL を直接開いて動作確認しないでください。
