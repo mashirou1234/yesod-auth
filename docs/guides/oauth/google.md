@@ -52,9 +52,11 @@ Google OAuth は「同じ provider」でも、検証環境と本番環境で登�
 | 観点 | 検証環境（staging / localhost） | 本番環境（production） |
 |------|----------------------------------|------------------------|
 | Redirect URI | `http://localhost:8000/api/v1/auth/google/callback` または `https://stg.<domain>/api/v1/auth/google/callback` | `https://<domain>/api/v1/auth/google/callback` |
+| Callback 再確認 | Google Cloud Console の検証用 OAuth クライアントで、実際に使う検証 URL がスキーム・ホスト・ポート・パス・末尾 `/` まで完全一致していることを確認 | 本番用 OAuth クライアントで、`localhost` や staging URL が残っていないことを確認 |
 | OAuth同意画面の公開状態 | Testing（検証ユーザーのみ） | In production（一般ユーザー向け） |
 | テストユーザー | Google Cloud Console の Test users に開発メンバーを登録 | 原則不要（一般公開時） |
-| クライアントID/Secret | 検証用を発行して `secrets/google_client_*.txt` に設定 | 本番用を別発行し、デプロイ先の secret に設定 |
+| OAuth 実行モード | ローカル疎通だけなら `MOCK_OAUTH_ENABLED=1`、Google 実OAuth検証では `MOCK_OAUTH_ENABLED=0` に切り替える | `MOCK_OAUTH_ENABLED=0` を本番構成で確認 |
+| クライアントID/Secret | 検証用を発行して `secrets/google_client_*.txt` に設定し、`docker compose config` で secret mount を確認 | 本番用を別発行し、デプロイ先の secret に設定し、環境変数直書きより secret store を優先 |
 | API URL / CORS | `API_URL` と `FRONTEND_URL` を検証ドメインに合わせる | `API_URL` と `FRONTEND_URL` を本番ドメインに合わせる |
 
 !!! warning "混在防止"
@@ -64,20 +66,27 @@ Google OAuth は「同じ provider」でも、検証環境と本番環境で登�
 
 Google 側で `Error 400: redirect_uri_mismatch` が表示された場合は、以下を順に確認します。
 
-1. 実際に callback を受ける URL を確認
+1. 実際に callback を受ける URL を環境ごとに固定
     - ローカル開発: `http://localhost:8000/api/v1/auth/google/callback`
+    - 検証環境: `https://stg.<your-domain>/api/v1/auth/google/callback`
     - 本番運用: `https://<your-domain>/api/v1/auth/google/callback`
-2. Google Cloud Console の OAuth クライアント設定を確認
+2. Google Cloud Console の OAuth クライアント設定を再確認
+    - 検証環境は検証用クライアント、本番環境は本番用クライアントを開くこと
     - 「承認済みのリダイレクト URI」に上記 URL が **完全一致** で登録されていること
     - スキーム (`http`/`https`)、ホスト、ポート、パス、末尾 `/` の有無が一致していること
-3. アプリ側設定を確認
+3. アプリ側の実行モードと secret 配置を確認
+    - 実 Google OAuth を検証する環境では `MOCK_OAUTH_ENABLED=0` になっていること
+    - `google_client_id` / `google_client_secret` が対象環境の値で、`secrets/google_client_*.txt` またはデプロイ先の secret に配置されていること
+    - `docker compose config | rg -n "MOCK_OAUTH_ENABLED|google_client_(id|secret)"` で Compose 側の反映を確認すること
+4. アプリ側 URL 設定を確認
     - `API_URL` が実際の公開 URL と一致していること
     - reverse proxy 配下では `X-Forwarded-Proto` が正しく引き継がれていること
-4. 再現確認
+5. 再現確認
     - 必ず `GET /api/v1/auth/google` から開始し、古いタブを再利用しない
     - 失敗時は API ログで callback URL を確認する
 
 ```bash
+docker compose config | rg -n "MOCK_OAUTH_ENABLED|google_client_(id|secret)"
 docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri|mismatch"
 ```
 
