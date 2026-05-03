@@ -1,7 +1,7 @@
 """Prometheus metrics endpoint."""
 
-from collections import defaultdict
 import re
+from collections import defaultdict
 from threading import Lock
 
 from fastapi import APIRouter, Depends

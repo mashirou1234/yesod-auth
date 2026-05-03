@@ -20,9 +20,9 @@ from app.models import OAuthAccount, User
 from app.valkey import OAuthStateStore
 
 from .schemas import (
-    OAuthAccountResponse,
     SUPPORTED_ACCOUNT_PROVIDERS,
     UNLINK_LAST_AUTH_METHOD_ERROR_DETAIL,
+    OAuthAccountResponse,
     UnlinkResponse,
 )
 
@@ -78,9 +78,7 @@ def _normalize_callback_url(url: str) -> str:
 
 def _build_link_redirect_uri(provider: str) -> str:
     """Build canonical redirect URI for account-link callback."""
-    return (
-        f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/accounts/link/{provider}/callback"
-    )
+    return f"{settings.API_URL.rstrip('/')}{API_V1_PREFIX}/accounts/link/{provider}/callback"
 
 
 def _validate_link_callback_url_or_raise(

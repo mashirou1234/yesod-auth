@@ -155,5 +155,7 @@ async def test_sessions_openapi_limit_has_maximum(client: AsyncClient):
     response = await client.get("/openapi.json")
     assert response.status_code == 200
 
-    parameter_schema = response.json()["paths"]["/api/v1/sessions"]["get"]["parameters"][0]["schema"]
+    parameter_schema = response.json()["paths"]["/api/v1/sessions"]["get"]["parameters"][0][
+        "schema"
+    ]
     assert parameter_schema["maximum"] == 1000

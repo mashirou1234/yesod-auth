@@ -34,4 +34,6 @@ def test_provider_registry_order_is_logged(caplog) -> None:
         auth_router_module._log_provider_registry_order()
 
     assert "OAuth provider registry initialized in deterministic order" in caplog.text
-    assert "discord -> facebook -> github -> google -> linkedin -> slack -> twitch -> x" in caplog.text
+    assert (
+        "discord -> facebook -> github -> google -> linkedin -> slack -> twitch -> x" in caplog.text
+    )

@@ -71,7 +71,10 @@ class TestWebhookSigner:
         assert signature.startswith("sha256=")
 
         # Verification with same inputs should succeed
-        assert WebhookSigner.verify(payload, secret, timestamp, signature, current_timestamp=timestamp) is True
+        assert (
+            WebhookSigner.verify(payload, secret, timestamp, signature, current_timestamp=timestamp)
+            is True
+        )
 
     @settings(max_examples=50)
     @given(payload=payloads, secret=secrets, timestamp=timestamps)
@@ -145,13 +148,16 @@ class TestWebhookSigner:
 
         # Verify with wrong secret
         wrong_secret = secret + "wrong"
-        assert WebhookSigner.verify(
-            payload,
-            wrong_secret,
-            timestamp,
-            signature,
-            current_timestamp=timestamp,
-        ) is False
+        assert (
+            WebhookSigner.verify(
+                payload,
+                wrong_secret,
+                timestamp,
+                signature,
+                current_timestamp=timestamp,
+            )
+            is False
+        )
 
     @pytest.mark.parametrize("timestamp_offset", (-300, 300))
     def test_verification_accepts_timestamp_at_skew_boundary(self, timestamp_offset: int):

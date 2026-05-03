@@ -51,9 +51,7 @@ async def test_validate_refresh_token_accepts_naive_expiry_just_before_boundary(
         FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
         refresh_token = await create_refresh_token(db_session, user.id)
         token_record = await db_session.scalar(
-            select(RefreshToken).where(
-                RefreshToken.token_hash == hash_refresh_token(refresh_token)
-            )
+            select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(refresh_token))
         )
         assert token_record is not None
 
@@ -78,9 +76,7 @@ async def test_refresh_token_classification_marks_exact_expiry_as_expired(
         FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
         refresh_token = await create_refresh_token(db_session, user.id)
         token_record = await db_session.scalar(
-            select(RefreshToken).where(
-                RefreshToken.token_hash == hash_refresh_token(refresh_token)
-            )
+            select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(refresh_token))
         )
         assert token_record is not None
 

@@ -163,7 +163,9 @@ class Settings:
             if len(providers) > 1
         )
         if duplicate_provider_groups:
-            duplicate_message = ", ".join("/".join(providers) for providers in duplicate_provider_groups)
+            duplicate_message = ", ".join(
+                "/".join(providers) for providers in duplicate_provider_groups
+            )
             raise ValueError(
                 "OAuth provider client_id is duplicated across enabled providers. "
                 f"Resolve duplicates for: {duplicate_message}."

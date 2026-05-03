@@ -52,7 +52,9 @@ async def test_delete_account_invalidates_related_session_tokens(
     assert delete_response.status_code == 200
     assert payload["deleted_user_id"] == str(user.id)
     assert payload["deleted_email"] == "delete-session-test@example.com"
-    scheduled_delete_at = datetime.fromisoformat(payload["scheduled_delete_at"].replace("Z", "+00:00"))
+    scheduled_delete_at = datetime.fromisoformat(
+        payload["scheduled_delete_at"].replace("Z", "+00:00")
+    )
     assert scheduled_delete_at.tzinfo == UTC
 
     deleted_user = await db_session.scalar(select(DeletedUser).where(DeletedUser.id == user.id))

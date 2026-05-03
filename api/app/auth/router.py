@@ -1159,9 +1159,7 @@ async def refresh_tokens(
     """Refresh access token using refresh token (with rotation)."""
     device_info, ip_address = _get_client_info(request)
 
-    result = await _rotate_refresh_token_with_retry(
-        db, body.refresh_token, device_info, ip_address
-    )
+    result = await _rotate_refresh_token_with_retry(db, body.refresh_token, device_info, ip_address)
 
     if not result:
         token_status = await classify_refresh_token_failure(db, body.refresh_token)
