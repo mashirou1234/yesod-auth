@@ -51,6 +51,17 @@ YESOD AuthはGoogle OAuthでPKCEを自動的に使用します。
 必須なのは`jwt_secret`と、実際に有効化して使うOAuthプロバイダーの`*_client_id`/`*_client_secret`だけです。
 たとえばGoogleのみ使う最小構成ならGoogle分だけ、複数プロバイダー運用なら有効化した各プロバイダー分を追加してください。
 
+加えて `--profile full` で `admin` を使う場合は、`secrets/admin_password.txt` も必須です（空ファイル不可）。
+
+```bash
+ls -l secrets/admin_password.txt
+test -s secrets/admin_password.txt && echo "admin_password: OK" || (echo "admin_password が未作成または空です" >&2; exit 1)
+```
+
+導線同期:
+- インストール: [管理画面付き](../installation.md#管理画面付き)
+- トラブルシューティング: [full profile で admin ログインできない（admin_password 未設定/空）](./troubleshooting.md#full-profile-admin-password-missing)
+
 ### provider 未設定のまま初回導入を進めてもよい？
 
 可能です。次の順で進めると最短で起動確認できます。

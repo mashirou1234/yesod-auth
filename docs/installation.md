@@ -184,6 +184,8 @@ ls -l secrets/admin_password.txt
 test -s secrets/admin_password.txt && echo "admin_password: OK" || (echo "admin_password が未作成または空です" >&2; exit 1)
 ```
 
+FAQ で同じ確認観点を参照: [どのsecretを必須で用意すべき？](./help/faq.md#どのsecretを必須で用意すべき)
+
 2. 管理画面向け環境変数の確認観点
 
 - `ADMIN_USER`: 管理者ログイン名。既定値は `admin`（`docker-compose.yml` で設定）
