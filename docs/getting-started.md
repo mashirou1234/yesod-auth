@@ -6,6 +6,20 @@
     Docker要件や `default` / `full` / `ci` の違いは[インストール](installation.md)に整理しています。初回導入時は先に確認してください。
     導入順で迷った場合は [docs index: 導入者向け最短導線（3ステップ）](index.md#導入者向け最短導線3ステップ) を起点に進めてください。
 
+## 最小確認順
+
+初回導入では、OAuth provider の詳細設定へ進む前に次の順で土台を固定します。
+
+1. secret を作成し、必要な provider だけを有効化する
+2. `docker compose --profile default up -d` で起動する
+3. `/health` と `/docs` の到達を確認する
+4. provider 管理画面の callback URL と `API_URL` を完全一致させる
+5. `GET /api/v1/auth/{provider}` から認可を開始する
+
+```bash
+rg -n "最小確認順|/health|/docs|redirect_uri_mismatch|state mismatch" docs/getting-started.md docs/help/first-start-troubleshooting.md docs/help/troubleshooting.md
+```
+
 ## 前提条件
 
 - Docker & Docker Compose

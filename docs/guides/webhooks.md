@@ -279,6 +279,17 @@ HTTP 4xx エラーはリトライしません（クライアントエラーの�
 配信履歴の `id` や `attempt_count` は再送ごとに変わるため、重複判定には使えません。  
 API 契約の詳細は [Webhook API: 冪等性の注意点（再送時）](../api/webhooks.md#冪等性の注意点再送時) を参照してください。
 
+### delivery_id / retry 用語の使い分け
+
+| 用語 | 意味 | 冪等キーに使うか |
+| --- | --- | --- |
+| `event_id` | Webhook イベントそのものの ID。同一イベントの再送でも変わらない | 使う |
+| `delivery_id` / 配信履歴の `id` | 1 回の配信試行または履歴行を追跡する ID | 使わない |
+| `attempt_count` | 同一イベントの何回目の配信かを示す回数 | 使わない |
+| `next_retry_at` | 次回再送予定時刻 | 使わない |
+
+運用上の重複排除は `event_id` に固定し、配送経路の調査だけ `delivery_id`、`attempt_count`、`request_id` を併用してください。
+
 <a id="webhook-delivery-log-checklist"></a>
 
 ### 配信失敗時のログ確認項目

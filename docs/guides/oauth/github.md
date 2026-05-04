@@ -62,6 +62,19 @@ curl -sSI \
 
 5. `user:email` が不足している場合は、GitHub 側で再認可（連携解除後の再ログイン）を実施する
 
+### scope不足時の再同意手順
+
+`read:user user:email` のどちらかが不足している場合、YESOD Auth 側で secret を直しても既存の認可 grant は自動更新されません。次の順で再同意してください。
+
+1. GitHub の Authorized OAuth Apps で対象アプリの認可を取り消す
+2. `GET /api/v1/auth/github` から認可を開始する
+3. consent 画面で `read:user` と `user:email` が表示されることを確認する
+4. callback 後に `X-OAuth-Scopes` を再確認する
+
+```bash
+curl -sSI -H "Authorization: Bearer <github_access_token>" https://api.github.com/user | rg -i '^x-oauth-scopes:'
+```
+
 ## organization制限時の挙動
 
 現在の YESOD Auth は GitHub OAuth で organization 制限を実施しません。  

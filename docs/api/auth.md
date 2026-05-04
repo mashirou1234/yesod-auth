@@ -378,6 +378,18 @@ Content-Type: application/json
 
 使い分け: `401` は未認証・無効トークン、`400` 系（本 API では主に `422`）は JSON 入力不正を示します。
 
+refresh / logout の問い合わせでは、次の順で記録を残してください。
+
+1. 対象 endpoint（`/refresh` か `/logout`）
+2. HTTP ステータス（`401` と `422` を混同しない）
+3. `detail` の代表メッセージ
+4. クライアント側で最新 `refresh_token` に置き換え済みか
+5. 再ログインへ切り替えたか
+
+```bash
+rg -n "refresh失敗時エラー分類|POST `/api/v1/auth/logout`|401|422|再ログイン" docs/api/auth.md docs/help/troubleshooting.md docs/getting-started.md
+```
+
 ### OAuth callback 共通（参考）
 
 | HTTP | 条件 | 原因の目安 | 対処の目安 |

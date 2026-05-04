@@ -31,14 +31,36 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 - `blocked`: issue コメントと `codex:blocked` を付与
 - `pr-opened`: merge 確認後に reconcile で close（自動レーン主体）
 
-## 3. Woodpecker docs-only CI 分岐ルール
+## 3. Run 記録導線
+
+自動レーンの記録は、実行前の状態、処理した issue、PR/merge 結果、後続メモを 1 本の流れで残します。記録先が分散しても、同じ run を後から追えるように `run_id`、issue 番号、branch、PR URL を同じ値でそろえてください。
+
+| 段階 | 記録する内容 | yesod-auth での確認コマンド |
+| --- | --- | --- |
+| preflight | 認証、remote、working tree、必須ラベル、Project 連携状態 | `git status --short --branch` / `gh issue list -R <REPO_SLUG> --label codex:queue --state open` |
+| queue snapshot | 着手前の `codex:queue` 件数と候補 issue | `python3 scripts/queue_seed_snapshot.py --repo <REPO_SLUG> --format markdown` |
+| run log | 対象 issue、実行コマンド、検証結果、失敗時の blocker | issue コメントまたは run artifact |
+| PR reconcile | PR URL、merge commit、remote branch 削除、issue close | `gh pr view <pr> --json state,mergedAt,mergeCommit` |
+| memory | 1 run 1 file の運用メモ。直接追記ではなく append helper を使う | 展開先の `append_memory.sh` / Codex 運用 helper |
+
+`scripts/preflight_automation.sh` や `append_memory.sh` を配布している repo へ展開する場合は、上表の preflight と memory にそれぞれ接続します。yesod-auth では repo 内に同名 helper を置かないため、repo 内の再現確認は `scripts/queue_seed_snapshot.py` と `scripts/weekly_git_inventory.sh` を正本にします。
+
+受け入れ時の同期チェック:
+
+```bash
+rg -n "Run 記録導線|queue_seed_snapshot|weekly_git_inventory|append_memory|preflight" docs/guides/codex-automation-ops.md README.md AGENTS.md
+python3 scripts/queue_seed_snapshot.py --repo mashirou1234/yesod-auth --format markdown
+bash scripts/weekly_git_inventory.sh
+```
+
+## 4. Woodpecker docs-only CI 分岐ルール
 
 - 対象ファイル: `docs/**`, `README.md`, `AGENTS.md`
 - 変更が対象のみ: 重い検証ステップをスキップ
 - 対象外が 1 つでも含まれる: 通常 CI を実行
 - 判定が不確実なとき: スキップせず通常 CI を実行（fail-open）
 
-## 4. README / AGENTS 反映ポイント
+## 5. README / AGENTS 反映ポイント
 
 ### README に必ず書くこと
 
@@ -54,7 +76,7 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 - `blocked` / `pr-opened` のラベル運用
 - Project 未連携時の `N/A` 記録ルール
 
-## 5. 適用チェックリスト
+## 6. 適用チェックリスト
 
 - [ ] `<ORCH_RUN_COMMAND>` を実在コマンドへ置換した
 - [ ] `<REPO_SLUG>`, `<BASE_BRANCH>`, `<REQUIRED_CHECKS>`, `<LABEL_SET>` を置換した
@@ -62,3 +84,4 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 - [ ] CI 定義（Woodpecker）と README の docs-only 条件が一致している
 - [ ] `queue -> claimed -> (blocked | pr-opened) -> merge確認 -> close` が運用文書で一致している
 - [ ] `codex:priority` を含む issue 選定順が README / AGENTS / 実行プロンプトと矛盾していない
+- [ ] run 記録が preflight / snapshot / run log / PR reconcile / memory の順で追跡できる

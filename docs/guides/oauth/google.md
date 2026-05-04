@@ -78,6 +78,7 @@ Google 側で `Error 400: redirect_uri_mismatch` が表示された場合は、�
     - 実 Google OAuth を検証する環境では `MOCK_OAUTH_ENABLED=0` になっていること
     - `google_client_id` / `google_client_secret` が対象環境の値で、`secrets/google_client_*.txt` またはデプロイ先の secret に配置されていること
     - `docker compose config | rg -n "MOCK_OAUTH_ENABLED|google_client_(id|secret)"` で Compose 側の反映を確認すること
+    - scope は `openid email profile` を維持すること。メール取得に失敗する場合は Google Cloud Console の同意画面とテストユーザー設定を先に確認すること
 4. アプリ側 URL 設定を確認
     - `API_URL` が実際の公開 URL と一致していること
     - reverse proxy 配下では `X-Forwarded-Proto` が正しく引き継がれていること
@@ -88,6 +89,12 @@ Google 側で `Error 400: redirect_uri_mismatch` が表示された場合は、�
 ```bash
 docker compose config | rg -n "MOCK_OAUTH_ENABLED|google_client_(id|secret)"
 docker compose logs api --since=30m | rg -n "auth/google|callback|redirect_uri|mismatch"
+```
+
+secret / scope / redirect URI の三点同期チェック:
+
+```bash
+rg -n "openid email profile|google_client_(id|secret)|redirect_uri_mismatch" docs/guides/oauth/google.md docs/installation.md docs/help/troubleshooting.md
 ```
 
 `Invalid or expired state` が同時に発生する場合は、[トラブルシューティング](../../help/troubleshooting.md#state-mismatch-flow) の診断フローも併せて確認してください。

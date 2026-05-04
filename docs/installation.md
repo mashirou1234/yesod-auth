@@ -197,6 +197,8 @@ FAQ で同じ確認観点を参照: [どのsecretを必須で用意すべき？]
 
 - `ADMIN_USER`: 管理者ログイン名。既定値は `admin`（`docker-compose.yml` で設定）
 - `SESSION_EXPIRY_HOURS`: 管理画面セッション期限（時間）。未指定時はアプリ既定値 `24`
+- `SESSION_COOKIE_SAMESITE`: 管理画面 cookie の SameSite 属性。通常は `Lax`、クロスサイト cookie が必要な場合のみ `None`
+- `SESSION_COOKIE_SECURE`: `SESSION_COOKIE_SAMESITE=None` を使う場合は `true` と HTTPS を必須にする
 
 #### 2. 起動
 
@@ -234,6 +236,16 @@ docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid|u
 - 3コマンドの詳細は [トラブルシューティング: `SESSION_EXPIRY_HOURS` が不正値](./help/troubleshooting.md#session-expiry-hours-invalid)
 - 運用上の再発防止メモは [FAQ: SESSION_EXPIRY_HOURS の異常値を最短で復旧するには？](./help/faq.md#session-expiry-hours-recovery)
 
+5. `SESSION_COOKIE_SAMESITE` の確認
+
+```bash
+docker compose --profile full config | rg -n "SESSION_COOKIE_SAMESITE|SESSION_COOKIE_SECURE"
+docker compose logs admin --since=10m | rg -n "SESSION_COOKIE_SAMESITE|SESSION_COOKIE_SECURE"
+```
+
+- 推奨値は [FAQ: `SESSION_COOKIE_SAMESITE` の推奨値は？](./help/faq.md#session-cookie-samesite-recommended) を参照
+- 警告時は [トラブルシューティング: `SESSION_COOKIE_SAMESITE` が空文字/未知値](./help/troubleshooting.md#session-cookie-samesite-invalid) を参照
+
 #### 代表的な失敗例
 
 - 症状: `admin` サービスが起動失敗する / ログインできない
@@ -248,6 +260,7 @@ docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid|u
    - FAQ: [SESSION_EXPIRY_HOURS の異常値を最短で復旧するには？](./help/faq.md#session-expiry-hours-recovery)  
    - Installation: [管理画面付き](#管理画面付き)  
    - Troubleshooting: [`SESSION_EXPIRY_HOURS` が不正値](./help/troubleshooting.md#session-expiry-hours-invalid)
+4. `SESSION_COOKIE_SAMESITE=None` を使う場合は、`SESSION_COOKIE_SECURE=true` と HTTPS 前提が同じ PR で確認されている
 
 ### CI相当
 

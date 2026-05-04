@@ -35,6 +35,7 @@ echo "your-client-secret" > secrets/twitch_client_secret.txt
     - `secrets/twitch_client_secret.txt`
 3. **APIコンテナへ secrets をマウント**
     - `docker-compose.override.yml` で `twitch_client_id` / `twitch_client_secret` を `api` と `api-ci` に追加
+    - CI で実 OAuth を検証する場合は `api-ci` 側の mount も必須。`api` だけに追加するとローカルは成功して CI が `invalid_client` になります。
 4. **実OAuthモードへ切替**
     - `MOCK_OAUTH_ENABLED=0`（または未設定）を確認
 5. **スコープを固定**
@@ -74,6 +75,12 @@ curl -fsS http://localhost:8000/health
 # 2) Twitch OAuth導線確認（302想定）
 curl -fsS -o /dev/null -w '%{http_code}\n' \
   "http://localhost:8000/api/v1/auth/twitch"
+```
+
+CI/ローカルの mount 同期確認:
+
+```bash
+docker compose config | rg -n "api-ci:|twitch_client_(id|secret)|MOCK_OAUTH_ENABLED"
 ```
 
 !!! info "Helix API"

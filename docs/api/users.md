@@ -275,3 +275,5 @@ Authorization: Bearer <access_token>
     FAQ は [sync-from-provider の 400/404 の意味](../help/faq.md#sync-from-provider-の-400404-は何を意味する)、
     障害対応は [sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors)、
     provider 未設定時の初動は [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順) を参照してください。
+
+運用で記録する場合は、`provider`、HTTP ステータス、代表メッセージ、再ログイン有無を 1 セットにしてください。`400 Unsupported provider` は入力修正、`404 No <provider> account linked` は再ログイン、`400 No provider info stored` は同一 provider でプロフィール再取得、という順で処理します。

@@ -97,6 +97,18 @@ APIドキュメントは http://localhost:8000/docs で確認できます。
    - [トラブルシューティング](help/troubleshooting.md): callback / state mismatch などの切り分け手順を確認
    - [FAQ](help/faq.md): 導入後によくある確認事項を横断で参照
 
+API 導線の同期確認は次の 3 点を正本にします。
+
+| 領域 | 正本 | 確認する用語 |
+| --- | --- | --- |
+| 認証 | [認証API](api/auth.md) | `refresh` / `logout` / `state mismatch` |
+| ユーザー | [ユーザーAPI](api/users.md) | `sync-from-provider` / provider 連携 |
+| Webhook | [Webhook API](api/webhooks.md) | `delivery_id` / retry / 署名検証 |
+
+```bash
+rg -n "refresh|logout|sync-from-provider|delivery_id|retry" docs/index.md docs/api/*.md docs/help/troubleshooting.md
+```
+
 ## 運用導線の同期チェック
 
 トップページの導線を更新したときは、次の 3 文書へのリンクと記述の整合をあわせて確認してください。
