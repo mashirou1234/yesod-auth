@@ -4,53 +4,16 @@
 from __future__ import annotations
 
 import argparse
-import json
 import re
-import subprocess
-import sys
+
+from github_fallback import detect_repo, edit_issue_title, list_open_issues
 
 BENCH_TITLE_RE = re.compile(r"^\s*\[Bench-80\]\[(\d+)\]\s*(.+?)\s*$")
 
 
-def run_gh(args: list[str]) -> str:
-    try:
-        completed = subprocess.run(
-            ["gh", *args],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError:
-        print("gh CLI is required", file=sys.stderr)
-        raise SystemExit(1)
-    except subprocess.CalledProcessError as exc:
-        print(exc.stderr.strip() or str(exc), file=sys.stderr)
-        raise SystemExit(exc.returncode)
-    return completed.stdout
-
-
-def detect_repo(explicit: str) -> str:
-    if explicit:
-        return explicit
-    return run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).strip()
-
 
 def fetch_open_queue_issues(repo: str) -> list[dict]:
-    output = run_gh(
-        [
-            "issue",
-            "list",
-            "--repo",
-            repo,
-            "--state",
-            "open",
-            "--limit",
-            "200",
-            "--json",
-            "number,title,labels,createdAt",
-        ]
-    )
-    issues = json.loads(output)
+    issues = list_open_issues(repo)
     queue = []
     for issue in issues:
         labels = {label["name"] for label in issue.get("labels", [])}
@@ -92,7 +55,7 @@ def main() -> int:
         print(f"#{number}: {old_title} -> {new_title}")
         if not args.apply:
             continue
-        run_gh(["issue", "edit", str(number), "--repo", repo, "--title", new_title])
+        edit_issue_title(repo, number, new_title)
         updated += 1
 
     if args.apply:
