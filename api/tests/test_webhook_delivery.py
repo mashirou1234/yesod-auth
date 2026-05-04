@@ -1,13 +1,19 @@
 """Tests for webhook delivery logging."""
 
+import re
 import uuid
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
+from app.webhooks.config import WebhookConfig, WebhookEndpoint, WebhookSettings
+from app.webhooks.emitter import WebhookEmitter
+from app.webhooks.event import WebhookEvent
 from app.webhooks.models import DeliveryStatus, WebhookDelivery
-from app.webhooks.worker import DeliveryResult
+from app.webhooks.worker import DeliveryResult, WebhookWorker
 
 
 class TestDeliveryLogging:
@@ -150,3 +156,99 @@ class TestDeliveryLogging:
         assert failure_result.success is False
         assert failure_result.http_status == 500
         assert failure_result.error_message == "Internal Server Error"
+
+
+class TestDeliveryFailureLogTracking:
+    """配送失敗ログで delivery_id の追跡キーが欠落しないことを検証する。"""
+
+    @pytest.mark.asyncio
+    async def test_emitter_queue_failure_logs_delivery_id(self, caplog):
+        """Emitter 側の失敗ログに delivery_id を含める。"""
+        mock_valkey = AsyncMock()
+        mock_valkey.rpush = AsyncMock(side_effect=Exception("Connection failed"))
+
+        with (
+            patch("app.webhooks.emitter._is_testing", return_value=False),
+            patch("app.webhooks.emitter.get_valkey", return_value=mock_valkey),
+            patch(
+                "app.webhooks.config.WebhookConfigLoader.get_endpoints_for_event",
+                return_value=[object()],
+            ),
+            caplog.at_level("ERROR", logger="app.webhooks.emitter"),
+        ):
+            event = await WebhookEmitter.emit(
+                "user.created",
+                {"user_id": str(uuid.uuid4())},
+            )
+
+        assert event is None
+        failure_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if "Failed to queue webhook event" in record.getMessage()
+        )
+        delivery_id_match = re.search(r"delivery_id=([0-9a-f-]{36})", failure_log)
+        assert delivery_id_match is not None
+        assert uuid.UUID(delivery_id_match.group(1))
+
+    @pytest.mark.asyncio
+    async def test_worker_failure_logs_use_delivery_id_consistently(self, caplog):
+        """Worker の再試行/失敗ログで同一 delivery_id を追跡できる。"""
+        worker = WebhookWorker()
+        endpoint = WebhookEndpoint(
+            id="test-endpoint",
+            url="https://example.com/webhook",
+            secret="test-secret",
+            events=["user.created"],
+            enabled=True,
+        )
+        config = WebhookConfig(
+            endpoints=[endpoint],
+            settings=WebhookSettings(
+                max_retries=2,
+                retry_base_delay_seconds=0,
+                delivery_timeout_seconds=5,
+            ),
+        )
+        event = WebhookEvent(
+            event_type="user.created",
+            data={"user_id": str(uuid.uuid4())},
+        )
+
+        mock_response = AsyncMock()
+        mock_response.status_code = 500
+        mock_response.text = "Server Error"
+
+        with (
+            patch(
+                "app.webhooks.worker.WebhookConfigLoader.get_config",
+                return_value=config,
+            ),
+            patch("httpx.AsyncClient") as mock_client_class,
+            caplog.at_level("INFO", logger="app.webhooks.worker"),
+        ):
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client
+            result = await worker._deliver_to_endpoint(event, endpoint)
+
+        assert result.success is False
+        retry_logs = [
+            record.getMessage()
+            for record in caplog.records
+            if "Retrying webhook delivery" in record.getMessage()
+        ]
+        assert retry_logs
+
+        exhausted_log = next(
+            record.getMessage()
+            for record in caplog.records
+            if "webhook_delivery_retry_exhausted" in record.getMessage()
+        )
+        exhausted_delivery_id = re.search(r"delivery_id=([0-9a-f-]{36})", exhausted_log)
+        assert exhausted_delivery_id is not None
+        delivery_id = exhausted_delivery_id.group(1)
+        for retry_log in retry_logs:
+            assert f"delivery_id={delivery_id}" in retry_log
