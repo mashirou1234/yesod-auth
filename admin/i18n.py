@@ -21,6 +21,9 @@ _translations_cache: dict[str, dict] = {}
 logger = logging.getLogger(__name__)
 
 
+_MISSING = object()
+
+
 def _resolve_language(lang: str) -> str:
     """Resolve language code to a safe supported value."""
     normalized = (lang or "").strip().lower()
@@ -59,6 +62,17 @@ def _load_translations(lang: str) -> dict:
         return {}
 
 
+def _resolve_key(translations: dict[str, Any], key: str) -> Any:
+    """Resolve a dot-notated key from nested translations."""
+    value: Any = translations
+    for part in key.split("."):
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        else:
+            return _MISSING
+    return value
+
+
 def get_text(key: str, lang: str = DEFAULT_LANGUAGE, **kwargs: Any) -> str:
     """Get translated text by key.
 
@@ -70,18 +84,17 @@ def get_text(key: str, lang: str = DEFAULT_LANGUAGE, **kwargs: Any) -> str:
     Returns:
         Translated string, or the key if not found
     """
-    translations = _load_translations(lang)
+    resolved_lang = _resolve_language(lang)
+    translations = _load_translations(resolved_lang)
+    value = _resolve_key(translations, key)
 
-    # Navigate nested keys
-    keys = key.split(".")
-    value: Any = translations
+    # Fallback to default language when key is untranslated in the selected locale.
+    if value is _MISSING and resolved_lang != DEFAULT_LANGUAGE:
+        default_translations = _load_translations(DEFAULT_LANGUAGE)
+        value = _resolve_key(default_translations, key)
 
-    for k in keys:
-        if isinstance(value, dict) and k in value:
-            value = value[k]
-        else:
-            # Key not found, return the key itself
-            return key
+    if value is _MISSING:
+        return key
 
     if isinstance(value, str):
         # Apply format arguments if provided
