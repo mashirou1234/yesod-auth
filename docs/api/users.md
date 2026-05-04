@@ -258,6 +258,20 @@ Authorization: Bearer <access_token>
 }
 ```
 
+### sync-from-provider 失敗マトリクス（運用向け）
+
+`POST /api/v1/users/me/sync-from-provider` の失敗時は、まず次の表で `400` と `404` を切り分けてください。
+
+| ステータス | 代表メッセージ | 何が起きているか | 最初の対処 | 次に見る場所 |
+| --- | --- | --- | --- | --- |
+| `400` | `Unsupported provider` | `provider` が対応外（`google` / `discord` 以外） | `provider` クエリを `google` か `discord` に修正 | [FAQ: sync-from-provider の 400/404 は何を意味する？](../help/faq.md#sync-from-provider-の-400404-は何を意味する) |
+| `404` | `No <provider> account linked` | 指定 provider の OAuth 連携が未作成 | 対象 provider で再ログインし、連携作成後に再実行 | [トラブルシューティング: sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors) |
+| `400` | `No provider info stored for <provider>...` | 連携はあるが保存済みプロフィール情報が空 | 同 provider で再ログインし、プロフィール情報を再取得 | [トラブルシューティング: sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors) |
+
+!!! note "対応 provider の範囲"
+    `sync-from-provider` の `provider` は現時点で `google` / `discord` のみ対応です。
+
 !!! tip "三点同期の確認導線"
     FAQ は [sync-from-provider の 400/404 の意味](../help/faq.md#sync-from-provider-の-400404-は何を意味する)、
-    障害対応は [sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors) を参照してください。
+    障害対応は [sync-from-provider で 400/404 が返る](../help/troubleshooting.md#sync-from-provider-errors)、
+    provider 未設定時の初動は [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順) を参照してください。

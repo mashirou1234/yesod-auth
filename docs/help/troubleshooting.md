@@ -368,6 +368,11 @@ environment:
 | 404 | `No <provider> account linked` | 指定 provider の連携がない | 当該 provider で再ログインして連携を作成 |
 | 400 | `No provider info stored for <provider>...` | 連携はあるが保存済みプロフィール情報が空 | 同 provider で再ログインし、プロフィール情報を再取得 |
 
+参照導線:
+
+- FAQ での要点整理: [sync-from-provider の 400/404 は何を意味する？](./faq.md#sync-from-provider-の-400404-は何を意味する)
+- provider 未設定時の初動: [インストール: provider 未設定時の最短スキップ手順](../installation.md#provider-未設定時の最短スキップ手順)
+
 確認コマンド例:
 
 ```bash
