@@ -3,9 +3,11 @@
 import importlib
 
 import pytest
+
 from app.oauth_providers import OAUTH_PROVIDER_CREDENTIAL_FIELDS
 
 auth_router_module = importlib.import_module("app.auth.router")
+
 
 @pytest.mark.parametrize("provider", list(OAUTH_PROVIDER_CREDENTIAL_FIELDS.keys()))
 def test_oauth_provider_disabled_raises_503(monkeypatch, provider: str):
@@ -44,8 +46,7 @@ def test_oauth_provider_name_is_case_insensitive(monkeypatch, provider_variant: 
 
     assert exc_info.value.status_code == 503
     assert exc_info.value.detail == (
-        "OAuth provider 'github' is disabled. "
-        "Configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET."
+        "OAuth provider 'github' is disabled. Configure GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET."
     )
 
 

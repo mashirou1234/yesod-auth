@@ -33,8 +33,6 @@ def test_generate_code_challenge_accepts_max_length_verifier():
         ("a" * 129, "code_verifier must be between 43 and 128 characters"),
     ],
 )
-def test_generate_code_challenge_rejects_out_of_range_length(
-    verifier: str, expected_message: str
-):
+def test_generate_code_challenge_rejects_out_of_range_length(verifier: str, expected_message: str):
     with pytest.raises(ValueError, match=expected_message):
         generate_code_challenge(verifier)

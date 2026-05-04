@@ -47,4 +47,3 @@ async def test_log_event_preserves_existing_request_id(monkeypatch):
     assert payload["request_id"] == "req-fixed-123"
     assert payload["request_id_backfilled"] is False
     db.commit.assert_awaited_once()
-

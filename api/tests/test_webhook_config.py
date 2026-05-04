@@ -1,8 +1,8 @@
 """Property-based tests for WebhookConfigLoader."""
 
+import logging
 import os
 import tempfile
-import logging
 from pathlib import Path
 from unittest.mock import patch
 

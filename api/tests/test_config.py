@@ -11,8 +11,8 @@ import yaml
 
 from app.config import (
     DEFAULT_CORS_ORIGINS,
-    parse_bool_env,
     Settings,
+    parse_bool_env,
     read_secret,
     resolve_cors_origins,
 )
@@ -22,8 +22,9 @@ def test_read_secret_prefers_secret_file_over_env(monkeypatch):
     """Docker secret file value must win over environment variable."""
     monkeypatch.setenv("JWT_SECRET", "env-value")
 
-    with patch("app.config.os.path.exists", return_value=True), patch(
-        "builtins.open", mock_open(read_data="file-value\n")
+    with (
+        patch("app.config.os.path.exists", return_value=True),
+        patch("builtins.open", mock_open(read_data="file-value\n")),
     ):
         assert read_secret("jwt_secret", "default-value") == "file-value"
 
@@ -32,7 +33,10 @@ def test_read_secret_falls_back_to_env_when_secret_file_missing(monkeypatch):
     """Environment variable is used when secret file does not exist."""
     monkeypatch.setenv("JWT_SECRET", "env-value")
 
-    with patch("app.config.os.path.exists", return_value=False), patch("builtins.open") as mock_file:
+    with (
+        patch("app.config.os.path.exists", return_value=False),
+        patch("builtins.open") as mock_file,
+    ):
         assert read_secret("jwt_secret", "default-value") == "env-value"
         mock_file.assert_not_called()
 
@@ -41,7 +45,10 @@ def test_read_secret_falls_back_to_default_when_secret_and_env_missing(monkeypat
     """Default value is used when both secret file and environment are absent."""
     monkeypatch.delenv("JWT_SECRET", raising=False)
 
-    with patch("app.config.os.path.exists", return_value=False), patch("builtins.open") as mock_file:
+    with (
+        patch("app.config.os.path.exists", return_value=False),
+        patch("builtins.open") as mock_file,
+    ):
         assert read_secret("jwt_secret", "default-value") == "default-value"
         mock_file.assert_not_called()
 
@@ -50,8 +57,9 @@ def test_read_secret_strips_trailing_whitespace_from_secret_file(monkeypatch):
     """Trailing whitespace in secret files must be removed."""
     monkeypatch.setenv("JWT_SECRET", "env-value")
 
-    with patch("app.config.os.path.exists", return_value=True), patch(
-        "builtins.open", mock_open(read_data="file-value  \n\n")
+    with (
+        patch("app.config.os.path.exists", return_value=True),
+        patch("builtins.open", mock_open(read_data="file-value  \n\n")),
     ):
         assert read_secret("jwt_secret", "default-value") == "file-value"
 
@@ -87,7 +95,9 @@ def test_resolve_cors_origins_normalizes_and_deduplicates_origins():
 
 
 def test_resolve_cors_origins_keeps_http_and_https_as_distinct_origins():
-    origins, using_default = resolve_cors_origins("http://example.com,https://example.com,http://example.com/")
+    origins, using_default = resolve_cors_origins(
+        "http://example.com,https://example.com,http://example.com/"
+    )
 
     assert origins == ["http://example.com", "https://example.com"]
     assert using_default is False
@@ -114,13 +124,12 @@ def test_parse_bool_env_returns_default_when_unset(monkeypatch):
 def test_parse_bool_env_raises_clear_error_on_invalid_value(monkeypatch):
     monkeypatch.setenv("TESTING", "maybe")
 
-    try:
+    with pytest.raises(ValueError) as exc_info:
         parse_bool_env("TESTING")
-        assert False, "ValueError was not raised for invalid boolean value"
-    except ValueError as exc:
-        message = str(exc)
-        assert "Invalid boolean value for TESTING: raw='maybe', normalized='maybe'" in message
-        assert "Allowed values: 1,true,yes,0,false,no" in message
+
+    message = str(exc_info.value)
+    assert "Invalid boolean value for TESTING: raw='maybe', normalized='maybe'" in message
+    assert "Allowed values: 1,true,yes,0,false,no" in message
 
 
 def test_parse_bool_env_raises_with_raw_and_normalized_value(monkeypatch):
@@ -177,9 +186,7 @@ def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monk
     monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
     monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "")
 
-    with pytest.raises(
-        ValueError, match="GITHUB_CLIENT_SECRET"
-    ):
+    with pytest.raises(ValueError, match="GITHUB_CLIENT_SECRET"):
         Settings()
 
 

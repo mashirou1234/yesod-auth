@@ -29,9 +29,12 @@ async def test_validate_callback_url_allows_trailing_slash_difference(caplog):
         )
     )
 
-    with patch.object(auth_router_module, "record_oauth_failure_metric") as mock_metric, patch.object(
-        auth_router_module.AuditLogger, "log_login", new_callable=AsyncMock
-    ) as mock_log_login:
+    with (
+        patch.object(auth_router_module, "record_oauth_failure_metric") as mock_metric,
+        patch.object(
+            auth_router_module.AuditLogger, "log_login", new_callable=AsyncMock
+        ) as mock_log_login,
+    ):
         await auth_router_module._validate_callback_url_or_raise(
             request=request,
             db=AsyncMock(),
@@ -61,9 +64,12 @@ async def test_validate_callback_url_rejects_real_mismatch():
         )
     )
 
-    with patch.object(auth_router_module, "record_oauth_failure_metric") as mock_metric, patch.object(
-        auth_router_module.AuditLogger, "log_login", new_callable=AsyncMock
-    ) as mock_log_login:
+    with (
+        patch.object(auth_router_module, "record_oauth_failure_metric") as mock_metric,
+        patch.object(
+            auth_router_module.AuditLogger, "log_login", new_callable=AsyncMock
+        ) as mock_log_login,
+    ):
         with pytest.raises(HTTPException) as exc_info:
             await auth_router_module._validate_callback_url_or_raise(
                 request=request,

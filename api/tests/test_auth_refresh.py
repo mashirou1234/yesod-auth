@@ -1,9 +1,9 @@
 """Refresh token endpoint tests."""
 
-import time
 import importlib
-from types import SimpleNamespace
+import time
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, PropertyMock, patch
 
 import pytest
@@ -113,7 +113,9 @@ async def test_refresh_accepts_token_one_second_before_expiry(
 
     with (
         patch("app.auth.tokens.datetime", FrozenDateTime),
-        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-boundary@example.com"),
+        patch.object(
+            User, "email", new_callable=PropertyMock, return_value="refresh-boundary@example.com"
+        ),
     ):
         FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
         refresh_token = await create_refresh_token(db_session, user.id)
@@ -154,7 +156,12 @@ async def test_refresh_rejects_token_at_exact_expiry_boundary(
 
     with (
         patch("app.auth.tokens.datetime", FrozenDateTime),
-        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-expired-boundary@example.com"),
+        patch.object(
+            User,
+            "email",
+            new_callable=PropertyMock,
+            return_value="refresh-expired-boundary@example.com",
+        ),
     ):
         FrozenDateTime.current = datetime(2026, 1, 1, tzinfo=UTC)
         refresh_token = await create_refresh_token(db_session, user.id)
@@ -175,9 +182,7 @@ async def test_refresh_rejects_token_at_exact_expiry_boundary(
 
 
 @pytest.mark.asyncio
-async def test_refresh_rejects_revoked_session_token(
-    client: AsyncClient, db_session: AsyncSession
-):
+async def test_refresh_rejects_revoked_session_token(client: AsyncClient, db_session: AsyncSession):
     """Revoked session refresh token should not be reusable."""
     user = User()
     db_session.add(user)
@@ -189,9 +194,7 @@ async def test_refresh_rejects_revoked_session_token(
     auth_header = {"Authorization": f"Bearer {access_token}"}
 
     token_record = await db_session.scalar(
-        select(RefreshToken).where(
-            RefreshToken.token_hash == hash_refresh_token(refresh_token)
-        )
+        select(RefreshToken).where(RefreshToken.token_hash == hash_refresh_token(refresh_token))
     )
     assert token_record is not None
     session_id = token_record.id
@@ -229,7 +232,9 @@ async def test_refresh_reuse_logs_revoked_token_status(
     refresh_token = await create_refresh_token(db_session, user.id)
     with (
         patch("app.auth.router.AuditLogger.log_event", new=AsyncMock()) as mock_log_event,
-        patch.object(User, "email", new_callable=PropertyMock, return_value="refresh-reuse@example.com"),
+        patch.object(
+            User, "email", new_callable=PropertyMock, return_value="refresh-reuse@example.com"
+        ),
     ):
         first_refresh = await client.post(
             "/api/v1/auth/refresh",
@@ -291,6 +296,8 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
     assert retry_after is not None
     assert retry_after.isdigit()
     assert int(retry_after) >= 0
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("max_retries", "expected_attempts"),
@@ -300,7 +307,9 @@ async def test_refresh_rate_limited_response_includes_retry_after_header(client:
         (5, 6),
     ],
 )
-async def test_refresh_retry_limit_is_configurable(monkeypatch, max_retries: int, expected_attempts: int):
+async def test_refresh_retry_limit_is_configurable(
+    monkeypatch, max_retries: int, expected_attempts: int
+):
     rotate_mock = AsyncMock(side_effect=RuntimeError("temporary failure"))
     monkeypatch.setattr(auth_router, "rotate_refresh_token", rotate_mock)
     monkeypatch.setattr(auth_router.settings, "TOKEN_REFRESH_MAX_RETRIES", max_retries)

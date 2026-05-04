@@ -16,6 +16,10 @@ env/
 *.swp
 *.swo
 
+# Local agent/browser work artifacts
+.agent/
+.playwright-mcp/
+
 # Docker
 .docker/
 

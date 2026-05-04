@@ -11,10 +11,13 @@ auth_router_module = importlib.import_module("app.auth.router")
 @pytest.fixture(autouse=True)
 def bypass_rate_limit(monkeypatch):
     """Avoid external Redis dependency for endpoint contract tests."""
+
     def _fake_check_request_limit(request, *args, **kwargs):
         request.state.view_rate_limit = None
 
-    monkeypatch.setattr(auth_router_module.limiter, "_check_request_limit", _fake_check_request_limit)
+    monkeypatch.setattr(
+        auth_router_module.limiter, "_check_request_limit", _fake_check_request_limit
+    )
 
 
 @pytest.mark.asyncio

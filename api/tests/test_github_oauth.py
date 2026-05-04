@@ -157,8 +157,14 @@ class TestGitHubOAuthExchangeCode:
 
         assert result is None
         logs = "\n".join(caplog.messages)
-        assert "redirect_uri_raw=https://EXAMPLE.COM:443/api/v1/auth/github/callback/?code=abcd%2A%2A%2A" in logs
-        assert "redirect_uri_normalized=https://example.com/api/v1/auth/github/callback?code=abcd%2A%2A%2A" in logs
+        assert (
+            "redirect_uri_raw=https://EXAMPLE.COM:443/api/v1/auth/github/callback/?code=abcd%2A%2A%2A"
+            in logs
+        )
+        assert (
+            "redirect_uri_normalized=https://example.com/api/v1/auth/github/callback?code=abcd%2A%2A%2A"
+            in logs
+        )
         assert "redirect_uri_changed=True" in logs
         assert '"code":"***"' in logs
 
@@ -366,7 +372,9 @@ class TestGitHubOAuthCallback:
             patch("app.auth.router.record_oauth_failure_metric") as mock_metric,
             patch("app.auth.router.AuditLogger.log_login", new=AsyncMock()) as mock_log_login,
         ):
-            response = await client.get("/api/v1/auth/github/callback?error=provider_outage&state=s1")
+            response = await client.get(
+                "/api/v1/auth/github/callback?error=provider_outage&state=s1"
+            )
 
         assert response.status_code == 400
         assert response.json() == {"detail": "OAuth callback failed: provider_outage"}

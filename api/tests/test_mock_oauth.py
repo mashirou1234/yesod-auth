@@ -95,7 +95,9 @@ async def test_authenticated_request(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_mock_login_github_avoids_provider_user_id_collision(client: AsyncClient, monkeypatch):
+async def test_mock_login_github_avoids_provider_user_id_collision(
+    client: AsyncClient, monkeypatch
+):
     """GitHub mock provider_user_id must avoid collisions even with same numeric suffix IDs."""
     collision_users = {
         "alice": MockOAuthUser(

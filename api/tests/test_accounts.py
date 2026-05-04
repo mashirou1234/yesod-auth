@@ -215,9 +215,7 @@ def test_link_validate_callback_url_allows_trailing_slash_difference(caplog):
     caplog.set_level(logging.INFO, logger=accounts_router_module.logger.name)
     request = SimpleNamespace(
         url=SimpleNamespace(
-            replace=lambda **kwargs: (
-                "https://api.example.com/api/v1/accounts/link/google/callback/"
-            )
+            replace=lambda **kwargs: "https://api.example.com/api/v1/accounts/link/google/callback/"
         )
     )
 

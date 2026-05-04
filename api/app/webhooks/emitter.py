@@ -66,10 +66,7 @@ class WebhookEmitter:
             )
         except Exception as e:
             logger.error(
-                (
-                    "Failed to queue webhook event "
-                    "(delivery_id=%s event_type=%s queue_key=%s): %s"
-                ),
+                ("Failed to queue webhook event (delivery_id=%s event_type=%s queue_key=%s): %s"),
                 event.event_id,
                 event_type,
                 WEBHOOK_QUEUE_KEY,

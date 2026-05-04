@@ -146,9 +146,7 @@ async def classify_refresh_token_failure(
     token_hash = hash_refresh_token(token)
     now = datetime.now(UTC)
 
-    result = await db.execute(
-        select(RefreshToken).where(RefreshToken.token_hash == token_hash)
-    )
+    result = await db.execute(select(RefreshToken).where(RefreshToken.token_hash == token_hash))
     record = result.scalar_one_or_none()
     if not record:
         return "not_found"

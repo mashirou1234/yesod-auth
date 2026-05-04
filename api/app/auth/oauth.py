@@ -93,7 +93,9 @@ def _sanitize_error_snippet(text: str | None) -> str:
     return compact[:240]
 
 
-def _log_exchange_failure(provider: str, status_code: int, response_text: str, redirect_uri: str) -> None:
+def _log_exchange_failure(
+    provider: str, status_code: int, response_text: str, redirect_uri: str
+) -> None:
     normalized_uri = _normalize_redirect_uri(redirect_uri)
     logger.debug(
         "OAuth code exchange failed provider=%s status_code=%s redirect_uri_raw=%s "

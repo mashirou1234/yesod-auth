@@ -2,9 +2,11 @@
 
 import pytest
 
-from app.auth.rate_limit import MISSING_OAUTH_PROVIDER_KEY
-from app.auth.rate_limit import extract_oauth_provider_from_path
-from app.auth.rate_limit import resolve_oauth_provider_metric_key
+from app.auth.rate_limit import (
+    MISSING_OAUTH_PROVIDER_KEY,
+    extract_oauth_provider_from_path,
+    resolve_oauth_provider_metric_key,
+)
 
 
 @pytest.mark.parametrize(

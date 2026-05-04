@@ -97,6 +97,7 @@ class AuditLogger:
             return  # Skip audit logging in test environment
 
         import json
+
         normalized_details = AuditLogger._normalize_event_details(details)
 
         await db.execute(

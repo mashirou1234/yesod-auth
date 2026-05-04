@@ -162,9 +162,7 @@ class WebhookConfigLoader:
         prev_value = -1
         for idx, value in enumerate(retry_backoff_ms):
             if not isinstance(value, int) or value <= 0:
-                raise ValueError(
-                    f"settings.retry_backoff_ms[{idx}] must be a positive integer"
-                )
+                raise ValueError(f"settings.retry_backoff_ms[{idx}] must be a positive integer")
             if idx > 0 and value < prev_value:
                 raise ValueError(
                     f"settings.retry_backoff_ms[{idx}] must be greater than or equal to "
@@ -224,9 +222,7 @@ class WebhookConfigLoader:
         seen_events: set[str] = set()
         for idx, event in enumerate(events):
             if not isinstance(event, str):
-                raise ValueError(
-                    f"Endpoint '{endpoint_id}' events[{idx}] must be a string"
-                )
+                raise ValueError(f"Endpoint '{endpoint_id}' events[{idx}] must be a string")
             normalized_event = event.strip()
             if not normalized_event:
                 raise ValueError(
