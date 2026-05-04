@@ -223,6 +223,17 @@ docker compose --profile full config --services
 
 - ログイン後、指定した `SESSION_EXPIRY_HOURS` が運用要件に合うことを確認する
 
+4. `SESSION_EXPIRY_HOURS` 異常値の最短診断（確認→再作成→ログ確認）
+
+```bash
+docker compose --profile full config | rg -n "SESSION_EXPIRY_HOURS|ADMIN_USER|admin:"
+docker compose --profile full up -d --force-recreate admin
+docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid|using default value 24"
+```
+
+- 3コマンドの詳細は [トラブルシューティング: `SESSION_EXPIRY_HOURS` が不正値](./help/troubleshooting.md#session-expiry-hours-invalid)
+- 運用上の再発防止メモは [FAQ: SESSION_EXPIRY_HOURS の異常値を最短で復旧するには？](./help/faq.md#session-expiry-hours-recovery)
+
 #### 代表的な失敗例
 
 - 症状: `admin` サービスが起動失敗する / ログインできない
@@ -234,9 +245,9 @@ docker compose --profile full config --services
 1. `full` プロファイル手順に `admin_password` の非空チェック（`test -s`）が含まれている
 2. 未設定時の症状（起動失敗/ログイン失敗）と復旧手順が同じ節に記載されている
 3. FAQ / installation / troubleshooting の3点同期を確認できる  
-   - FAQ: [どのsecretを必須で用意すべき？](./help/faq.md#どのsecretを必須で用意すべき)  
+   - FAQ: [SESSION_EXPIRY_HOURS の異常値を最短で復旧するには？](./help/faq.md#session-expiry-hours-recovery)  
    - Installation: [管理画面付き](#管理画面付き)  
-   - Troubleshooting: [認証エラー](./help/troubleshooting.md#認証エラー)
+   - Troubleshooting: [`SESSION_EXPIRY_HOURS` が不正値](./help/troubleshooting.md#session-expiry-hours-invalid)
 
 ### CI相当
 

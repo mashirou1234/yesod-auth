@@ -104,6 +104,27 @@ rg -n "^### OAuth secretを更新したら再起動は必要？$|^### provider �
   docs/help/faq.md docs/installation.md docs/help/troubleshooting.md
 ```
 
+<a id="session-expiry-hours-recovery"></a>
+
+### `SESSION_EXPIRY_HOURS` の異常値を最短で復旧するには？
+
+次の 3 コマンドを固定順（確認 → 再作成 → ログ確認）で実行してください。
+
+```bash
+docker compose --profile full config | rg -n "SESSION_EXPIRY_HOURS|ADMIN_USER|admin:"
+docker compose --profile full up -d --force-recreate admin
+docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid|using default value 24"
+```
+
+運用メモ:
+
+1. `SESSION_EXPIRY_HOURS` は 1 以上の整数に固定し、0 以下や文字列を混在させない
+2. 値を変更した run では、必ず `--force-recreate admin` を実行して反映する
+3. ログ確認で警告が残る場合は、profile と secrets の読み込み元を再点検する
+
+手順詳細は [トラブルシューティング: `SESSION_EXPIRY_HOURS` が不正値](./troubleshooting.md#session-expiry-hours-invalid)、
+導入手順側の位置づけは [インストール: 管理画面付き](../installation.md#管理画面付き) を参照してください。
+
 <a id="oauth-secret-permission-recovery"></a>
 
 ### OAuth secret の権限不備を最短で復旧するには？
