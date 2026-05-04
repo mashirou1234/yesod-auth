@@ -6,11 +6,12 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import subprocess
 import sys
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
+
+from github_fallback import detect_repo, list_open_issues
 
 BENCH_TITLE_RE = re.compile(r"^\s*\[Bench-80\]\[(\d+)\]\s*(.+?)\s*$")
 
@@ -23,39 +24,8 @@ class BenchIssue:
     url: str
 
 
-def run_gh(args: list[str]) -> str:
-    try:
-        completed = subprocess.run(
-            ["gh", *args],
-            check=True,
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError:
-        print("gh CLI is required", file=sys.stderr)
-        raise SystemExit(1)
-    except subprocess.CalledProcessError as exc:
-        print(exc.stderr.strip() or str(exc), file=sys.stderr)
-        raise SystemExit(exc.returncode)
-    return completed.stdout
-
-
 def fetch_open_queue_issues(repo: str) -> list[dict[str, Any]]:
-    output = run_gh(
-        [
-            "issue",
-            "list",
-            "--repo",
-            repo,
-            "--state",
-            "open",
-            "--limit",
-            "200",
-            "--json",
-            "number,title,url,createdAt,labels",
-        ]
-    )
-    issues = json.loads(output)
+    issues = list_open_issues(repo)
     queue_issues = []
     for issue in issues:
         labels = {label["name"] for label in issue.get("labels", [])}
@@ -140,9 +110,7 @@ def main() -> int:
     parser.add_argument("--format", choices=("json", "markdown"), default="json")
     args = parser.parse_args()
 
-    repo = args.repo.strip()
-    if not repo:
-        repo = run_gh(["repo", "view", "--json", "nameWithOwner", "-q", ".nameWithOwner"]).strip()
+    repo = detect_repo(args.repo.strip())
     if not repo:
         print("Repository not found. pass --repo owner/repo.", file=sys.stderr)
         return 1
