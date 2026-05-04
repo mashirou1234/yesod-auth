@@ -73,6 +73,13 @@ OAuth provider をまだ一部用意できていない場合は、次の手順�
 - 失敗時: [トラブルシューティング: provider 未設定のまま認証導線を実行した](./help/troubleshooting.md#provider-未設定のまま認証導線を実行した)
 - FAQ での要点確認: [Mock OAuthから実OAuthへ切り替える最小確認は？](./help/faq.md#mock-oauthから実oauthへ切り替える最小確認は)
 
+FAQ / installation / troubleshooting の同期確認コマンド:
+
+```bash
+rg -n "^### OAuth secretを更新したら再起動は必要？$|^### provider 未設定時の最短スキップ手順$|^### provider 未設定のまま認証導線を実行した$|docker compose --profile default up -d --force-recreate api|docker compose --profile default ps|curl -fsS http://localhost:8000/health" \
+  docs/help/faq.md docs/installation.md docs/help/troubleshooting.md
+```
+
 ## Docker起動前チェック項目
 
 `docker compose up` 実行前に、次の7項目を確認してください。
