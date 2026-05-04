@@ -56,6 +56,19 @@ YESOD Auth の LinkedIn ログインで要求する最小 scope は次の 3 つ�
     `openid profile email` の 3 つはセットで必要です。
     一部のみを要求すると、`/v2/userinfo` から必要情報を取得できずログイン失敗の原因になります。
 
+### scope不足時の re-authorization
+
+LinkedIn 側で `Sign In with LinkedIn using OpenID Connect` が未承認、または `openid profile email` の一部だけで認可した場合は、既存セッションを破棄して再認可します。
+
+1. LinkedIn Developer Portal で対象アプリの Product と Authorized redirect URLs を確認する
+2. クライアント側の token pair を破棄する
+3. `GET /api/v1/auth/linkedin` から認可をやり直す
+4. 失敗時は API ログで `linkedin|userinfo|scope|email` を確認する
+
+```bash
+docker compose logs api --since=30m | rg -n "linkedin|userinfo|scope|email"
+```
+
 ## 技術仕様
 
 | 項目 | 値 |

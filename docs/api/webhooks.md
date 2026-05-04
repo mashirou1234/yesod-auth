@@ -224,6 +224,8 @@ Webhook 配信が再試行上限に到達した場合、ワーカーは固定キ
 - `http_status`: HTTP ステータス（取得できない場合は `None`）
 - `endpoint_id` / `event_id`: 影響範囲の追跡キー
 
+`delivery_id` は配信履歴を追うための識別子であり、受信側の冪等キーではありません。再送や署名検証の調査では、`event_id` を重複排除の正本にし、`delivery_id`、`attempts`、`failure_reason` は配送経路の診断情報として扱います。
+
 ---
 
 <a id="webhook-signature-failure-reasons"></a>

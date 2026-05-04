@@ -51,6 +51,13 @@ echo "your-app-secret" > secrets/facebook_client_secret.txt
 - 監査ログの保持期間・ローテーション方針は [Deployment ガイド](../deployment.md#ログ保全設定例) で先に定義してください。
 - 障害時は [トラブルシューティング](../../help/troubleshooting.md) の「管理者トークン失効で管理APIが `401 Unauthorized` になる」節の再認証導線とあわせて確認してください。
 
+更新失敗時は、長期トークンの再交換を繰り返す前にユーザー再認可へ切り替えます。
+
+1. Facebook Developer Portal の有効な OAuth リダイレクト URI を確認する
+2. 対象ユーザーに `GET /api/v1/auth/facebook` から再ログインしてもらう
+3. 追加 Graph API 呼び出しがある場合のみ、新しい短期 token から長期 token を再発行する
+4. 監査ログに更新日時、失敗理由、再認可有無を記録する
+
 ## 技術仕様
 
 | 項目 | 値 |

@@ -42,6 +42,7 @@ echo "your-client-secret" > secrets/slack_client_secret.txt
     - callback: `http://localhost:8000/api/v1/auth/slack/callback`
 - 開発時は`MOCK_OAUTH_ENABLED=1`を無効化してから実OAuthを試してください。Mock OAuthが有効だと、Slack設定ミスが見えにくくなります。
 - `OpenID Connect`を有効化していない場合、Slackログイン画面まで進んでもユーザー情報取得で失敗します。
+- secret は `secrets/slack_client_id.txt` と `secrets/slack_client_secret.txt` に配置し、`api` と必要に応じて `api-ci` へ mount します。Redirect URLs、secret、OpenID Connect の 3 点を同じ Slack App でそろえてください。
 
 ### ローカル検証チェックリスト
 
@@ -59,6 +60,12 @@ echo "your-client-secret" > secrets/slack_client_secret.txt
     ```
 4. 認証後の callback で失敗した場合は、Slack 側 Redirect URLs と
    `http://localhost:8000/api/v1/auth/slack/callback` の完全一致を再確認する
+
+secret mount の同期確認:
+
+```bash
+docker compose config | rg -n "slack_client_(id|secret)|MOCK_OAUTH_ENABLED"
+```
 
 !!! info "OpenID Connect"
     SlackはOpenID Connectを使用します。

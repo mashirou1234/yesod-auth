@@ -13,6 +13,8 @@
    ls -1 secrets/{google_client_id,google_client_secret,discord_client_id,discord_client_secret,jwt_secret}.txt
    ```
 
+<a id="first-start-three-checks"></a>
+
 ## 1. 初回3点確認順（固定）
 
 初回起動失敗時は、必ず次の順番で確認してください。
@@ -29,6 +31,8 @@
    ```bash
    curl -fsS -o /dev/null -w '%{http_code}\n' http://localhost:8000/metrics
    ```
+
+OAuth provider の設定に進むのは、この 3 点が成功してからにしてください。`/health` が失敗している状態で callback や secret を調べると、依存サービス障害と provider 設定不備を混同しやすくなります。
 
 ## 2. 結果別の次アクション（次に読む文書）
 

@@ -70,6 +70,17 @@ X の `client_id` / `client_secret` が未設定または不正な場合に発�
 - ブラウザ戻る操作や callback URL の再実行を避ける
 - `API_URL` と実アクセス先ホスト/スキームの一致
 
+復旧時は古い callback URL を再読み込みせず、必ず次の固定順で再取得します。
+
+1. 古い認可タブを閉じる
+2. `GET /api/v1/auth/x` から新しい `state` と PKCE verifier を発行する
+3. X の認可画面で同意する
+4. callback 後に API ログで `auth/x|invalid_request|state` が再発していないことを確認する
+
+```bash
+docker compose logs api --since=30m | rg -n "auth/x|invalid_request|Invalid state|callback"
+```
+
 ### `400 Bad Request` / `Failed to exchange code`
 
 認可コード交換に失敗した場合に発生します。X 側の callback URL 設定不一致

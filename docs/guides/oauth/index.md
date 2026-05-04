@@ -11,12 +11,14 @@ Callback URL は provider 名だけを差し替え、ローカルと本番で同
 |-------------|------------|----------------------|-------------------|------|----------------|------|
 | Google | [google.md](google.md) | `http://localhost:8000/api/v1/auth/google/callback` | `https://<api-domain>/api/v1/auth/google/callback` | 公式 | ✅ | 推奨 |
 | GitHub | [github.md](github.md) | `http://localhost:8000/api/v1/auth/github/callback` | `https://<api-domain>/api/v1/auth/github/callback` | 公式 | ❌ | |
-| Discord | [discord.md](discord.md) | `http://localhost:8000/api/v1/auth/discord/callback` | `https://<api-domain>/api/v1/auth/discord/callback` | 独自 | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
 | X (Twitter) | [x.md](x.md) | `http://localhost:8000/api/v1/auth/x/callback` | `https://<api-domain>/api/v1/auth/x/callback` | 公式 | ❌ | メールアドレス取得不可 |
 | LinkedIn | [linkedin.md](linkedin.md) | `http://localhost:8000/api/v1/auth/linkedin/callback` | `https://<api-domain>/api/v1/auth/linkedin/callback` | 公式 | ✅ | |
 | Facebook | [facebook.md](facebook.md) | `http://localhost:8000/api/v1/auth/facebook/callback` | `https://<api-domain>/api/v1/auth/facebook/callback` | 公式 | ❌ | [Graph API v18.0](https://developers.facebook.com/docs/graph-api/){:target="_blank"} |
+| Discord | [discord.md](discord.md) | `http://localhost:8000/api/v1/auth/discord/callback` | `https://<api-domain>/api/v1/auth/discord/callback` | 独自 | ❌ | プロバイダーは対応しているが公式ドキュメントなし |
 | Slack | [slack.md](slack.md) | `http://localhost:8000/api/v1/auth/slack/callback` | `https://<api-domain>/api/v1/auth/slack/callback` | 独自 | ✅ | |
 | Twitch | [twitch.md](twitch.md) | `http://localhost:8000/api/v1/auth/twitch/callback` | `https://<api-domain>/api/v1/auth/twitch/callback` | 独自 | ❌ | [Helix API](https://dev.twitch.tv/docs/api/){:target="_blank"} |
+
+表の並び順は README / docs index と同じ `Google -> GitHub -> X -> LinkedIn -> Facebook -> Discord -> Slack -> Twitch` を正本にします。provider を追加・並べ替える場合は、このページ、[ドキュメント入口](../../index.md)、[インストールガイド](../../installation.md#oauth-credentials) の 3 点で順序と provider 名を同期してください。
 
 <a id="初回導入の読み順"></a>
 
@@ -41,10 +43,10 @@ Callback URL は provider 名だけを差し替え、ローカルと本番で同
 |---|---|---|---|---|
 | Google | `google_client_id` / `google_client_secret` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `/api/v1/auth/google/callback` | [google.md](google.md) |
 | GitHub | `github_client_id` / `github_client_secret` | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | `/api/v1/auth/github/callback` | [github.md](github.md) |
-| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | `/api/v1/auth/discord/callback` | [discord.md](discord.md) |
 | X (Twitter) | `x_client_id` / `x_client_secret` | `X_CLIENT_ID` / `X_CLIENT_SECRET` | `/api/v1/auth/x/callback` | [x.md](x.md) |
 | LinkedIn | `linkedin_client_id` / `linkedin_client_secret` | `LINKEDIN_CLIENT_ID` / `LINKEDIN_CLIENT_SECRET` | `/api/v1/auth/linkedin/callback` | [linkedin.md](linkedin.md) |
 | Facebook | `facebook_client_id` / `facebook_client_secret` | `FACEBOOK_CLIENT_ID` / `FACEBOOK_CLIENT_SECRET` | `/api/v1/auth/facebook/callback` | [facebook.md](facebook.md) |
+| Discord | `discord_client_id` / `discord_client_secret` | `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` | `/api/v1/auth/discord/callback` | [discord.md](discord.md) |
 | Slack | `slack_client_id` / `slack_client_secret` | `SLACK_CLIENT_ID` / `SLACK_CLIENT_SECRET` | `/api/v1/auth/slack/callback` | [slack.md](slack.md) |
 | Twitch | `twitch_client_id` / `twitch_client_secret` | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | `/api/v1/auth/twitch/callback` | [twitch.md](twitch.md) |
 

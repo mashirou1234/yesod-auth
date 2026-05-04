@@ -125,6 +125,20 @@ docker compose logs admin --since=10m | rg -n "SESSION_EXPIRY_HOURS is invalid|u
 手順詳細は [トラブルシューティング: `SESSION_EXPIRY_HOURS` が不正値](./troubleshooting.md#session-expiry-hours-invalid)、
 導入手順側の位置づけは [インストール: 管理画面付き](../installation.md#管理画面付き) を参照してください。
 
+<a id="session-cookie-samesite-recommended"></a>
+
+### `SESSION_COOKIE_SAMESITE` の推奨値は？
+
+管理画面の通常運用では `Lax` を推奨します。別ドメイン iframe や外部 IdP からのクロスサイト遷移で cookie を明示的に送る必要がある場合のみ `None` を選び、その場合は `SESSION_COOKIE_SECURE=true` と HTTPS を必須にしてください。
+
+| 値 | 用途 | 追加条件 |
+| --- | --- | --- |
+| `Lax` | 通常の管理画面ログイン | なし |
+| `Strict` | 同一サイト内だけで完結する高制限運用 | 外部遷移後の復帰を事前検証 |
+| `None` | クロスサイト cookie が必要な運用 | `SESSION_COOKIE_SECURE=true` と HTTPS |
+
+警告が出た場合は [トラブルシューティング: `SESSION_COOKIE_SAMESITE` が空文字/未知値](./troubleshooting.md#session-cookie-samesite-invalid) を確認し、導入時の設定位置は [インストール: 管理画面付き](../installation.md#管理画面付き) と同期してください。
+
 <a id="oauth-secret-permission-recovery"></a>
 
 ### OAuth secret の権限不備を最短で復旧するには？

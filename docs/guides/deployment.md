@@ -167,6 +167,13 @@ docker compose logs --since=24h api | rg -n "/api/v1/auth/.*/callback|invalid_cl
    - 同じコマンドを `--since=30m` で再実行し、該当エラー件数が増加しないことを確認する
    - `curl -sS -o /dev/null -w "%{http_code}\n" https://api.your-domain.com/health` が `200` であることを確認する
 
+本番前の最小ゲートは、[インストール: 本番切替前チェック](../installation.md#production-cutover-check) と同じ順にそろえます。
+
+```bash
+rg -n "MOCK_OAUTH_ENABLED|callback|secret|production|本番" docs/guides/deployment.md docs/installation.md docs/help/faq.md
+docker compose config | rg -n "MOCK_OAUTH_ENABLED|client_(id|secret)|SESSION_COOKIE"
+```
+
 ## OAuthシークレットローテーション手順
 
 プロバイダー個別の管理画面差分（Google/Discord など）に依存しない、共通の切替手順です。Compose/ECS/Kubernetes いずれでも「シークレット更新」「API再起動（または再デプロイ）」「疎通確認」の順序は共通です。

@@ -100,6 +100,8 @@ docker compose logs --tail=100 api | rg -n "discord|Failed to get user info|KeyE
 
 - アプリ側の認可URLで `scope=identify email` を維持する
 - 認証を最初からやり直して再同意を取得する
+- 既存の同意が古い scope のまま残っている場合は、Discord 側の連携を解除してから `GET /api/v1/auth/discord` で再同意する
+- 復旧後は `docker compose logs api --since=30m | rg -n "discord|scope|email"` で同じ scope 不足ログが再発していないことを確認する
 
 !!! info "PKCE対応について"
     DiscordはPKCEパラメータを受け入れますが、公式ドキュメントには記載されていません。

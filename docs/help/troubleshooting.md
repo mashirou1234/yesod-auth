@@ -25,6 +25,8 @@ docker compose logs api --since=30m | rg -n "Invalid state|/api/v1/auth/.*/callb
 | `provider` | [`401 Unauthorized` / `invalid_client`](#401-unauthorized--invalid_client) | `docker compose logs --tail=100 api \| rg -n "invalid_client\|401\|client_secret\|client_id"` |
 | `webhook` | [Webhook設定ガイド](../guides/webhooks.md#ローカルテスト) | `curl -fsS http://localhost:8000/api/v1/admin/webhooks/endpoints` |
 
+callback / state mismatch の問い合わせでは、まず [初回起動トラブルシュート](./first-start-troubleshooting.md#first-start-three-checks) の `/health`、`/docs`、`/metrics` を確認し、その後に本ページの `state mismatch`、`invalid_client`、`redirect_uri_mismatch` へ分岐します。callback URL を直接開いた結果は再現証跡にせず、必ず `GET /api/v1/auth/{provider}` から開始したログを採取してください。
+
 ## 起動時のエラー
 
 `secret ... not found` の即時復旧は [`インストールガイド` の secret不足時手順](../installation.md#1-docker-compose-up-で-secret-未設定エラーになる) を先に実行してください。
@@ -130,6 +132,8 @@ SESSION_EXPIRY_HOURS is invalid ('<value>'); using default value 24
 
 ---
 
+<a id="session-cookie-samesite-invalid"></a>
+
 ### `SESSION_COOKIE_SAMESITE` が空文字/未知値
 
 **症状:** admin 起動時に `SESSION_COOKIE_SAMESITE` の警告が出る。
@@ -151,6 +155,11 @@ SESSION_COOKIE_SAMESITE='<value>' is unsupported; falling back to framework defa
    ```bash
    docker compose up -d --force-recreate admin
    ```
+
+導線同期:
+
+- FAQ: [`SESSION_COOKIE_SAMESITE` の推奨値は？](./faq.md#session-cookie-samesite-recommended)
+- Installation: [管理画面付き](../installation.md#管理画面付き)
 
 ---
 
