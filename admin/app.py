@@ -14,6 +14,14 @@ from i18n import (
     SUPPORTED_LANGUAGES,
     get_language_selector_options,
 )
+from tour_runtime import (
+    PAGE_ORDER,
+    page_label,
+    render_tour_anchor,
+    render_tour_assets,
+    set_page_query,
+    sync_page_from_query,
+)
 import db
 import valkey_client
 
@@ -152,6 +160,7 @@ def check_auth():
 def show_overview():
     t = get_translator()
     st.header(t("overview.header"))
+    render_tour_anchor("overview-summary")
 
     try:
         stats = db.get_stats()
@@ -168,6 +177,7 @@ def show_overview():
 def show_users():
     t = get_translator()
     st.header(t("users.header"))
+    render_tour_anchor("users-page")
 
     try:
         users_df = db.get_users()
@@ -212,6 +222,7 @@ def show_users():
 def show_sessions():
     t = get_translator()
     st.header(t("sessions.header"))
+    render_tour_anchor("sessions-page")
 
     try:
         sessions_df = db.get_sessions()
@@ -258,6 +269,7 @@ def show_sessions():
 def show_valkey_status():
     t = get_translator()
     st.header(t("valkey.header"))
+    render_tour_anchor("valkey-page")
 
     try:
         # OAuth States
@@ -283,6 +295,7 @@ def show_valkey_status():
 def show_audit_logs():
     t = get_translator()
     st.header(t("audit.header"))
+    render_tour_anchor("audit-page")
 
     try:
         # Stats
@@ -345,6 +358,7 @@ def show_audit_logs():
 def show_api_test():
     t = get_translator()
     st.header(t("api_test.header"))
+    render_tour_anchor("api-test-page")
 
     API_BASE = "http://localhost:8000/api/v1"  # Use localhost for browser access
 
@@ -685,6 +699,7 @@ def show_api_test():
 def show_db_schema():
     t = get_translator()
     st.header(t("db_schema.header"))
+    render_tour_anchor("db-schema-page")
 
     try:
         table_info = db.get_table_info()
@@ -820,6 +835,7 @@ def main():
         return
 
     t = get_translator()
+    sync_page_from_query()
 
     # Environment badge (only show in non-production environments)
     if settings.ENVIRONMENT:
@@ -838,12 +854,21 @@ def main():
         )
 
     st.title(f"🔐 {t('app.title')}")
+    render_tour_anchor("app-title")
 
     # Sidebar navigation
+    st.sidebar.markdown(
+        '<span class="yesod-tour-anchor" data-tour-id="sidebar-navigation" aria-hidden="true"></span>',
+        unsafe_allow_html=True,
+    )
     page = st.sidebar.radio(
         t("nav.navigation"),
-        [t("nav.overview"), t("nav.users"), t("nav.sessions"), t("nav.audit_logs"), t("nav.valkey_status"), t("nav.db_schema"), t("nav.api_test")]
+        PAGE_ORDER,
+        format_func=lambda page_id: page_label(page_id, t),
+        key="page_id",
     )
+    set_page_query(page)
+    render_tour_assets(page, t)
 
     if st.sidebar.button(t("nav.refresh")):
         st.rerun()
@@ -868,19 +893,19 @@ def main():
         st.session_state.language = lang_options[selected_lang_display]
         st.rerun()
 
-    if page == t("nav.overview"):
+    if page == "overview":
         show_overview()
-    elif page == t("nav.users"):
+    elif page == "users":
         show_users()
-    elif page == t("nav.sessions"):
+    elif page == "sessions":
         show_sessions()
-    elif page == t("nav.audit_logs"):
+    elif page == "audit_logs":
         show_audit_logs()
-    elif page == t("nav.valkey_status"):
+    elif page == "valkey_status":
         show_valkey_status()
-    elif page == t("nav.db_schema"):
+    elif page == "db_schema":
         show_db_schema()
-    elif page == t("nav.api_test"):
+    elif page == "api_test":
         show_api_test()
 
 

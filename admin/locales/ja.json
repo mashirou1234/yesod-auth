@@ -140,5 +140,48 @@
   "common": {
     "status": "ステータス",
     "environment_warning": "⚠️ {env} 環境"
+  },
+  "tour": {
+    "launcher": "操作チュートリアル",
+    "launcher_aria": "管理画面の操作チュートリアルを開始",
+    "next": "次へ",
+    "previous": "戻る",
+    "done": "完了",
+    "progress": "{{current}} / {{total}}",
+    "missing_target": "このセクションは現在表示されていません。現在の画面コンテキストからチュートリアルを続行してください。",
+    "steps": {
+      "navigation": {
+        "title": "管理エリアを切り替える",
+        "description": "サイドバーから管理画面の各領域へ移動します。チュートリアルはセルフホスト環境を確認する通常順に沿って進みます。"
+      },
+      "overview": {
+        "title": "最初に全体状態を見る",
+        "description": "ユーザー数、OAuth連携数、アクティブセッション数を先に確認します。ここで読み込みに失敗する場合は、詳細調査より先にDB接続を確認してください。"
+      },
+      "users": {
+        "title": "ユーザーと連携アカウントを確認する",
+        "description": "Users では登録ユーザー、連携済みOAuth provider、ユーザー単位の全セッション失効などを確認します。"
+      },
+      "sessions": {
+        "title": "セッションを絞り込み、必要時だけ失効する",
+        "description": "Sessions では有効・期限切れ・失効済みの token を切り分けます。失効操作は運用影響があるため、対象ユーザーまたはセッションを確認してから実行してください。"
+      },
+      "audit": {
+        "title": "認証イベントを突き合わせる",
+        "description": "Audit Logs ではログイン履歴と認証イベントを確認します。ログイン失敗、provider 挙動の違和感、不審操作の調査はここから始めます。"
+      },
+      "valkey": {
+        "title": "一時的な認証状態を見る",
+        "description": "Valkey Status では OAuth state と rate limit 情報を確認します。一時状態が期待どおり保存・削除されているかを見るために使います。"
+      },
+      "db_schema": {
+        "title": "保存データの構造を把握する",
+        "description": "DB Schema では ER 関係、テーブル詳細、行数を確認できます。手動データ変更や migration 問題の診断前に確認してください。"
+      },
+      "api_test": {
+        "title": "API フローを慎重に検証する",
+        "description": "API Test は実 token を使う手動検証用です。開発用 credential を使い、対象環境を確認し、本番での破壊的操作は計画済みの場合だけ実行してください。"
+      }
+    }
   }
 }

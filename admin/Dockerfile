@@ -1,3 +1,14 @@
+FROM oven/bun:1.3.5 AS tour-build
+
+WORKDIR /app
+
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+
+COPY scripts ./scripts
+COPY tour ./tour
+RUN bun run build:tour
+
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -9,6 +20,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+COPY --from=tour-build /app/static/tour ./static/tour
 
 EXPOSE 8501
 

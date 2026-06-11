@@ -1,0 +1,43 @@
+.yesod-tour-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 2147483000;
+  border: 0;
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: #2563eb;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  font: 600 14px/1.2 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.yesod-tour-launcher:hover,
+.yesod-tour-launcher:focus-visible {
+  background: #1d4ed8;
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
+}
+
+.yesod-tour-anchor {
+  display: block;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+}
+
+.driver-popover.yesod-admin-tour-popover {
+  max-width: 420px;
+  border-radius: 14px;
+}
+
+.driver-popover.yesod-admin-tour-popover .driver-popover-title {
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.driver-popover.yesod-admin-tour-popover .driver-popover-description {
+  font-size: 14px;
+  line-height: 1.7;
+}

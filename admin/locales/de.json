@@ -140,5 +140,48 @@
   "common": {
     "status": "Status",
     "environment_warning": "⚠️ {env}-UMGEBUNG"
+  },
+  "tour": {
+    "launcher": "Geführte Tour starten",
+    "launcher_aria": "Geführte Admin-Tour starten",
+    "next": "Weiter",
+    "previous": "Zurück",
+    "done": "Fertig",
+    "progress": "{{current}} von {{total}}",
+    "missing_target": "Dieser Bereich ist gerade nicht sichtbar. Setze die Tour aus dem aktuellen Seitenkontext fort.",
+    "steps": {
+      "navigation": {
+        "title": "Choose an admin area",
+        "description": "Use the sidebar to move through the admin workflow. The tour follows the normal order for checking a self-hosted instance."
+      },
+      "overview": {
+        "title": "Start from the health summary",
+        "description": "Review total users, linked OAuth accounts, and active sessions first. If these metrics fail to load, check database connectivity before deeper investigation."
+      },
+      "users": {
+        "title": "Review users and account links",
+        "description": "Use Users to inspect registered users, linked OAuth providers, and user-scoped actions such as revoking all sessions."
+      },
+      "sessions": {
+        "title": "Filter and revoke sessions",
+        "description": "Use Sessions to narrow active, expired, or revoked tokens. Revocation is an operational action, so confirm the target user or session before running it."
+      },
+      "audit": {
+        "title": "Correlate authentication events",
+        "description": "Audit Logs show login history and auth events. Start here when investigating failed logins, unexpected provider behavior, or suspicious activity."
+      },
+      "valkey": {
+        "title": "Check ephemeral auth state",
+        "description": "Valkey Status shows OAuth state and rate-limit entries. Use it to confirm whether transient authentication state is being written and cleared as expected."
+      },
+      "db_schema": {
+        "title": "Understand stored data shape",
+        "description": "DB Schema gives ER relationships, table details, and row counts. Use it before changing data manually or diagnosing migration-related problems."
+      },
+      "api_test": {
+        "title": "Exercise API flows carefully",
+        "description": "API Test is for manual verification with real tokens. Use development credentials, confirm the target environment, and avoid destructive actions in production unless planned."
+      }
+    }
   }
 }

@@ -1,0 +1,11 @@
+{
+  "name": "yesod-auth-admin-tour",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:tour": "bun scripts/build-tour.mjs"
+  },
+  "dependencies": {
+    "driver.js": "1.4.0"
+  }
+}
