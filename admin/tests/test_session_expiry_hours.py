@@ -11,7 +11,7 @@ class SessionExpiryHoursConfigTests(unittest.TestCase):
         with mock.patch.dict(os.environ, {}, clear=False):
             os.environ.pop("SESSION_EXPIRY_HOURS", None)
             value = read_session_expiry_hours_env()
-        self.assertEqual(value, 24)
+        self.assertEqual(value, 1)
 
     def test_uses_env_value_when_valid_positive_integer(self) -> None:
         with mock.patch.dict(
@@ -30,10 +30,10 @@ class SessionExpiryHoursConfigTests(unittest.TestCase):
         ):
             with self.assertLogs("config", level="WARNING") as captured:
                 value = read_session_expiry_hours_env()
-        self.assertEqual(value, 24)
+        self.assertEqual(value, 1)
         self.assertTrue(
             any(
-                "SESSION_EXPIRY_HOURS is invalid ('abc'); using default value 24" in message
+                "SESSION_EXPIRY_HOURS is invalid ('abc'); using default value 1" in message
                 for message in captured.output
             )
         )
@@ -46,10 +46,10 @@ class SessionExpiryHoursConfigTests(unittest.TestCase):
         ):
             with self.assertLogs("config", level="WARNING") as captured:
                 value = read_session_expiry_hours_env()
-        self.assertEqual(value, 24)
+        self.assertEqual(value, 1)
         self.assertTrue(
             any(
-                "SESSION_EXPIRY_HOURS is invalid ('0'); using default value 24" in message
+                "SESSION_EXPIRY_HOURS is invalid ('0'); using default value 1" in message
                 for message in captured.output
             )
         )

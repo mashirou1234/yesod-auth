@@ -19,10 +19,9 @@
   "login": {
     "username": "사용자 이름",
     "password": "비밀번호",
-    "remember_me": "로그인 상태 유지 (24시간)",
     "login_button": "로그인",
     "invalid_credentials": "잘못된 인증 정보",
-    "bookmark_tip": "💡 팁: 세션 매개변수가 포함된 이 페이지를 북마크하면 로그인 상태를 유지할 수 있습니다"
+    "session_notice": "세션은 정해진 시간에 만료됩니다. 페이지를 새로고침하거나 다시 연결하면 로그인이 필요할 수 있습니다."
   },
   "overview": {
     "header": "개요",

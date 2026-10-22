@@ -19,10 +19,9 @@
   "login": {
     "username": "Nom d'utilisateur",
     "password": "Mot de passe",
-    "remember_me": "Se souvenir de moi (24 heures)",
     "login_button": "Connexion",
     "invalid_credentials": "Identifiants invalides",
-    "bookmark_tip": "💡 Astuce : Ajoutez cette page avec le paramètre de session à vos favoris pour rester connecté"
+    "session_notice": "Cette session a une durée fixe. Le rechargement ou la reconnexion peut nécessiter une nouvelle connexion."
   },
   "overview": {
     "header": "Aperçu",

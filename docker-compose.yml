@@ -53,6 +53,7 @@ services:
       - FRONTEND_URL=http://localhost:3000
       - ACCESS_TOKEN_LIFETIME_SECONDS=900
       - REFRESH_TOKEN_LIFETIME_DAYS=7
+      - RUNTIME_MODE=development
       - MOCK_OAUTH_ENABLED=1
       - RATE_LIMIT_PER_MINUTE=20
     secrets:
@@ -107,6 +108,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://yesod_user:yesod_password@db-ci:5432/yesod
       - VALKEY_URL=redis://valkey:6379/0
+      - RUNTIME_MODE=test
       - MOCK_OAUTH_ENABLED=1
       - TESTING=1
     secrets:
@@ -145,11 +147,10 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - DATABASE_URL=postgresql://yesod_user:yesod_password@db:5432/yesod
+      - DATABASE_URL=postgresql+psycopg2://yesod_user:yesod_password@db:5432/yesod
       - VALKEY_URL=redis://valkey:6379/0
       - ADMIN_USER=admin
-      - ADMIN_PASSWORD_FILE=/run/secrets/admin_password
-      - ENVIRONMENT=DEV
+      - RUNTIME_MODE=development
     secrets:
       - admin_password
     depends_on:

@@ -19,10 +19,9 @@
   "login": {
     "username": "ユーザー名",
     "password": "パスワード",
-    "remember_me": "ログイン状態を保持（24時間）",
     "login_button": "ログイン",
     "invalid_credentials": "認証情報が無効です",
-    "bookmark_tip": "💡 ヒント: セッションパラメータ付きでこのページをブックマークすると、ログイン状態を維持できます"
+    "session_notice": "セッションには固定の有効期限があります。ページの再読み込みや再接続では、再ログインが必要になる場合があります。"
   },
   "overview": {
     "header": "概要",

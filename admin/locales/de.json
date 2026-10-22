@@ -19,10 +19,9 @@
   "login": {
     "username": "Benutzername",
     "password": "Passwort",
-    "remember_me": "Angemeldet bleiben (24 Stunden)",
     "login_button": "Anmelden",
     "invalid_credentials": "Ungültige Anmeldedaten",
-    "bookmark_tip": "💡 Tipp: Setzen Sie ein Lesezeichen für diese Seite mit dem Sitzungsparameter, um angemeldet zu bleiben"
+    "session_notice": "Diese Sitzung hat eine feste Laufzeit. Nach Neuladen oder erneuter Verbindung kann eine neue Anmeldung erforderlich sein."
   },
   "overview": {
     "header": "Übersicht",

@@ -53,15 +53,15 @@ def test_read_secret_falls_back_to_default_when_secret_and_env_missing(monkeypat
         mock_file.assert_not_called()
 
 
-def test_read_secret_strips_trailing_whitespace_from_secret_file(monkeypatch):
-    """Trailing whitespace in secret files must be removed."""
+def test_read_secret_preserves_whitespace_except_one_file_line_terminator(monkeypatch):
+    """Only one final LF is removed, leaving unsafe whitespace for validation."""
     monkeypatch.setenv("JWT_SECRET", "env-value")
 
     with (
         patch("app.config.os.path.exists", return_value=True),
         patch("builtins.open", mock_open(read_data="file-value  \n\n")),
     ):
-        assert read_secret("jwt_secret", "default-value") == "file-value"
+        assert read_secret("jwt_secret", "default-value") == "file-value  \n"
 
 
 def test_resolve_cors_origins_uses_default_when_unset():
@@ -148,12 +148,12 @@ def test_resolve_cors_origins_raises_when_empty_element_is_present():
         resolve_cors_origins("https://example.com, ,https://admin.example.com")
 
 
-def test_config_import_fails_fast_when_cors_origins_contains_empty_element():
+def test_settings_construction_fails_when_cors_origins_contains_empty_element():
     env = os.environ.copy()
     env["CORS_ORIGINS"] = "https://example.com, ,https://admin.example.com"
 
     result = subprocess.run(
-        [sys.executable, "-c", "import app.config"],
+        [sys.executable, "-c", "from app.config import Settings; Settings()"],
         capture_output=True,
         text=True,
         env=env,
@@ -170,7 +170,7 @@ def test_frontend_url_defaults_when_env_is_unset():
     env.pop("FRONTEND_URL", None)
 
     result = subprocess.run(
-        [sys.executable, "-c", "from app.config import Settings; print(Settings.FRONTEND_URL)"],
+        [sys.executable, "-c", "from app.config import Settings; print(Settings().FRONTEND_URL)"],
         capture_output=True,
         text=True,
         env=env,
@@ -183,16 +183,16 @@ def test_frontend_url_defaults_when_env_is_unset():
 
 
 def test_settings_raises_when_provider_client_id_exists_but_secret_is_empty(monkeypatch):
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "")
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "")
 
     with pytest.raises(ValueError, match="GITHUB_CLIENT_SECRET"):
         Settings()
 
 
 def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-client-secret")
 
     settings = Settings()
 
@@ -200,20 +200,20 @@ def test_settings_allows_when_provider_secret_is_non_empty(monkeypatch):
 
 
 def test_settings_raises_when_provider_client_id_is_duplicated(monkeypatch):
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "shared-client-id")
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
-    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_ID", "shared-client-id")
-    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_SECRET", "google-client-secret")
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "shared-client-id")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-client-secret")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "shared-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "google-client-secret")
 
     with pytest.raises(ValueError, match="duplicated across enabled providers"):
         Settings()
 
 
 def test_settings_allows_when_provider_client_ids_are_unique(monkeypatch):
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_ID", "github-client-id")
-    monkeypatch.setattr(Settings, "GITHUB_CLIENT_SECRET", "github-client-secret")
-    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_ID", "google-client-id")
-    monkeypatch.setattr(Settings, "GOOGLE_CLIENT_SECRET", "google-client-secret")
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "github-client-id")
+    monkeypatch.setenv("GITHUB_CLIENT_SECRET", "github-client-secret")
+    monkeypatch.setenv("GOOGLE_CLIENT_ID", "google-client-id")
+    monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "google-client-secret")
 
     settings = Settings()
 

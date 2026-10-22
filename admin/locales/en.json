@@ -19,10 +19,9 @@
   "login": {
     "username": "Username",
     "password": "Password",
-    "remember_me": "Remember me (24 hours)",
     "login_button": "Login",
     "invalid_credentials": "Invalid credentials",
-    "bookmark_tip": "💡 Tip: Bookmark this page with the session parameter to stay logged in"
+    "session_notice": "This session expires after a fixed time. Reloading the page or reconnecting may require signing in again."
   },
   "overview": {
     "header": "Overview",
