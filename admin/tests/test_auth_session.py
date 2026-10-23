@@ -1,5 +1,7 @@
 """Server-side absolute session expiry independent of Streamlit."""
 
+import math
+
 import pytest
 
 from auth_session import clear_session, is_authenticated, start_session
@@ -42,3 +44,27 @@ def test_changing_admin_identity_invalidates_existing_session():
     state = {}
     start_session(state, "old-admin", 3600, now=100)
     assert not is_authenticated(state, "new-admin", 3600, now=101)
+
+
+@pytest.mark.parametrize("issued_at", [496.1, 65535.7, 1_000_000.1])
+@pytest.mark.parametrize("lifetime", [3600, 43200])
+def test_fractional_clock_session_preserves_exact_absolute_deadline(issued_at, lifetime):
+    state = {}
+    start_session(state, "admin", lifetime, now=issued_at)
+    deadline = state["admin_session"]["expires_at"]
+    assert is_authenticated(state, "admin", lifetime, now=issued_at)
+    assert is_authenticated(state, "admin", lifetime, now=math.nextafter(deadline, -math.inf))
+    assert state["admin_session"]["expires_at"] == deadline
+    assert not is_authenticated(state, "admin", lifetime, now=deadline)
+    assert "admin_session" not in state
+
+
+@pytest.mark.parametrize("issued_at", [496.1, 65535.7, 1_000_000.1])
+def test_fractional_clock_rejects_even_one_float_step_beyond_maximum_deadline(issued_at):
+    state = {}
+    start_session(state, "admin", 3600, now=issued_at)
+    state["admin_session"]["expires_at"] = math.nextafter(
+        state["admin_session"]["expires_at"], math.inf
+    )
+    assert not is_authenticated(state, "admin", 3600, now=issued_at)
+    assert "admin_session" not in state

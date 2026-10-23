@@ -42,9 +42,11 @@ def is_authenticated(
     if isinstance(record, dict) and record.get("username") == username:
         issued_at, expires_at = record.get("issued_at"), record.get("expires_at")
         if all(type(value) in (int, float) and math.isfinite(value) for value in (issued_at, expires_at)):
+            # Compare deadlines using the same addition as creation; subtraction can
+            # round a valid fractional-clock lifetime above its configured limit.
             valid = (
                 issued_at <= current < expires_at
-                and 0 < expires_at - issued_at <= lifetime_seconds
+                and issued_at < expires_at <= issued_at + lifetime_seconds
             )
     if not valid:
         # Preserve public UI preferences and in-progress login widgets; remove all auth material.
