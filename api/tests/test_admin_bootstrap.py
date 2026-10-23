@@ -1,5 +1,6 @@
 """Input and HTTP contracts for first-administrator bootstrap."""
 
+import logging
 import secrets
 from unittest.mock import AsyncMock, patch
 
@@ -19,16 +20,43 @@ def valid_input():
     }
 
 
+@pytest.fixture(autouse=True)
+def observed_application_logs(caplog):
+    """Observe DEBUG/INFO from app and access loggers, including non-propagating ones."""
+    caplog.set_level(logging.DEBUG)
+    names = ("app", "app.routers.admin_bootstrap", "app.services.admin_bootstrap", "uvicorn.access")
+    attached = []
+    for name in names:
+        logger = logging.getLogger(name)
+        caplog.set_level(logging.DEBUG, logger=name)
+        if caplog.handler not in logger.handlers:
+            logger.addHandler(caplog.handler)
+            attached.append(logger)
+        logger.debug("bootstrap capture control DEBUG")
+        logger.info("bootstrap capture control INFO")
+        assert any(
+            record.name == name and record.levelno == logging.DEBUG for record in caplog.records
+        )
+        assert any(
+            record.name == name and record.levelno == logging.INFO for record in caplog.records
+        )
+    try:
+        yield
+    finally:
+        for logger in attached:
+            logger.removeHandler(caplog.handler)
+
+
 def test_valid_registration_and_password_boundaries():
     data = valid_input()
-    for password in ("a" * 16, "界" * 128, "a" * 128):
+    for password in ("a" * 16, "界" * 128, "a" * 128, chr(0x1F680) * 16, chr(0x1F680) * 128):
         validate_registration({**data, "password": password})
 
 
 @pytest.mark.parametrize(
     "case", ["short", "long", "blank", "same", "username", "capability", "extra", "type"]
 )
-def test_invalid_input_never_includes_input_in_error(case):
+def test_invalid_input_never_includes_input_in_error(case, caplog):
     data = valid_input()
     if case == "short":
         data["password"] = "x" * 15
@@ -50,6 +78,11 @@ def test_invalid_input_never_includes_input_in_error(case):
     with pytest.raises(BootstrapError) as error:
         validate_registration(data)
     assert str(error.value) == "Invalid registration input"
+    assert all(
+        value not in caplog.text
+        for key in ("capability", "password")
+        if isinstance((value := data[key]), str) and len(value) >= 16
+    )
 
 
 @pytest.fixture

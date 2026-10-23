@@ -7,9 +7,18 @@ const username = document.getElementById("username");
 const status = document.getElementById("status");
 const submit = form.querySelector("button");
 
+function validatePassword() {
+  const length = Array.from(password.value).length;
+  password.setCustomValidity(length < 16 || length > 128
+    ? "Use 16–128 characters for the password."
+    : "");
+}
+password.addEventListener("input", validatePassword);
+
 function clearSecrets() {
   capability.value = "";
   password.value = "";
+  password.setCustomValidity("");
 }
 
 window.addEventListener("pagehide", clearSecrets);
@@ -21,6 +30,8 @@ form.addEventListener("invalid", () => {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
+  validatePassword();
+  if (!password.reportValidity()) return;
   submit.disabled = true;
   status.textContent = "Creating your administrator…";
   let payload = JSON.stringify({
