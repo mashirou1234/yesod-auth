@@ -130,3 +130,24 @@ M1 開始前に、OIDC 実装部品、公開 endpoint/metadata、失効方式、
 M1 実装では上表の失敗を先に再現し、実 PostgreSQL/Valkey の並行性検証を追加する。
 M2 では初回導入・中断再開・修正をブラウザで確認し、M3 では独立した二つの標準 OIDC client で接続する。
 Mock 成功、設定保存、ドキュメント記載のいずれかだけで実 OAuth 接続完了とはしない。
+
+## 初回管理者登録の実装契約（#803）
+
+`GET /api/v1/admin/bootstrap` が最小登録画面、`POST` が登録 API です。
+capability の発行はサーバー内の `python -m app.bootstrap` に限定し、HTTP の発行 endpoint は設けません。
+256 bit の乱数をローカル TTY にだけ出力し、DB には SHA-256 digest と 15 分の期限を保持します。
+
+`admin_bootstrap` の単一行をロックし、DB 時刻による期限確認、`administrators` の作成、capability の消費を一つの transaction で行います。
+再発行も同じロックを使い、登録後は拒否します。
+管理者の削除やプロセス再起動から独立した `initialized_at` を残すため、登録入口は再開しません。
+password は 16 byte の salt と 600,000 回の PBKDF2-HMAC-SHA256 で保存し、OAuth 利用者の identity と分離します。
+最初の管理者は既定 project を参照します。所属認可と永続 session は #806 / #804 の範囲です。
+
+JSON body は 4,096 byte 以下、capability は URL-safe base64 の 43 文字、管理者名は英数字で始まる ASCII 3–64 文字です。
+password は 16–128 Unicode 文字かつ UTF-8 512 byte 以下とし、空白だけ・管理者名と同じ値を拒否します。
+余分な入力、query parameters、異なる origin からのブラウザ送信を拒否し、例外に入力を含めません。
+画面は `no-store`、外部 asset 禁止、CSP、送信時・履歴移動時の秘密入力消去を使用します。
+ブラウザの password manager、利用者自身の clipboard や撮影など、アプリの管理外の保存は消去保証の対象にしません。
+
+成功は 201、登録閉鎖は 410、無効・期限切れ capability は 403、入力不正は 400、DB 利用不能は 503 です。
+登録成功を管理コンソールへのログイン完了と表示しません。

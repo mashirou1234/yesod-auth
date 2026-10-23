@@ -41,7 +41,7 @@ async def test_postgres_token_lifecycle_and_valkey_state():
     state = f"foundation-{uuid.uuid4()}"
     try:
         async with engine.connect() as connection:
-            assert await connection.scalar(text("SELECT version_num FROM alembic_version")) == "007"
+            assert await connection.scalar(text("SELECT version_num FROM alembic_version")) == "008"
         async with sessions() as db:
             user = User(id=user_id)
             db.add(user)
