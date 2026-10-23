@@ -15,7 +15,7 @@ async def test_log_event_backfills_request_id_when_missing(monkeypatch, db_sessi
     monkeypatch.setenv("TESTING", "0")
     db = db_session
     connection = AsyncMock()
-    monkeypatch.setattr(db, "connection", AsyncMock(return_value=connection))
+    monkeypatch.setattr("app.db.project._execute_audit_sql", connection.execute)
     monkeypatch.setattr(db, "commit", AsyncMock())
 
     await AuditLogger.log_event(
@@ -25,7 +25,7 @@ async def test_log_event_backfills_request_id_when_missing(monkeypatch, db_sessi
         ip_address="127.0.0.1",
     )
 
-    payload = json.loads(connection.execute.await_args.args[1]["details"])
+    payload = json.loads(connection.execute.await_args.args[2]["details"])
     assert payload["provider"] == "github"
     assert payload["request_id_backfilled"] is True
     assert "request_id" in payload
@@ -39,7 +39,7 @@ async def test_log_event_preserves_existing_request_id(monkeypatch, db_session):
     monkeypatch.setenv("TESTING", "0")
     db = db_session
     connection = AsyncMock()
-    monkeypatch.setattr(db, "connection", AsyncMock(return_value=connection))
+    monkeypatch.setattr("app.db.project._execute_audit_sql", connection.execute)
     monkeypatch.setattr(db, "commit", AsyncMock())
     details = {"provider": "google", "request_id": "req-fixed-123"}
 
@@ -49,7 +49,7 @@ async def test_log_event_preserves_existing_request_id(monkeypatch, db_session):
         details=details,
     )
 
-    payload = json.loads(connection.execute.await_args.args[1]["details"])
+    payload = json.loads(connection.execute.await_args.args[2]["details"])
     assert payload["request_id"] == "req-fixed-123"
     assert payload["request_id_backfilled"] is False
     db.commit.assert_awaited_once()

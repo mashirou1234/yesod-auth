@@ -6,10 +6,10 @@ from threading import Lock
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.project import project_id_of
+from app.db.project import read_audit_counts
 from app.db.session import get_db
 from app.models import DeletedUser, OAuthAccount, RefreshToken, User
 
@@ -122,32 +122,11 @@ async def metrics(db: AsyncSession = Depends(get_db)):
 
     # Login stats (last 24h) - only if audit schema exists
     try:
-        result = await (await db.connection()).execute(
-            text("""
-            SELECT
-                success,
-                COUNT(*)
-            FROM audit.login_history
-            WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
-            GROUP BY success
-        """),
-            {"project_id": str(project_id_of(db))},
-        )
-        for row in result.fetchall():
+        for row in await read_audit_counts(db, "login_history"):
             status = "success" if row[0] else "failed"
             metrics_output.append(f'yesod_logins_24h{{status="{status}"}} {row[1]}')
 
-        # Auth events (last 24h)
-        result = await (await db.connection()).execute(
-            text("""
-            SELECT event_type, COUNT(*)
-            FROM audit.auth_events
-            WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
-            GROUP BY event_type
-        """),
-            {"project_id": str(project_id_of(db))},
-        )
-        for row in result.fetchall():
+        for row in await read_audit_counts(db, "auth_events"):
             metrics_output.append(f'yesod_auth_events_24h{{event_type="{row[0]}"}} {row[1]}')
     except Exception:
         # Audit schema might not exist yet

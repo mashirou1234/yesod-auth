@@ -429,6 +429,19 @@ async def test_migration_preserves_existing_data_and_seeds_empty_database():
     migrated = create_async_engine(target_url)
     user_id = uuid.uuid4()
     token_id = uuid.uuid4()
+    deleted_id = uuid.uuid4()
+    retained_tables = (
+        "users",
+        "user_profiles",
+        "user_emails",
+        "oauth_accounts",
+        "refresh_tokens",
+        "deleted_users",
+        "webhook_deliveries",
+        "audit.login_history",
+        "audit.auth_events",
+    )
+    before_rows = {}
     env = os.environ.copy()
     env["DATABASE_URL"] = target_url.render_as_string(hide_password=False)
 
@@ -461,10 +474,95 @@ async def test_migration_preserves_existing_data_and_seeds_empty_database():
                 ),
                 {"id": token_id, "uid": user_id},
             )
+            await connection.execute(
+                text(
+                    "INSERT INTO user_profiles(user_id,display_name,avatar_url) "
+                    "VALUES (:uid,'Preserved profile','https://example.invalid/profile.png')"
+                ),
+                {"uid": user_id},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO oauth_accounts(id,user_id,provider,provider_user_id,provider_display_name,"
+                    "provider_avatar_url,provider_email,access_token,refresh_token) "
+                    "VALUES (:id,:uid,'google','retained-identity','Provider profile',"
+                    "'https://example.invalid/provider.png','provider@example.invalid',"
+                    "'synthetic-access-fixture','synthetic-refresh-fixture')"
+                ),
+                {"id": uuid.uuid4(), "uid": user_id},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO refresh_tokens(id,user_id,token_hash,is_revoked,expires_at) "
+                    "VALUES (:id,:uid,'preserved-active-test-hash',false,NOW() + INTERVAL '1 day')"
+                ),
+                {"id": uuid.uuid4(), "uid": user_id},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO deleted_users(id,email_backup,display_name_backup,purge_at,oauth_providers) "
+                    "VALUES (:id,'deleted@example.invalid','Deleted profile',NOW()+INTERVAL '30 days','[\"google\"]')"
+                ),
+                {"id": deleted_id},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO webhook_deliveries(id,event_id,event_type,endpoint_id,endpoint_url,status,"
+                    "http_status,error_message,attempt_count,latency_ms,completed_at) "
+                    "VALUES (:id,:event,'user.deleted','retained-endpoint','https://example.invalid/webhook',"
+                    "'failed',503,'fixture-unavailable',3,123,NOW())"
+                ),
+                {"id": uuid.uuid4(), "event": uuid.uuid4()},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO audit.login_history(user_id,provider,ip_address,user_agent,success,failure_reason) "
+                    "VALUES (:uid,'google','127.0.0.1','retained-fixture',false,'fixture-failure')"
+                ),
+                {"uid": user_id},
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO audit.auth_events(user_id,event_type,details,ip_address,user_agent) "
+                    "VALUES (:uid,'account_deleted',CAST(:details AS jsonb),'127.0.0.1','retained-fixture')"
+                ),
+                {"uid": deleted_id, "details": '{"request_id":"retained-fixture","deleted":true}'},
+            )
+            # Capture every original column, including timestamps and revocation state.
+            for table in retained_tables:
+                rows = (
+                    (await connection.execute(text(f"SELECT to_jsonb(t) FROM {table} t")))
+                    .scalars()
+                    .all()
+                )
+                assert rows, f"retention fixture missing for {table}"
+                before_rows[table] = sorted(rows, key=lambda row: str(sorted(row.items())))
         await upgrade("head")
         await upgrade("head")
         async with migrated.connect() as connection:
             assert await connection.scalar(select(func.count()).select_from(Project)) == 1
+            for table in retained_tables:
+                rows = (
+                    await connection.execute(
+                        text(
+                            f"SELECT to_jsonb(t) - 'project_id' AS original, project_id FROM {table} t"
+                        )
+                    )
+                ).all()
+                assert (
+                    sorted((row.original for row in rows), key=lambda row: str(sorted(row.items())))
+                    == before_rows[table]
+                ), table
+                assert all(row.project_id == DEFAULT_PROJECT_ID for row in rows), table
+                assert (
+                    await connection.scalar(
+                        text(
+                            f"SELECT count(*) FROM {table} WHERE project_id IS NULL OR project_id <> :project_id"
+                        ),
+                        {"project_id": DEFAULT_PROJECT_ID},
+                    )
+                    == 0
+                )
             assert (
                 await connection.scalar(select(User.project_id).where(User.id == user_id))
                 == DEFAULT_PROJECT_ID
@@ -504,3 +602,90 @@ async def test_database_rejects_missing_row_ownership(database):
 def test_application_session_rejects_invalid_project(invalid_project):
     with pytest.raises(ValueError, match="project_id"):
         async_session_maker(project_id=invalid_project)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("interface", ["async", "sync"])
+async def test_public_project_connection_rejects_low_level_access(database, interface):
+    """Defensive contract only: never execute SQL through a returned connection."""
+    _, sessions, project_b = database
+    async with sessions(project_id=project_b) as db:
+        with pytest.raises(ValueError, match="project"):
+            if interface == "async":
+                await db.connection()
+            else:
+                await db.run_sync(lambda session: session.connection())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("event_kind", ["login", "event"])
+async def test_audit_rejects_user_from_another_project(database, event_kind):
+    engine, sessions, project_b = database
+    async with sessions(project_id=project_b) as db:
+        user = User()
+        db.add(user)
+        await db.commit()
+        user_id = user.id
+    try:
+        async with sessions(project_id=DEFAULT_PROJECT_ID) as db:
+            with pytest.raises(ValueError, match="project"):
+                if event_kind == "login":
+                    await AuditLogger.log_login(db, user_id, "google", True)
+                else:
+                    await AuditLogger.log_event(db, AuthEventType.LOGIN_SUCCESS, user_id)
+        async with engine.connect() as connection:
+            for table in ("audit.login_history", "audit.auth_events"):
+                assert (
+                    await connection.scalar(
+                        text(f"SELECT count(*) FROM {table} WHERE user_id = :id"), {"id": user_id}
+                    )
+                    == 0
+                )
+    finally:
+        # Cleanup only this fixture's rows, including any pre-fix rejected-contract artifact.
+        async with engine.begin() as connection:
+            for table in ("audit.login_history", "audit.auth_events"):
+                await connection.execute(
+                    text(f"DELETE FROM {table} WHERE user_id = :id"), {"id": user_id}
+                )
+
+
+@pytest.mark.asyncio
+async def test_audit_keeps_history_after_user_deletion(database):
+    engine, sessions, project_b = database
+    async with sessions(project_id=project_b) as db:
+        user = User()
+        db.add(user)
+        await db.commit()
+        user_id = user.id
+        await AuditLogger.log_login(db, user_id, "google", True)
+        await AuditLogger.log_event(db, AuthEventType.ACCOUNT_DELETED, user_id)
+        await db.delete(user)
+        await db.commit()
+        await AuditLogger.log_login(db, None, "google", False)
+    async with engine.connect() as connection:
+        for table in ("audit.login_history", "audit.auth_events"):
+            rows = (
+                (
+                    await connection.execute(
+                        text(f"SELECT project_id FROM {table} WHERE user_id = :id"), {"id": user_id}
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            assert rows == [project_b]
+
+
+@pytest.mark.asyncio
+async def test_audit_helpers_accept_only_fixed_operations(database):
+    from app.db.project import read_audit_counts, write_audit
+
+    _, sessions, project_b = database
+    async with sessions(project_id=project_b) as db:
+        with pytest.raises(ValueError, match="fixed project audit"):
+            await write_audit(db, text("SELECT 1"), {})
+        with pytest.raises(ValueError, match="Unknown project audit"):
+            await read_audit_counts(db, "unknown")
+        await AuditLogger.log_login(db, None, "google", False)
+        assert await read_audit_counts(db, "login_history") == [(False, 1)]

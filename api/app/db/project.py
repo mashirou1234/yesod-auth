@@ -6,7 +6,7 @@ raw SQL/bulk mutations cannot opt out of ownership filtering through execute().
 
 import uuid
 
-from sqlalchemy import event, inspect, text
+from sqlalchemy import event, inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session, with_loader_criteria
 
@@ -20,6 +20,9 @@ class ProjectSession(Session):
         except (ValueError, TypeError, AttributeError):
             raise ValueError("A valid project_id is required") from None
         super().__init__(*args, **kwargs)
+
+    def connection(self, *args, **kwargs):
+        raise ValueError("Raw connections are unavailable on a project session")
 
     def bulk_save_objects(self, *args, **kwargs):
         raise ValueError("Bulk writes cannot bypass project ownership")
@@ -37,6 +40,9 @@ class ProjectSession(Session):
 
 class ProjectAsyncSession(AsyncSession):
     sync_session_class = ProjectSession
+
+    async def connection(self, *args, **kwargs):
+        raise ValueError("Raw connections are unavailable on a project session")
 
 
 def project_id_of(db):
@@ -94,10 +100,56 @@ def _scope_writes(session, flush_context, instances):
             raise ValueError("Changing project ownership is forbidden")
 
 
+# These are the only raw SQL operations accepted by the internal audit consumer.
+# No connection or arbitrary caller-supplied SQL is returned by the public session.
+_AUDIT_INSERTS = (
+    "INSERT INTO audit.login_history "
+    "(project_id, user_id, provider, ip_address, user_agent, success, failure_reason) "
+    "VALUES (:project_id, :user_id, :provider, :ip_address, :user_agent, :success, :failure_reason)",
+    "INSERT INTO audit.auth_events "
+    "(project_id, user_id, event_type, details, ip_address, user_agent) "
+    "VALUES (:project_id, :user_id, :event_type, CAST(:details AS jsonb), :ip_address, :user_agent)",
+)
+_AUDIT_COUNTS = {
+    "login_history": "SELECT success, COUNT(*) FROM audit.login_history "
+    "WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours' GROUP BY success",
+    "auth_events": "SELECT event_type, COUNT(*) FROM audit.auth_events "
+    "WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours' GROUP BY event_type",
+}
+
+
+async def _execute_audit_sql(db, statement, values):
+    # Explicit superclass use is private to these fixed audit operations. It is
+    # not a public opt-out flag or connection accessor on ProjectSession.
+    return await db.run_sync(lambda session: Session.connection(session).execute(statement, values))
+
+
 async def write_audit(db, statement, values):
-    """Narrow raw SQL consumer: internal audit INSERTs always bind session ownership."""
+    """Validate audit subject ownership before executing one of two fixed INSERTs."""
+    from app.models import User
+
     project_id = project_id_of(db)
-    values = dict(values, project_id=str(project_id))
-    # Do not expose arbitrary raw SQL on the application session itself.
-    connection = await db.connection()
-    await connection.execute(statement, values)
+    normalized = " ".join(str(statement).split())
+    if normalized not in _AUDIT_INSERTS:
+        raise ValueError("Only fixed project audit inserts are permitted")
+    user_id = values.get("user_id")
+    if user_id is not None:
+        # The scoped read also locks the live subject until the audit commit.
+        # Audit history has no cascading user FK and survives later deletion.
+        subject = await db.scalar(
+            select(User.id).where(User.id == uuid.UUID(str(user_id))).with_for_update()
+        )
+        if subject is None:
+            raise ValueError("Audit user must belong to the session project")
+    await _execute_audit_sql(db, text(normalized), dict(values, project_id=str(project_id)))
+
+
+async def read_audit_counts(db, kind):
+    """Return project-local metrics without exposing raw SQL or a connection."""
+    project_id = project_id_of(db)
+    if kind not in _AUDIT_COUNTS:
+        raise ValueError("Unknown project audit counter")
+    result = await _execute_audit_sql(
+        db, text(_AUDIT_COUNTS[kind]), {"project_id": str(project_id)}
+    )
+    return result.fetchall()
