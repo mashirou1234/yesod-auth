@@ -2,13 +2,12 @@
 import streamlit as st
 import pandas as pd
 import graphviz
-import hashlib
 import hmac
 import base64
 import logging
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
-from config import settings, warn_if_session_cookie_samesite_unset
+from auth_session import clear_session, is_authenticated, start_session
+from config import settings
 from i18n import (
     Translator,
     SUPPORTED_LANGUAGES,
@@ -45,13 +44,6 @@ st.set_page_config(
     layout="wide",
 )
 
-warn_if_session_cookie_samesite_unset(
-    logger,
-    environment=settings.ENVIRONMENT,
-    session_cookie_samesite=settings.SESSION_COOKIE_SAMESITE,
-    session_cookie_secure=settings.SESSION_COOKIE_SECURE,
-)
-
 
 def get_translator() -> Translator:
     """Get translator instance based on session state."""
@@ -60,100 +52,43 @@ def get_translator() -> Translator:
     return Translator(st.session_state.language)
 
 
-def generate_session_token(expiry: datetime) -> str:
-    """Generate a secure session token with expiry."""
-    expiry_ts = int(expiry.timestamp())
-    message = f"{settings.ADMIN_USER}:{expiry_ts}"
-    signature = hmac.new(
-        settings.ADMIN_PASSWORD.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()[:32]
-    return f"{expiry_ts}.{signature}"
-
-
-def validate_session_token(token: str) -> bool:
-    """Validate session token."""
-    try:
-        parts = token.split(".")
-        if len(parts) != 2:
-            return False
-        
-        expiry_ts, signature = parts
-        expiry_ts = int(expiry_ts)
-        expiry = datetime.fromtimestamp(expiry_ts, tz=timezone.utc)
-        
-        # Check expiry
-        if expiry < datetime.now(timezone.utc):
-            return False
-        
-        # Verify signature
-        message = f"{settings.ADMIN_USER}:{expiry_ts}"
-        expected = hmac.new(
-            settings.ADMIN_PASSWORD.encode(),
-            message.encode(),
-            hashlib.sha256
-        ).hexdigest()[:32]
-        
-        return hmac.compare_digest(signature, expected)
-    except (ValueError, TypeError):
-        return False
+def require_admin_auth() -> None:
+    """Recheck the absolute deadline immediately before protected operations."""
+    if not is_authenticated(
+        st.session_state, settings.ADMIN_USER, settings.SESSION_EXPIRY_HOURS * 3600
+    ):
+        st.rerun()
+        st.stop()
 
 
 def check_auth():
-    """Authentication check with URL-based session persistence."""
+    """Authenticate only through server-side state for this Streamlit connection."""
+    # Old bookmarks are never authentication inputs and must not retain credentials.
+    if "session" in st.query_params:
+        del st.query_params["session"]
+    if is_authenticated(
+        st.session_state, settings.ADMIN_USER, settings.SESSION_EXPIRY_HOURS * 3600
+    ):
+        return True
+
     t = get_translator()
-
-    # Initialize session state
-    if "authenticated" not in st.session_state:
-        st.session_state.authenticated = False
-    if "session_token" not in st.session_state:
-        st.session_state.session_token = None
-
-    # Check for session token in query params
-    token = st.query_params.get("session")
-
-    if token and validate_session_token(token):
-        st.session_state.authenticated = True
-        st.session_state.session_token = token
-        return True
-
-    # Check session state (already authenticated in this session)
-    if st.session_state.authenticated:
-        if st.session_state.session_token and validate_session_token(st.session_state.session_token):
-            return True
-        # Token expired or invalid, but still in same session - allow access
-        # (will need to re-login on next page load)
-        return True
-
-    # Show login form
     st.title(f"🔐 {t('app.login_title')}")
-
-    with st.form("login"):
+    st.caption(t("login.session_notice"))
+    with st.form("login", clear_on_submit=True):
         username = st.text_input(t("login.username"))
         password = st.text_input(t("login.password"), type="password")
-        remember = st.checkbox(t("login.remember_me"), value=True)
         submitted = st.form_submit_button(t("login.login_button"))
-
         if submitted:
-            if username == settings.ADMIN_USER and password == settings.ADMIN_PASSWORD:
-                st.session_state.authenticated = True
-
-                if remember:
-                    expiry = datetime.now(timezone.utc) + timedelta(hours=settings.SESSION_EXPIRY_HOURS)
-                    token = generate_session_token(expiry)
-                    st.session_state.session_token = token
-                    # Set query param for persistence
-                    st.query_params["session"] = token
-
+            if (
+                hmac.compare_digest(username.encode(), settings.ADMIN_USER.encode())
+                and hmac.compare_digest(password.encode(), settings.ADMIN_PASSWORD.encode())
+            ):
+                start_session(
+                    st.session_state, settings.ADMIN_USER, settings.SESSION_EXPIRY_HOURS * 3600
+                )
                 st.rerun()
             else:
                 st.error(t("login.invalid_credentials"))
-
-    # Show bookmark hint
-    if st.session_state.get("session_token"):
-        st.info(t("login.bookmark_tip"))
-
     return False
 
 
@@ -163,6 +98,7 @@ def show_overview():
     render_tour_anchor("overview-summary")
 
     try:
+        require_admin_auth()
         stats = db.get_stats()
 
         col1, col2, col3 = st.columns(3)
@@ -180,6 +116,7 @@ def show_users():
     render_tour_anchor("users-page")
 
     try:
+        require_admin_auth()
         users_df = db.get_users()
 
         if users_df.empty:
@@ -202,6 +139,7 @@ def show_users():
 
             with col1:
                 st.write(f"**{t('users.oauth_accounts')}**")
+                require_admin_auth()
                 oauth_df = db.get_user_oauth_accounts(selected_user)
                 if not oauth_df.empty:
                     st.dataframe(oauth_df, hide_index=True)
@@ -211,6 +149,7 @@ def show_users():
             with col2:
                 st.write(f"**{t('users.actions')}**")
                 if st.button(t("users.revoke_all_sessions"), key="revoke_all"):
+                    require_admin_auth()
                     count = db.revoke_all_user_sessions(selected_user)
                     st.success(t("users.revoked_sessions", count=count))
                     st.rerun()
@@ -225,6 +164,7 @@ def show_sessions():
     render_tour_anchor("sessions-page")
 
     try:
+        require_admin_auth()
         sessions_df = db.get_sessions()
 
         if sessions_df.empty:
@@ -240,7 +180,7 @@ def show_sessions():
 
         filtered_df = sessions_df.copy()
         if not show_revoked:
-            filtered_df = filtered_df[filtered_df["Revoked"] == False]
+            filtered_df = filtered_df[filtered_df["Revoked"].eq(False)]
         if not show_expired:
             filtered_df = filtered_df[
                 pd.to_datetime(filtered_df["Expires At"]) > pd.Timestamp.now(tz="UTC")
@@ -258,6 +198,7 @@ def show_sessions():
         if session_ids:
             selected_session = st.selectbox(t("sessions.select_session"), session_ids)
             if st.button(t("sessions.revoke_selected")):
+                require_admin_auth()
                 db.revoke_session(selected_session)
                 st.success(t("sessions.session_revoked"))
                 st.rerun()
@@ -274,6 +215,7 @@ def show_valkey_status():
     try:
         # OAuth States
         st.subheader(t("valkey.oauth_states"))
+        require_admin_auth()
         states = valkey_client.get_oauth_states()
         if states:
             st.dataframe(pd.DataFrame(states), hide_index=True)
@@ -282,6 +224,7 @@ def show_valkey_status():
 
         # Rate Limits
         st.subheader(t("valkey.rate_limits"))
+        require_admin_auth()
         limits = valkey_client.get_rate_limit_info()
         if limits:
             st.dataframe(pd.DataFrame(limits), hide_index=True)
@@ -299,6 +242,7 @@ def show_audit_logs():
 
     try:
         # Stats
+        require_admin_auth()
         stats = db.get_audit_stats()
 
         col1, col2, col3 = st.columns(3)
@@ -314,6 +258,7 @@ def show_audit_logs():
         with tab1:
             st.subheader(t("audit.login_history"))
 
+            require_admin_auth()
             login_df = db.get_login_history(100)
             if login_df.empty:
                 st.info(t("audit.no_login_history"))
@@ -327,15 +272,16 @@ def show_audit_logs():
 
                 filtered_df = login_df.copy()
                 if not show_success:
-                    filtered_df = filtered_df[filtered_df["Success"] == False]
+                    filtered_df = filtered_df[filtered_df["Success"].eq(False)]
                 if not show_failed:
-                    filtered_df = filtered_df[filtered_df["Success"] == True]
+                    filtered_df = filtered_df[filtered_df["Success"].eq(True)]
 
                 st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
         with tab2:
             st.subheader(t("audit.auth_events"))
 
+            require_admin_auth()
             events_df = db.get_auth_events(100)
             if events_df.empty:
                 st.info(t("audit.no_auth_events"))
@@ -504,6 +450,7 @@ def show_api_test():
         if st.button("GET /users/me", key="get_user"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.get(f"{API_INTERNAL}/users/me", headers=headers)
                 st.json(resp.json())
                 st.write(f"{t('common.status')}: {resp.status_code}")
@@ -525,6 +472,7 @@ def show_api_test():
                 if new_avatar_url:
                     data["avatar_url"] = new_avatar_url
 
+                require_admin_auth()
                 resp = requests.patch(
                     f"{API_INTERNAL}/users/me",
                     headers=headers,
@@ -548,6 +496,7 @@ def show_api_test():
         if st.button(f"POST /users/me/sync-from-provider?provider={sync_provider}", key="sync_profile"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.post(
                     f"{API_INTERNAL}/users/me/sync-from-provider?provider={sync_provider}",
                     headers=headers,
@@ -563,6 +512,7 @@ def show_api_test():
         if st.button("GET /accounts", key="list_accounts"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.get(f"{API_INTERNAL}/accounts", headers=headers)
                 st.json(resp.json())
                 st.write(f"{t('common.status')}: {resp.status_code}")
@@ -639,6 +589,7 @@ def show_api_test():
         if st.button(f"DELETE /accounts/{unlink_provider}", key="unlink"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.delete(
                     f"{API_INTERNAL}/accounts/{unlink_provider}",
                     headers=headers,
@@ -654,6 +605,7 @@ def show_api_test():
         if st.button("GET /sessions", key="list_sessions"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.get(f"{API_INTERNAL}/sessions", headers=headers)
                 data = resp.json()
                 st.json(data)
@@ -673,6 +625,7 @@ def show_api_test():
             if session_id:
                 try:
                     import requests
+                    require_admin_auth()
                     resp = requests.delete(
                         f"{API_INTERNAL}/sessions/{session_id}",
                         headers=headers,
@@ -689,6 +642,7 @@ def show_api_test():
         if st.button(f"DELETE /sessions ({t('api_test.revoke_all')})", key="revoke_all_sessions"):
             try:
                 import requests
+                require_admin_auth()
                 resp = requests.delete(f"{API_INTERNAL}/sessions", headers=headers)
                 st.json(resp.json())
                 st.write(f"{t('common.status')}: {resp.status_code}")
@@ -702,7 +656,9 @@ def show_db_schema():
     render_tour_anchor("db-schema-page")
 
     try:
+        require_admin_auth()
         table_info = db.get_table_info()
+        require_admin_auth()
         relationships = db.get_table_relationships()
 
         # Tab layout
@@ -838,13 +794,13 @@ def main():
     sync_page_from_query()
 
     # Environment badge (only show in non-production environments)
-    if settings.ENVIRONMENT:
+    if settings.RUNTIME_MODE != "production":
         env_colors = {
             "CI": "#f44336",      # Red
             "DEV": "#ff9800",     # Orange
             "STAGING": "#2196f3", # Blue
         }
-        env_name = settings.ENVIRONMENT.upper()
+        env_name = settings.RUNTIME_MODE.upper()
         color = env_colors.get(env_name, "#9e9e9e")
         st.markdown(
             f'<div style="background: {color}; color: white; padding: 8px 16px; '
@@ -874,8 +830,7 @@ def main():
         st.rerun()
 
     if st.sidebar.button(t("nav.logout")):
-        st.session_state.authenticated = False
-        st.session_state.session_token = None
+        clear_session(st.session_state)
         st.query_params.clear()
         st.rerun()
 

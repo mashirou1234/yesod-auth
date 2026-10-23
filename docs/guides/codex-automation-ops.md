@@ -10,7 +10,7 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 | `<ORCH_RUN_COMMAND>` | 自動レーン実行コマンド | 実行環境ごとの orch 実コマンド |
 | `<REPO_SLUG>` | `owner/repo` 形式 | `mashirou1234/yesod-auth` |
 | `<BASE_BRANCH>` | 既定マージ先ブランチ | `main` |
-| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` など |
+| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `ci/woodpecker/pr/woodpecker`。GitHub Actions の `python-foundation` は実際の PR check 名を確認して登録する |
 | `<LABEL_SET>` | codex 系ラベルセット | `codex`, `codex-automation`, `codex:priority`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened` |
 
 ## 2. 標準運用ルール（テンプレ文面）
@@ -54,6 +54,9 @@ bash scripts/weekly_git_inventory.sh
 ```
 
 ## 4. Woodpecker docs-only CI 分岐ルール
+
+M0 の現行 CI は文書変更も含めて通常の Python 検証を実行します。以下は軽量分岐を再導入する場合の条件です。
+無条件の自動承認・自動 merge workflow は撤去しました。品質検証とレビューの採用判断を別に扱います。
 
 - 対象ファイル: `docs/**`, `README.md`, `AGENTS.md`
 - 変更が対象のみ: 重い検証ステップをスキップ

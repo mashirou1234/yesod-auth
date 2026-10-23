@@ -42,6 +42,8 @@ async def test_users_me_rejects_expired_token(client: AsyncClient):
         token_settings.JWT_SECRET,
         algorithms=[token_settings.JWT_ALGORITHM],
         options={"verify_exp": False},
+        audience=token_settings.JWT_AUDIENCE,
+        issuer=token_settings.JWT_ISSUER,
     )
     payload["exp"] = int((datetime.now(UTC) - timedelta(minutes=1)).timestamp())
 
@@ -68,6 +70,8 @@ async def test_users_me_rejects_token_without_kid_header(client: AsyncClient):
     token = jwt.encode(
         {
             "sub": "00000000-0000-0000-0000-000000000001",
+            "iss": settings.JWT_ISSUER,
+            "aud": settings.JWT_AUDIENCE,
             "email": "user@example.com",
             "exp": datetime.now(UTC) + timedelta(minutes=5),
             "type": "access",
@@ -109,6 +113,8 @@ async def test_users_me_rejects_token_with_invalid_kid_header_value(
     token = jwt.encode(
         {
             "sub": "00000000-0000-0000-0000-000000000001",
+            "iss": settings.JWT_ISSUER,
+            "aud": settings.JWT_AUDIENCE,
             "email": "user@example.com",
             "exp": datetime.now(UTC) + timedelta(minutes=5),
             "type": "access",

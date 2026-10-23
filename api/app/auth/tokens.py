@@ -24,6 +24,8 @@ def create_access_token(user_id: str, email: str) -> str:
         "email": email,
         "exp": expire,
         "type": "access",
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
     }
     return jwt.encode(
         payload,
@@ -40,6 +42,14 @@ def decode_access_token(token: str) -> dict | None:
             token,
             settings.JWT_SECRET,
             algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=settings.JWT_AUDIENCE,
+            options={
+                "require_iss": True,
+                "require_aud": True,
+                "require_exp": True,
+                "require_sub": True,
+            },
         )
         if payload.get("type") != "access":
             return None

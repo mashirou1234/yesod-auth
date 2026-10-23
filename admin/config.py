@@ -1,12 +1,16 @@
 """Admin configuration."""
 import logging
 import os
-from typing import Protocol
 
 logger = logging.getLogger(__name__)
 
-
-SUPPORTED_SESSION_COOKIE_SAMESITE = {"lax", "strict", "none"}
+# Keep aligned with the separately deployed API's bounded common-pattern guard.
+# Passing these checks does not establish entropy or password uniqueness.
+COMMON_SECRET_PATTERNS = (
+    "password", "passw0rd", "p@ssw0rd", "qwerty", "letmein", "changeme",
+    "welcome123", "admin123", "1234567890", "0123456789", "9876543210",
+    "abcdefghijklmnopqrstuvwxyz",
+)
 
 
 def read_secret(name: str, default: str = "") -> str:
@@ -42,7 +46,7 @@ def read_bounded_float_env(
 def read_session_expiry_hours_env(
     name: str = "SESSION_EXPIRY_HOURS",
     *,
-    default: int = 24,
+    default: int = 1,
 ) -> int:
     raw = os.getenv(name)
     if raw is None:
@@ -63,88 +67,43 @@ def read_session_expiry_hours_env(
     return value
 
 
-def normalize_session_cookie_samesite(value: str) -> str:
-    normalized = value.strip().lower()
-    if normalized in SUPPORTED_SESSION_COOKIE_SAMESITE:
-        return normalized
-    return ""
-
-
 class Settings:
-    # Use sync driver (psycopg2) for Streamlit
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL",
-        "postgresql://yesod_user:yesod_password@localhost:5432/yesod"
-    )
-    VALKEY_URL: str = os.getenv("VALKEY_URL", "redis://localhost:6379/0")
-    VALKEY_RECONNECT_WAIT_SECONDS: float = read_bounded_float_env(
-        "VALKEY_RECONNECT_WAIT_SECONDS",
-        default=0.2,
-        minimum=0.05,
-        maximum=30.0,
-    )
-    ADMIN_USER: str = os.getenv("ADMIN_USER", "admin")
-    ADMIN_PASSWORD: str = read_secret("admin_password", "admin")
-    
-    # Environment indicator (empty = production, otherwise shows badge)
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "")
-    
-    # Session persistence (hours)
-    SESSION_EXPIRY_HOURS: int = read_session_expiry_hours_env()
-    # SameSite(None) is only valid when Secure=true.
-    SESSION_COOKIE_SECURE: bool = os.getenv("SESSION_COOKIE_SECURE", "false").lower() in (
-        "1",
-        "true",
-        "yes",
-        "on",
-    )
-    # Empty/unknown means "use framework default" and emit a warning for visibility.
-    SESSION_COOKIE_SAMESITE: str = normalize_session_cookie_samesite(
-        os.getenv("SESSION_COOKIE_SAMESITE", "")
-    )
-
-    # Default language (en, ja, fr, ko, de)
-    DEFAULT_LANGUAGE: str = os.getenv("DEFAULT_LANGUAGE", "en")
+    def __init__(self) -> None:
+        self.RUNTIME_MODE = os.getenv("RUNTIME_MODE", "production").strip().lower()
+        if self.RUNTIME_MODE not in {"development", "test", "production"}:
+            raise ValueError("RUNTIME_MODE must be development, test, or production")
+        self.DATABASE_URL = os.getenv(
+            "DATABASE_URL", "postgresql+psycopg2://yesod_user:yesod_password@localhost:5432/yesod"
+        )
+        self.VALKEY_URL = os.getenv("VALKEY_URL", "redis://localhost:6379/0")
+        self.VALKEY_RECONNECT_WAIT_SECONDS = read_bounded_float_env(
+            "VALKEY_RECONNECT_WAIT_SECONDS", default=0.2, minimum=0.05, maximum=30.0
+        )
+        self.ADMIN_USER = os.getenv("ADMIN_USER", "admin").strip()
+        self.ADMIN_PASSWORD = read_secret(
+            "admin_password", "" if self.RUNTIME_MODE == "production" else "admin"
+        )
+        if not self.ADMIN_USER:
+            raise ValueError("ADMIN_USER must be non-empty")
+        if self.RUNTIME_MODE == "production":
+            password = self.ADMIN_PASSWORD
+            if (
+                len(password) < 16
+                or len(set(password)) < 8
+                or password.casefold() == self.ADMIN_USER.casefold()
+                or any(pattern in password.casefold() for pattern in COMMON_SECRET_PATTERNS)
+                or any(marker in password.lower() for marker in (
+                    "change-me", "change_me", "development", "your-password", "example",
+                ))
+            ):
+                raise ValueError(
+                    "ADMIN_PASSWORD must be randomly generated and non-default (16+ characters); "
+                    "the format and common-pattern checks failed"
+                )
+        self.SESSION_EXPIRY_HOURS = read_session_expiry_hours_env()
+        if self.SESSION_EXPIRY_HOURS > 24:
+            raise ValueError("SESSION_EXPIRY_HOURS must be at most 24")
+        self.DEFAULT_LANGUAGE = os.getenv("DEFAULT_LANGUAGE", "en")
 
 
 settings = Settings()
-
-
-class WarningLogger(Protocol):
-    def warning(self, msg: str, *args) -> None: ...
-
-
-def warn_if_session_cookie_samesite_unset(
-    logger: WarningLogger,
-    *,
-    environment: str,
-    session_cookie_samesite: str,
-    session_cookie_secure: bool = True,
-) -> bool:
-    env_name = environment.strip() or "production"
-    raw_samesite = session_cookie_samesite.strip()
-    samesite = normalize_session_cookie_samesite(raw_samesite)
-
-    if raw_samesite and not samesite:
-        logger.warning(
-            "SESSION_COOKIE_SAMESITE=%r is unsupported; falling back to framework default (environment=%s)",
-            raw_samesite,
-            env_name,
-        )
-        return True
-
-    if not samesite:
-        logger.warning(
-            "SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=%s)",
-            env_name,
-        )
-        return True
-
-    if samesite == "none" and not session_cookie_secure:
-        logger.warning(
-            "SESSION_COOKIE_SAMESITE=None requires SESSION_COOKIE_SECURE=true for admin session cookie (environment=%s)",
-            env_name,
-        )
-        return True
-
-    return False

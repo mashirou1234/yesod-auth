@@ -1,0 +1,739 @@
+{
+  "format": "yesod-oss-verification-v1",
+  "verified_at": "2026-10-22T23:21:16.120864+00:00",
+  "candidate_id": "oss-m0-candidate-2",
+  "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+  "manifest_digest_algorithm": "sha256(json.dumps(manifest, sort_keys=True, separators=(comma, colon)).encode())",
+  "baseline_revision": "e3a896f83875aee27fb9fd4152933de24dbdd711",
+  "baseline_digest": "sha256:49a70d81af0c812b12c64537fc06b3c0f65c3aa28e2e7472efbcfde0772178be",
+  "manifest": [
+    {
+      "path": ".github/workflows/ci.yml",
+      "sha256": "3299501f68b0282e6ab25f69378a4b9e82a959f622496786666352ed76e8954e"
+    },
+    {
+      "path": ".github/workflows/pr-auto-approve.yml",
+      "sha256": null
+    },
+    {
+      "path": ".github/workflows/pr-auto-merge.yml",
+      "sha256": null
+    },
+    {
+      "path": ".woodpecker.yml",
+      "sha256": "9c970b522f31f321edc29bd8a22569d02811c47162febe8b5663fab13c56870a"
+    },
+    {
+      "path": "README.md",
+      "sha256": "3697bcc08c0da5b0c6b96962ea0558e781a5e0f6d50e5d7b2e6a2d7362233fe6"
+    },
+    {
+      "path": "admin/.gitignore",
+      "sha256": "4d56952b0fb13bf8f9b6c13a6d4c34a075bac3af447636a1df4335d7576e2f97"
+    },
+    {
+      "path": "admin/Dockerfile",
+      "sha256": "44f06c9bb6e6eff0e438c556d27aa2dc3ccec36bd74cf9a12586c32a4a4a54a8"
+    },
+    {
+      "path": "admin/app.py",
+      "sha256": "0cbff15e263cc1eafb0abd6796eb7d62377c7e1ba6a1fc478278651ba1abeba9"
+    },
+    {
+      "path": "admin/auth_session.py",
+      "sha256": "37b6711eaad222bd1f205523bdb57d312a0f834f724a8a2b15670ff651c1d25a"
+    },
+    {
+      "path": "admin/config.py",
+      "sha256": "0a4e815a2e7e62c17587bb7d209cd0a3e0296f241e2c617b2e04c7c356075dc2"
+    },
+    {
+      "path": "admin/i18n.py",
+      "sha256": "ade0903d72633d988890df3d3bcf851b5c52922b4659008eb903b4f20a8760c9"
+    },
+    {
+      "path": "admin/locales/de.json",
+      "sha256": "d4f97fd399caed83eedb745ce85fb5bd0af57d14cabab88e54bbdbff4d759b79"
+    },
+    {
+      "path": "admin/locales/en.json",
+      "sha256": "ddc802aa8032c936b100d6780720d7a3bfe748bbeebd44746dfc89fc805cdf7c"
+    },
+    {
+      "path": "admin/locales/fr.json",
+      "sha256": "0a52c68614577422142935b5c223f817801dbd977391b133a2b5b02c3b67863a"
+    },
+    {
+      "path": "admin/locales/ja.json",
+      "sha256": "1330643e95214345372a9e8a425151d4bc0f1bebb11b2139cc390265e234b98c"
+    },
+    {
+      "path": "admin/locales/ko.json",
+      "sha256": "eb0e44c07392040ac284d668133aae33656bcfd83a81823a7e06410efb7037aa"
+    },
+    {
+      "path": "admin/requirements.txt",
+      "sha256": "2ed713a99231d896a97102f74056e9c2a1e832505b4f041c479dc664a785bcc5"
+    },
+    {
+      "path": "admin/tests/conftest.py",
+      "sha256": "0b081a8c65167fa22bded09699306581f6a423d60be4fe705fe8d12324092506"
+    },
+    {
+      "path": "admin/tests/test_auth_session.py",
+      "sha256": "1705e0c953e834071d07de7c785373740cab4200c006329e15370df86fa22659"
+    },
+    {
+      "path": "admin/tests/test_auth_ui.py",
+      "sha256": "cff01dd1d6ce6b48fa9e5415d4feb4dbced210474f63d9c8a8f21bdcbb692fca"
+    },
+    {
+      "path": "admin/tests/test_runtime_security.py",
+      "sha256": "2669cee98a727e2f2a4855f9808956ee0c8b9db87344134ab6e26269b847cf24"
+    },
+    {
+      "path": "admin/tests/test_session_cookie_samesite.py",
+      "sha256": null
+    },
+    {
+      "path": "admin/tests/test_session_expiry_hours.py",
+      "sha256": "1391bb8bee1e274774c88275911d3c1bed1f326aa921cb9947bba1fd78016581"
+    },
+    {
+      "path": "api/.dockerignore",
+      "sha256": "d6784396f2de8a4599739d9040edc8d4f5dd07f05613ab91185652d8e34108b6"
+    },
+    {
+      "path": "api/Dockerfile",
+      "sha256": "ed8d1491f93c8e8f396e179dad20fdbb9245aaed5c6b179dbe009f85077575c1"
+    },
+    {
+      "path": "api/app/auth/router.py",
+      "sha256": "d56f5a93675771aaab7416819bc72c549bbdb1c71d05d9eae2c97924d1e620b2"
+    },
+    {
+      "path": "api/app/auth/tokens.py",
+      "sha256": "c9d8863e297f48cffd8e73a725b685878f76223ce508174d291360c37c5bf238"
+    },
+    {
+      "path": "api/app/config.py",
+      "sha256": "24f2d8110162dcccbedd4cc71107cc8af14b07266af02b8449df347f70bf538d"
+    },
+    {
+      "path": "api/integration/test_services.py",
+      "sha256": "0d44d1e3d6c6b8e2dd9f31363318a4a06ce94ece0315e2a525bcd52873da0213"
+    },
+    {
+      "path": "api/integration/wait_services.py",
+      "sha256": "841a102c1296d91e631dff8fb6998578c2674d88e76b1b24f87ddc595444a08a"
+    },
+    {
+      "path": "api/requirements.txt",
+      "sha256": "e00e8bee2f70157e5f563a02c0f365a51d5555d35e0cebfbe277c4b3df939bf9"
+    },
+    {
+      "path": "api/tests/conftest.py",
+      "sha256": "793e62f31cdca276b60e040a3a2eb4cf42fa153f4af748846d0438336e1e6f51"
+    },
+    {
+      "path": "api/tests/test_config.py",
+      "sha256": "8748c4b9671c019e21d008c0675d7f470e56e1c2f01a077fb646fde66399d110"
+    },
+    {
+      "path": "api/tests/test_foundation_security.py",
+      "sha256": "f6feb37a6d211c116a9d26f391c8d5489f103a702a6a256cf67f727d1c8134c9"
+    },
+    {
+      "path": "api/tests/test_sessions.py",
+      "sha256": "4b09079e1dec212cf5225340533358169a41357cf64d38502ca2f78ea60e65d4"
+    },
+    {
+      "path": "api/tests/test_users_me_auth.py",
+      "sha256": "6f8de50d551b98dd4c4834057bf25cf1edf62d733b886f5c41c169b91a8de7d3"
+    },
+    {
+      "path": "docker-compose.yml",
+      "sha256": "e6a53a01cec7ce69c7d0c3cd38b9eed8a1ff75459335447a51e0f8eebfeef2a6"
+    },
+    {
+      "path": "docs/architecture/app-registration-login-spec.md",
+      "sha256": "785ff0de5af4cf4653ed9599f33f347db4aa07b4afb3c2f442560c49ee2fb92e"
+    },
+    {
+      "path": "docs/architecture/oss-issue-map.md",
+      "sha256": "e6328e0906b96c6c714b14f023f7dcb1274a4a723e7f71a625a940a30584b742"
+    },
+    {
+      "path": "docs/architecture/oss-roadmap.md",
+      "sha256": "5ad092ff2a24601b0bbe407d106ffd0ec207b25b7e21ecd1d9f0d53a1a4dfc3a"
+    },
+    {
+      "path": "docs/guides/codex-automation-ops.md",
+      "sha256": "a16d0251bc422868b461291c05ab4a45b3c9ad9f0c5eb3a83627c170e55d2a19"
+    },
+    {
+      "path": "docs/guides/foundation-safety.md",
+      "sha256": "386a149422d7ad00627be6c97445f8add4430ab92e7e632d404b77c2da984ad2"
+    },
+    {
+      "path": "scripts/verify-foundation.sh",
+      "sha256": "0bcd2d54504d284c46fc6445e3b81cfea4884d9fce5a9e80ab75d209cb20e3eb"
+    }
+  ],
+  "environment": {
+    "recorded_after_execution": true,
+    "service_compose_sha256": "93b257ac39587a224afab7d3d34e554acce9eaf025b2d23adf1a6a50dd441750",
+    "selected_environment": {
+      "PYTHON_BIN": "<python3.12>",
+      "FOUNDATION_TEST_DATABASE_URL": "postgresql+asyncpg://yesod_ci:ci-disposable-password@127.0.0.1:15432/yesod_foundation_test",
+      "FOUNDATION_TEST_VALKEY_URL": "redis://127.0.0.1:16379/0"
+    },
+    "credentials": "public synthetic disposable fixtures; not deployment secrets",
+    "inherited_environment": "not fully archived"
+  },
+  "commands": [
+    {
+      "label": "final-python-version",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "<python3.12>",
+        "--version"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:03.567374+00:00",
+      "finished_at": "2026-10-22T23:14:03.573695+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-python-version.log",
+      "log_sha256": "9bdce2f3bc127762fcb79db8faf0385c42e81e916436db64486d7162bc1d04e0",
+      "summary": [
+        "Python 3.12.15"
+      ]
+    },
+    {
+      "label": "final-bun-version",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "mise",
+        "exec",
+        "bun@1.4.4",
+        "--",
+        "bun",
+        "--version"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:03.573961+00:00",
+      "finished_at": "2026-10-22T23:14:03.651050+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-bun-version.log",
+      "log_sha256": "d03d8b268b4171328ac2458ce8ca82d69a1fde38469d4e4faae4f8fa8d8a5e35",
+      "summary": [
+        "1.4.4"
+      ]
+    },
+    {
+      "label": "final-services-up",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "docker",
+        "compose",
+        "-p",
+        "yesod-m0-final",
+        "-f",
+        "/tmp/yesod-foundation-services.yml",
+        "up",
+        "-d",
+        "--wait"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:03.651340+00:00",
+      "finished_at": "2026-10-22T23:14:06.432009+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-services-up.log",
+      "log_sha256": "d71d4b11f2e746186b7402379004aae3d9dfbd5f4ad2065244c45d82981c1c2f",
+      "summary": [
+        " Container yesod-m0-final-valkey-1 Started ",
+        " Container yesod-m0-final-postgres-1 Started ",
+        " Container yesod-m0-final-postgres-1 Waiting ",
+        " Container yesod-m0-final-valkey-1 Waiting ",
+        " Container yesod-m0-final-valkey-1 Healthy ",
+        " Container yesod-m0-final-postgres-1 Healthy "
+      ]
+    },
+    {
+      "label": "final-common-all",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "mise",
+        "exec",
+        "bun@1.4.4",
+        "--",
+        "bash",
+        "scripts/verify-foundation.sh",
+        "all"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:06.433202+00:00",
+      "finished_at": "2026-10-22T23:14:12.471536+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-common-all.log",
+      "log_sha256": "c9347ec290387dc2e181fe7ce2fd4ae0ca346818bbc30ad3d643c0bde53e8b32",
+      "summary": [
+        "asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function",
+        "collecting ... collected 1 item",
+        "",
+        "integration/test_services.py::test_postgres_token_lifecycle_and_valkey_state PASSED [100%]",
+        "",
+        "============================== 1 passed in 0.36s ==============================="
+      ]
+    },
+    {
+      "label": "final-woodpecker-lint",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "/Users/mashirou/.local/bin/woodpecker-cli",
+        "--disable-update-check",
+        "lint",
+        "--strict",
+        ".woodpecker.yml"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:12.472126+00:00",
+      "finished_at": "2026-10-22T23:14:12.561705+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-woodpecker-lint.log",
+      "log_sha256": "7f338102d60e9d48b8a0ee1e69ad6f0a8d8a110f285beaba8bd05749adb82f94",
+      "summary": [
+        "✅ Config is valid"
+      ]
+    },
+    {
+      "label": "final-expired-admin-probe",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "<python3.12>",
+        "-c",
+        "import runpy; ns=runpy.run_path('/tmp/yesod-m0-baseline-red/admin/test_m0_expired_regression.py'); fn=ns['test_expired_legacy_session_must_not_read_dashboard']; fn.__globals__['__file__']='<candidate2>/admin/virtual_probe.py'; fn(); print('Same baseline expiry regression probe: PASS')"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:12.562097+00:00",
+      "finished_at": "2026-10-22T23:14:13.094486+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-expired-admin-probe.log",
+      "log_sha256": "88801979d4cf7f8ea7df1db182503728a7780645b375026c816f82d408deea7f",
+      "summary": [
+        "2026-10-23 08:14:12.677 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+        "2026-10-23 08:14:12.677 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+        "2026-10-23 08:14:12.677 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+        "Same baseline expiry regression probe: PASS"
+      ]
+    },
+    {
+      "label": "final-api-build",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "-t",
+        "yesod-m0-api-final",
+        "api"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:13.094955+00:00",
+      "finished_at": "2026-10-22T23:14:30.401319+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-api-build.log",
+      "log_sha256": "50fcdadedf5fb79cbf090f336a58cd6a8168663cdfe2df12329a1a890e363593",
+      "summary": [
+        "#11 naming to docker.io/library/yesod-m0-api-final:latest done",
+        "#11 unpacking to docker.io/library/yesod-m0-api-final:latest",
+        "#11 unpacking to docker.io/library/yesod-m0-api-final:latest 0.5s done",
+        "#11 DONE 3.3s",
+        "",
+        "View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/4o1f4bg1h78qte73m8lwbs6jz"
+      ]
+    },
+    {
+      "label": "final-admin-build",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "docker",
+        "build",
+        "--progress=plain",
+        "-t",
+        "yesod-m0-admin-final",
+        "admin"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:14:30.402505+00:00",
+      "finished_at": "2026-10-22T23:15:18.415881+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-admin-build.log",
+      "log_sha256": "2accb53fc06a84d24389ce3854280713d82c084fdbe3a64e604f52eeaf88c2c0",
+      "summary": [
+        "#20 naming to docker.io/library/yesod-m0-admin-final:latest done",
+        "#20 unpacking to docker.io/library/yesod-m0-admin-final:latest",
+        "#20 unpacking to docker.io/library/yesod-m0-admin-final:latest 2.3s done",
+        "#20 DONE 11.3s",
+        "",
+        "View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/7o8vl54mrvtxspmq2vrke3tp4"
+      ]
+    },
+    {
+      "label": "final-api-image-tests",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "docker",
+        "run",
+        "--rm",
+        "-v",
+        "<candidate2>/docker-compose.yml:/docker-compose.yml:ro",
+        "-e",
+        "RUNTIME_MODE=test",
+        "-e",
+        "TESTING=1",
+        "-e",
+        "MOCK_OAUTH_ENABLED=1",
+        "-e",
+        "DEBUG_OAUTH_ENABLED=0",
+        "-e",
+        "JWT_SECRET=ci-only-jwt-signing-fixture-0123456789abcdef",
+        "yesod-m0-api-final",
+        "pytest",
+        "-q"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:15:18.418125+00:00",
+      "finished_at": "2026-10-22T23:15:23.886727+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-api-image-tests.log",
+      "log_sha256": "62114515eb88769d99533ab63c23d87e880a43016d8a41ec719f61afbeb4ed45",
+      "summary": [
+        "tests/test_webhook_signer.py ...............                             [ 93%]",
+        "tests/test_webhook_worker.py .............                               [ 96%]",
+        "tests/test_webhooks_router_event_type_validation.py ..                   [ 97%]",
+        "tests/test_x_oauth.py ...........                                        [100%]",
+        "",
+        "============================= 393 passed in 3.94s =============================="
+      ]
+    },
+    {
+      "label": "final-docs-build",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "uv",
+        "run",
+        "--no-project",
+        "--with",
+        "mkdocs-material",
+        "--with",
+        "pymdown-extensions",
+        "mkdocs",
+        "build",
+        "--strict",
+        "--site-dir",
+        "/tmp/yesod-oss-final-docs"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:15:23.888221+00:00",
+      "finished_at": "2026-10-22T23:15:25.038021+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-docs-build.log",
+      "log_sha256": "7747443521bd6c98e0dfe3d0c2442799e99a6fd9a5af4c41acbafa8588e6cb72",
+      "summary": [
+        "INFO    -  Doc file 'help/troubleshooting.md' contains a link '../getting-started.md#provider-未設定時の最短スキップ手順', but the doc 'getting-started.md' does not contain an anchor '#provider-未設定時の最短スキップ手順'.",
+        "INFO    -  Doc file 'help/troubleshooting.md' contains a link '../guides/oauth/index.md#セルフホスト運用チェックリスト', but the doc 'guides/oauth/index.md' does not contain an anchor '#セルフホスト運用チェックリスト'.",
+        "INFO    -  Doc file 'help/troubleshooting.md' contains a link '../guides/oauth/index.md#対応プロバイダー', but the doc 'guides/oauth/index.md' does not contain an anchor '#対応プロバイダー'.",
+        "INFO    -  Doc file 'help/troubleshooting.md' contains a link '../api/users.md#プロバイダ情報からプロフィール復元', but the doc 'api/users.md' does not contain an anchor '#プロバイダ情報からプロフィール復元'.",
+        "INFO    -  Doc file 'help/troubleshooting.md' contains a link '../api/webhooks.md#署名鍵ローテーション時の利用', but the doc 'api/webhooks.md' does not contain an anchor '#署名鍵ローテーション時の利用'.",
+        "INFO    -  Documentation built in 0.44 seconds"
+      ]
+    },
+    {
+      "label": "final-services-cleanup",
+      "candidate_id": "oss-m0-candidate-2",
+      "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87",
+      "command": [
+        "docker",
+        "compose",
+        "-p",
+        "yesod-m0-final",
+        "-f",
+        "/tmp/yesod-foundation-services.yml",
+        "down",
+        "--volumes",
+        "--remove-orphans"
+      ],
+      "cwd": "<candidate2>",
+      "started_at": "2026-10-22T23:15:25.053459+00:00",
+      "finished_at": "2026-10-22T23:15:25.511622+00:00",
+      "exit_code": 0,
+      "log": ".agent/oss-foundation/evidence/final-services-cleanup.log",
+      "log_sha256": "d39fb55dd3e0beffada29f3dd9714639b57f07cc8d515cafea6c9680e38fef07",
+      "summary": [
+        " Container yesod-m0-final-postgres-1 Stopped ",
+        " Container yesod-m0-final-postgres-1 Removing ",
+        " Container yesod-m0-final-valkey-1 Removed ",
+        " Container yesod-m0-final-postgres-1 Removed ",
+        " Network yesod-m0-final_default Removing ",
+        " Network yesod-m0-final_default Removed "
+      ]
+    }
+  ],
+  "remediation_evidence": [
+    {
+      "label": "api-red",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "pytest",
+        "tests/test_foundation_security.py",
+        "-k",
+        "predictable or whitespace or file_line_terminator or generated",
+        "-q",
+        "--tb=short"
+      ],
+      "cwd": "<workspace>/api",
+      "started_at": "2026-10-22T23:08:06.499339+00:00",
+      "finished_at": "2026-10-22T23:08:07.269210+00:00",
+      "exit_code": 1,
+      "python_version": "Python 3.12.15",
+      "pytest_version": "pytest 9.1.1",
+      "log": "/tmp/yesod-foundation-api-red-2.log",
+      "log_sha256": "cefd93752096a1d84e4c02bec59527280b7fe22fbf65622c1b1fe2e66dde0415",
+      "implementation_sha256": "0f8d4d6cf2286c3f9c06fb3cd1d51e7d4bd6e43e78b2f0d8ef8c852cd641f919",
+      "observed_result_summary": "================= 36 failed, 5 passed, 26 deselected in 0.17s =================="
+    },
+    {
+      "label": "admin-red",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "pytest",
+        "tests/test_runtime_security.py",
+        "-k",
+        "predictable or generated",
+        "-q",
+        "--tb=short"
+      ],
+      "cwd": "<workspace>/admin",
+      "started_at": "2026-10-22T23:08:07.331092+00:00",
+      "finished_at": "2026-10-22T23:08:07.524117+00:00",
+      "exit_code": 1,
+      "python_version": "Python 3.12.15",
+      "pytest_version": "pytest 9.1.1",
+      "log": "/tmp/yesod-foundation-admin-red-2.log",
+      "log_sha256": "a9e0733e162f1e3a218b382f193b7f814191b45567abd45643e7eb768f76fca7",
+      "implementation_sha256": "3db68bedeed46eb3e1950c89883309496c6d8602b98bb82944838bc4504c797f",
+      "observed_result_summary": "6 failed, 2 passed, 10 deselected in 0.06s"
+    },
+    {
+      "label": "api-green",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "pytest",
+        "tests/test_foundation_security.py",
+        "tests/test_config.py",
+        "tests/test_auth_tokens.py",
+        "-q",
+        "--tb=short"
+      ],
+      "cwd": "<workspace>/api",
+      "started_at": "2026-10-22T23:10:44.740851+00:00",
+      "finished_at": "2026-10-22T23:10:45.461304+00:00",
+      "exit_code": 0,
+      "python_version": "Python 3.12.15",
+      "pytest_version": "pytest 9.1.1",
+      "log": "/tmp/yesod-foundation-api-green-2.log",
+      "log_sha256": "707d8c2c7cd430aeccb1b692e4802bd4b904d7cc22bd895435e5a451187d6326",
+      "file_hashes": {
+        "api/app/config.py": "24f2d8110162dcccbedd4cc71107cc8af14b07266af02b8449df347f70bf538d",
+        "api/tests/test_foundation_security.py": "f6feb37a6d211c116a9d26f391c8d5489f103a702a6a256cf67f727d1c8134c9",
+        "api/tests/test_config.py": "8748c4b9671c019e21d008c0675d7f470e56e1c2f01a077fb646fde66399d110",
+        "api/tests/test_auth_tokens.py": "8410ddc87072bf49fb91c5a89148981585f12e82047c3613abde3b3e34f26357"
+      },
+      "observed_result_summary": "============================== 95 passed in 0.23s =============================="
+    },
+    {
+      "label": "admin-green",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "pytest",
+        "tests/test_runtime_security.py",
+        "tests/test_auth_session.py",
+        "tests/test_auth_ui.py",
+        "-q",
+        "--tb=short"
+      ],
+      "cwd": "<workspace>/admin",
+      "started_at": "2026-10-22T23:10:45.522838+00:00",
+      "finished_at": "2026-10-22T23:10:46.675776+00:00",
+      "exit_code": 0,
+      "python_version": "Python 3.12.15",
+      "pytest_version": "pytest 9.1.1",
+      "log": "/tmp/yesod-foundation-admin-green-2.log",
+      "log_sha256": "b54e51233158b43d4bf9b21296e7dd07929f415ce54ea1c1c5130aac0fe16b5a",
+      "file_hashes": {
+        "admin/config.py": "0a4e815a2e7e62c17587bb7d209cd0a3e0296f241e2c617b2e04c7c356075dc2",
+        "admin/tests/test_runtime_security.py": "2669cee98a727e2f2a4855f9808956ee0c8b9db87344134ab6e26269b847cf24",
+        "admin/tests/test_auth_session.py": "1705e0c953e834071d07de7c785373740cab4200c006329e15370df86fa22659",
+        "admin/tests/test_auth_ui.py": "cff01dd1d6ce6b48fa9e5415d4feb4dbced210474f63d9c8a8f21bdcbb692fca"
+      },
+      "observed_result_summary": "36 passed in 0.91s"
+    },
+    {
+      "label": "ruff-check",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "ruff",
+        "check",
+        "api",
+        "admin"
+      ],
+      "cwd": "<workspace>",
+      "started_at": "2026-10-22T23:11:13.789241+00:00",
+      "finished_at": "2026-10-22T23:11:13.815623+00:00",
+      "exit_code": 0,
+      "log": "/tmp/yesod-foundation-ruff-check-2.log",
+      "log_sha256": "82b3e6a6c090a57601d22943bd23fca9218d1031dbe5a7b754092f9a156b4f18"
+    },
+    {
+      "label": "ruff-format",
+      "command": [
+        "<python3.12>",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "api"
+      ],
+      "cwd": "<workspace>",
+      "started_at": "2026-10-22T23:11:13.815651+00:00",
+      "finished_at": "2026-10-22T23:11:13.839341+00:00",
+      "exit_code": 0,
+      "log": "/tmp/yesod-foundation-ruff-format-2.log",
+      "log_sha256": "00a7f07f2dd4a1459bd76952c6f781e7b70e6fa643c75909fde50a665b52b5f6"
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "cwd": "<workspace>",
+      "started_at": "2026-10-22T23:11:13.839369+00:00",
+      "finished_at": "2026-10-22T23:11:13.847756+00:00",
+      "exit_code": 0,
+      "log": "/tmp/yesod-foundation-diff-check-2.log",
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "label": "docs-check",
+      "command": [
+        "<python3.12>",
+        "-c",
+        "from pathlib import Path\nreadme = Path(\"README.md\").read_text()\nguide = Path(\"docs/guides/foundation-safety.md\").read_text()\nassert \"JWT_LIFETIME_SECONDS\" not in readme\nassert \"`ACCESS_TOKEN_LIFETIME_SECONDS`\" in readme and \"`900`（15 分）\" in readme\nfor obsolete in [\"Keep `PR Auto Approve`\", \"Enable `Allow auto-merge`\", \"a PR is auto-approved\", \"reopen/synchronize the PR\", \"pr-auto-approve.yml\", \"pr-auto-merge.yml\"]:\n    assert obsolete not in readme\nassert \"無条件の自動承認と自動マージの workflow は削除\" in readme\nassert \"docs-only でも通常の検証\" in readme\nassert \"1 個だけ取り除いて\" in guide and \"一切トリムしません\" in guide\nassert \"エントロピーは証明できません\" in guide\nprint(\"README settings/CI guidance and file/env secret contract: PASS\")\n"
+      ],
+      "cwd": "<workspace>",
+      "started_at": "2026-10-22T23:11:13.847781+00:00",
+      "finished_at": "2026-10-22T23:11:13.861903+00:00",
+      "exit_code": 0,
+      "log": "/tmp/yesod-foundation-docs-check-2.log",
+      "log_sha256": "298897541534a253a910bfbfdaed38870850894d264441ef43f53c63879bbd2f",
+      "file_hashes": {
+        "README.md": "3697bcc08c0da5b0c6b96962ea0558e781a5e0f6d50e5d7b2e6a2d7362233fe6",
+        "docs/guides/foundation-safety.md": "386a149422d7ad00627be6c97445f8add4430ab92e7e632d404b77c2da984ad2"
+      }
+    }
+  ],
+  "reconstructed_baseline_red": {
+    "kind": "reconstructed baseline regression, not original execution",
+    "source_revision": "e3a896f83875aee27fb9fd4152933de24dbdd711",
+    "command": [
+      "<python3.12>",
+      "-m",
+      "pytest",
+      "test_m0_expired_regression.py",
+      "-q",
+      "--tb=short"
+    ],
+    "cwd": "/tmp/yesod-m0-baseline-red/admin",
+    "started_at": "2026-10-22T23:12:15.754490+00:00",
+    "finished_at": "2026-10-22T23:12:16.513843+00:00",
+    "exit_code": 1,
+    "log": ".agent/oss-foundation/evidence/baseline-expired-admin-red.log",
+    "log_sha256": "2a7125993483e2bbcbf2d78c598f8d17a17e4ad0c05f0faa822649c8625562e4",
+    "probe_sha256": "859932220126b230db6b8d2063054429158b08acb3b6b0366999f94fac84613c",
+    "source_sha256": "137d16d1842c6f878466d399057548401383a0553ddd0b5045bc4aa20719b1c9",
+    "tail": [
+      "2026-10-23 08:12:15.950 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+      "2026-10-23 08:12:15.950 WARNING streamlit.runtime.scriptrunner_utils.script_run_context: Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+      "------------------------------ Captured log call -------------------------------",
+      "WARNING  streamlit.runtime.scriptrunner_utils.script_run_context:script_run_context.py:508 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+      "WARNING  streamlit.runtime.scriptrunner_utils.script_run_context:script_run_context.py:508 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+      "WARNING  streamlit.runtime.scriptrunner_utils.script_run_context:script_run_context.py:508 Thread 'MainThread': missing ScriptRunContext! This warning can be ignored when running in bare mode.",
+      "WARNING  __main__:config.py:137 SESSION_COOKIE_SAMESITE is not configured for admin session cookie (environment=TEST)",
+      "=========================== short test summary info ============================",
+      "FAILED test_m0_expired_regression.py::test_expired_legacy_session_must_not_read_dashboard",
+      "1 failed in 0.52s"
+    ]
+  },
+  "final_evaluation": {
+    "evaluation_outcome": {
+      "readiness": "READY",
+      "decision": "PASS",
+      "decisive_evidence": [
+        "Frozen candidate2 and unchanged baseline; 43 source hashes match; eleven command exits0",
+        "A1-A6 covered by plans, issue reconciliation, implementation, tests and independent review",
+        "AR-CB-001/002/003, MGMT-001, EVID-001/002 closed; FE-M0-001 retained as future idle-screen UX requirement",
+        "No unresolved contradictions"
+      ],
+      "blocking_findings": [],
+      "unresolved_contradictions": [],
+      "next_action": "Accept candidate2 as local initial foundation increment only. Hosted CI, real OAuth, remote protection, release, merge and deployment require separate evidence."
+    },
+    "actor": "/root/final_authority",
+    "model_request": "gpt-5.6-sol",
+    "effort_request": "medium",
+    "resolution_status": "accepted",
+    "candidate_digest": "sha256:799e6c6a30be80a37c301f808e9aa0818b3525e1baa06dec72b90834e3922c87"
+  },
+  "security_scans": [
+    {
+      "id": "3ec365df-5f2e-4767-8603-4541b6ee2e05",
+      "new_findings": 0,
+      "source_items": 19,
+      "supporting_surfaces": 5,
+      "total_tokens": 4068754,
+      "input_tokens": 4062607,
+      "cached_input_tokens": 4012032
+    },
+    {
+      "id": "9fa84553-769d-4c7c-ace3-e73f6b4191e2",
+      "new_findings": 0,
+      "source_items": 2,
+      "total_tokens": 1333450,
+      "input_tokens": 1332217,
+      "cached_input_tokens": 1328256
+    }
+  ],
+  "limitations": [
+    "Command paths normalized for publication; full local logs retained under .agent/oss-foundation/evidence",
+    "Initial Red pytest exits unknown; not reconstructed as historical facts",
+    "Hosted CI not executed at report creation; no production readiness claim"
+  ]
+}

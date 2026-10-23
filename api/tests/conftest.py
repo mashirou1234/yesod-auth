@@ -12,7 +12,9 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 
 # Set test environment before importing app
+os.environ["RUNTIME_MODE"] = "test"
 os.environ["TESTING"] = "1"
+os.environ["DEBUG_OAUTH_ENABLED"] = "0"
 os.environ["MOCK_OAUTH_ENABLED"] = "1"
 
 from app.db.base import Base

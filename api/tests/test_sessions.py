@@ -56,6 +56,8 @@ async def test_sessions_list_rejects_expired_token(client: AsyncClient):
         token_settings.JWT_SECRET,
         algorithms=[token_settings.JWT_ALGORITHM],
         options={"verify_exp": False},
+        audience=token_settings.JWT_AUDIENCE,
+        issuer=token_settings.JWT_ISSUER,
     )
     payload["exp"] = int((datetime.now(UTC) - timedelta(minutes=1)).timestamp())
 

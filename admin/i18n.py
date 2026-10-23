@@ -1,7 +1,6 @@
 """Internationalization (i18n) support for admin dashboard."""
 import json
 import logging
-import os
 from pathlib import Path
 from typing import Any
 

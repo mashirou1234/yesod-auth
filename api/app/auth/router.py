@@ -337,7 +337,7 @@ async def google_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -447,7 +447,7 @@ async def discord_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -580,7 +580,7 @@ async def github_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -694,7 +694,7 @@ async def x_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -804,7 +804,7 @@ async def linkedin_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -914,7 +914,7 @@ async def facebook_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -1025,7 +1025,7 @@ async def slack_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -1136,7 +1136,7 @@ async def twitch_callback(
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
-    if settings.FRONTEND_URL.startswith("http://localhost"):
+    if settings.RUNTIME_MODE != "production" and settings.DEBUG_OAUTH_ENABLED:
         return RedirectResponse(
             url=f"{settings.API_URL}{API_V1_PREFIX}/auth/debug-tokens"
             f"?access_token={access_token}&refresh_token={refresh_token}"
@@ -1228,6 +1228,9 @@ async def debug_tokens(access_token: str, refresh_token: str):
     Only use in development!
     """
     from fastapi.responses import HTMLResponse
+
+    if settings.RUNTIME_MODE == "production" or not settings.DEBUG_OAUTH_ENABLED:
+        raise HTTPException(status_code=404, detail="Not found")
 
     html = f"""
     <!DOCTYPE html>

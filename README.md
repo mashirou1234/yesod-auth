@@ -30,6 +30,17 @@ For self-hosted operation, use [`docs/index.md`](docs/index.md) as the documenta
 | Callback, state mismatch, and startup troubleshooting | [`docs/help/troubleshooting.md`](docs/help/troubleshooting.md) |
 | Frequently checked operational questions | [`docs/help/faq.md`](docs/help/faq.md) |
 
+## Foundation safety status
+
+公開前の基盤改善を進めています。実行モードの既定値は `production` で、弱い JWT 秘密鍵・管理画面パスワードや本番の mock/debug OAuth を拒否します。
+ローカル Compose は `development` / `test` を明示する開発用構成です。
+管理画面の URL セッション認証は廃止し、既定 1 時間のサーバー内セッションを使います。
+
+OAuth callback の URL トークン引き渡し（[#680](https://github.com/mashirou1234/yesod-auth/issues/680)）は残っているため、本番利用可能とは扱いません。
+設定変更、CI コマンド、未実装範囲は [基盤の安全設定と検証](docs/guides/foundation-safety.md) を参照してください。
+
+再設計の順序は [OSS ロードマップ](docs/architecture/oss-roadmap.md)、既存 Issue の整理は [Issue 対応表](docs/architecture/oss-issue-map.md)、次の増分の契約は [アプリ登録からログインまでの仕様](docs/architecture/app-registration-login-spec.md) を参照してください。
+
 ## Quick Start
 
 ### 1. Clone the repository
@@ -60,7 +71,10 @@ Provider-specific setup steps are documented in [`docs/guides/oauth/`](docs/guid
 
 ```bash
 # Generate local secret files from templates
-cp secrets/*.example secrets/
+for template in secrets/*.example; do
+  target="${template%.example}"
+  [ -e "$target" ] || cp "$template" "$target"
+done
 
 # Fill OAuth credentials for the providers you use
 $EDITOR secrets/google_client_id.txt
@@ -289,10 +303,18 @@ export function useAuth() {
 
 | Variable | Description | Default |
 |----------|-------------|---------|
+| `RUNTIME_MODE` | `development` / `test` / `production`。ローカル開発では明示指定 | `production` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql+asyncpg://...` |
-| `JWT_LIFETIME_SECONDS` | Token expiration time | `86400` (24 hours) |
-| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:3000` |
+| `JWT_SECRET` | ランダム生成した JWT 秘密鍵。本番では弱い既知パターンや空白を拒否 | 本番では空（起動拒否） |
+| `JWT_ISSUER` | Access JWT の発行元 | `yesod-auth` |
+| `JWT_AUDIENCE` | Access JWT の対象 | `yesod-api` |
+| `ACCESS_TOKEN_LIFETIME_SECONDS` | Access token の有効期間 | `900`（15 分） |
+| `REFRESH_TOKEN_LIFETIME_DAYS` | Refresh token の有効期間 | `7` |
+| `CORS_ORIGINS` | Allowed CORS origins | `http://localhost:3000,http://localhost:5173` |
 | `FRONTEND_URL` | Frontend URL for redirects | `http://localhost:3000` |
+| `SESSION_EXPIRY_HOURS` | 管理画面の絶対有効期限（1〜24 時間） | `1` |
+
+本番の秘密値、mock/debug の制約、secret ファイルの改行ルールは [基盤の安全設定と検証](docs/guides/foundation-safety.md) を参照してください。
 
 ### Docker Secrets
 
@@ -430,23 +452,22 @@ pytest
 rg -n '^/artifacts/$|^artifacts/\\*\\*$|^api/.hypothesis/$|^\\.codex/skills/$' .gitignore
 ```
 
-## PR Auto-Approve + Auto-Merge
+## CI と PR レビュー
 
-This repository includes GitHub Actions workflows for automatic PR approval and merge:
+GitHub の `.github/workflows/ci.yml` と Woodpecker の `.woodpecker.yml` は、push と pull request で Python の検証を実行します。
+GitHub の `python-foundation` job は lint、API・管理画面のテスト、実 DB・Valkey 統合、静的資産、Docker image build を検証します。
+Woodpecker は Python・静的資産・実サービスの検証を行います。
 
-- `.github/workflows/pr-auto-approve.yml`
-  - Automatically approves pull requests targeting `main` or `master`
-- `.github/workflows/pr-auto-merge.yml`
-  - Enables GitHub auto-merge (squash) for pull requests targeting `main` or `master`
-  - Actual merge happens only after all required checks pass
+無条件の自動承認と自動マージの workflow は削除しました。
+CI 成功後にレビューとマージ判断を行う運用で、PR の作成・更新だけで承認やマージ予約は実行しません。
 
-### Required GitHub repository settings
+### GitHub の必須チェック設定
 
-1. Enable `Allow auto-merge` in repository settings
-2. Configure branch protection for `main`/`master` with required status checks
-3. Register your CI checks (including external CI like Woodpecker) as required checks
-4. Keep `PR Auto Approve` and `PR Auto Merge` workflows enabled in GitHub Actions
-5. Bootstrap Codex labels when setting up the repository:
+管理者は対象ブランチの保護設定で、GitHub の `python-foundation` と Woodpecker の実行で報告された CI context を確認し、必須チェックに指定します。
+以前の `auto-approve` や `enable-auto-merge` が必須チェックに残っている場合は、削除済みの workflow を待ち続けるため設定の整理が必要です。
+この変更では、リモートのブランチ保護や `Allow auto-merge` 設定そのものは変更していません。
+
+### Codex ラベルの初期設定
 
 ```bash
 ./scripts/ensure_github_labels.sh
@@ -478,10 +499,6 @@ python3 scripts/queue_seed_snapshot.py --repo mashirou1234/yesod-auth --format m
 - `duplicate_slots` が空
 - `bench_count` は `0`（番号プレフィックス廃止方針）
 
-If a pull request was opened while the auto-approve / auto-merge workflows were disabled, enabling the workflows later does not retroactively register auto-merge for that PR. In that case, reopen/synchronize the PR or enable auto-merge manually.
-
-With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
-
 ## Codex Automation Ops（commit/push と issue 処理）
 
 codex-orch 運用の基本方針は、手動レーンと自動レーンで責務を分けつつ、Issue ラベル遷移を一貫させることです。詳細テンプレートは [`docs/guides/codex-automation-ops.md`](docs/guides/codex-automation-ops.md) を参照してください。
@@ -502,9 +519,9 @@ codex-orch 運用の基本方針は、手動レーンと自動レーンで責務
 
 ### docs-only CI 分岐の対象
 
-docs-only として扱う対象は `docs/**`, `README.md`, `AGENTS.md` に固定します。
-これ以外のファイルが 1 つでも含まれる場合、または判定できない場合は通常 CI を実行します。
-branch protection の必須チェック例は `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` です。
+現在の CI は docs-only でも通常の検証を実行します。
+今後 docs-only 分岐を導入する場合、対象は `docs/**`, `README.md`, `AGENTS.md` に限定し、対象外または判定不能な変更があれば通常 CI を実行します。
+必須チェックは実際の GitHub・Woodpecker の CI context を指定し、削除済みの自動承認・自動マージ job を含めません。
 
 ### Generate TypeScript Types
 

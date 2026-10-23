@@ -1,108 +1,40 @@
-# push(main/master) と pull_request を有効化。
-# 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
+# Keep the required Woodpecker pipeline meaningful for this Python repository.
 when:
-  - event: [pull_request]
-  - event: [push]
-    branch: [main, master]
+  - event: [pull_request, push, manual]
+
+services:
+  - name: postgres
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: yesod_foundation_test
+      POSTGRES_USER: yesod_ci
+      POSTGRES_PASSWORD: ci-disposable-password
+  - name: valkey
+    image: valkey/valkey:8-alpine
 
 steps:
-  - name: fmt
-    image: rust:1
+  - name: build-admin-assets
+    image: oven/bun:1.4.4
     commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip fmt."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - rustup component add rustfmt
-      - cargo fmt --check
+      - cd admin
+      - bun install --frozen-lockfile
+      - bun run build:tour
 
-  - name: clippy
-    image: rust:1
+  - name: verify-python
+    image: python:3.12-slim
+    environment:
+      FOUNDATION_TEST_DATABASE_URL: postgresql+asyncpg://yesod_ci:ci-disposable-password@postgres:5432/yesod_foundation_test
+      FOUNDATION_TEST_VALKEY_URL: redis://valkey:6379/0
     commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip clippy."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - rustup component add clippy
-      - cargo clippy -- -D warnings
-
-  - name: test
-    image: rust:1
-    commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip test."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - cargo test
-
-  - name: build-release
-    image: rust:1
-    commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip build-release."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - cargo build --release
+      - apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+      - python -m pip install --no-cache-dir --no-deps "pip @ https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl#sha256=fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70"
+      - python -m pip install -r api/requirements.txt -r admin/requirements.txt ruff==0.14.2
+      - bash scripts/verify-foundation.sh lint
+      - bash scripts/verify-foundation.sh assets
+      - bash scripts/verify-foundation.sh unit
+      - python -m compileall -q api/app admin
+      - cd api && RUNTIME_MODE=test python -c 'from app.main import app; assert app.openapi()["paths"]' && cd ..
+      - bash scripts/verify-foundation.sh integration
 
   - name: notify-failure-ntfy
     image: codeberg.org/l-x/woodpecker-ntfy
