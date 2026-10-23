@@ -19,6 +19,8 @@ from app.auth.tokens import (
     validate_refresh_token,
 )
 from app.config import get_settings
+from app.db.base import DEFAULT_PROJECT_ID
+from app.db.project import ProjectAsyncSession
 from app.db.session import engine as app_engine
 from app.main import app
 from app.models import User
@@ -32,12 +34,15 @@ async def test_postgres_token_lifecycle_and_valkey_state():
     assert settings.DATABASE_URL.endswith("/yesod_foundation_test")
     assert settings.TESTING is False
     engine = create_async_engine(settings.DATABASE_URL)
-    sessions = async_sessionmaker(engine, expire_on_commit=False)
+    sessions = async_sessionmaker(
+        engine, class_=ProjectAsyncSession, project_id=DEFAULT_PROJECT_ID, expire_on_commit=False
+    )
     user_id = uuid.uuid4()
     state = f"foundation-{uuid.uuid4()}"
     try:
+        async with engine.connect() as connection:
+            assert await connection.scalar(text("SELECT version_num FROM alembic_version")) == "007"
         async with sessions() as db:
-            assert await db.scalar(text("SELECT version_num FROM alembic_version")) == "006"
             user = User(id=user_id)
             db.add(user)
             await db.commit()
@@ -48,8 +53,9 @@ async def test_postgres_token_lifecycle_and_valkey_state():
             assert await validate_refresh_token(db, token) is None
             assert (await validate_refresh_token(db, rotated[0])).user_id == user_id
             await AuditLogger.log_login(db, user_id, "google", True, "127.0.0.1", "foundation-ci")
+        async with engine.connect() as connection:
             assert (
-                await db.scalar(
+                await connection.scalar(
                     text("SELECT count(*) FROM audit.login_history WHERE user_id = :id"),
                     {"id": user_id},
                 )
@@ -74,10 +80,11 @@ async def test_postgres_token_lifecycle_and_valkey_state():
         }
         assert await OAuthStateStore.get_and_delete(state) is None
     finally:
-        async with sessions() as db:
-            await db.execute(
+        async with engine.begin() as connection:
+            await connection.execute(
                 text("DELETE FROM audit.login_history WHERE user_id = :id"), {"id": user_id}
             )
+        async with sessions() as db:
             user = await db.scalar(select(User).where(User.id == user_id))
             if user:
                 await db.delete(user)

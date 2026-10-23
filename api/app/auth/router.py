@@ -13,12 +13,15 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import AuditLogger, AuthEventType
 from app.config import get_settings
+from app.db.base import DEFAULT_PROJECT_ID
+from app.db.project import project_id_of
 from app.db.session import get_db
 from app.metrics import record_oauth_failure_metric
 from app.models import OAuthAccount, User
 from app.oauth_providers import (
     OAUTH_PROVIDER_CREDENTIAL_FIELDS,
     OAUTH_PROVIDER_ORDER,
+    get_project_provider_credentials,
 )
 from app.valkey import OAuthStateStore
 from app.webhooks.emitter import WebhookEmitter
@@ -225,8 +228,9 @@ def _ensure_provider_enabled(provider: str) -> None:
     assert credential_fields is not None
 
     client_id_field, client_secret_field = credential_fields
-    client_id = getattr(settings, client_id_field, "")
-    client_secret = getattr(settings, client_secret_field, "")
+    client_id, client_secret = get_project_provider_credentials(
+        settings, provider, project_id=DEFAULT_PROJECT_ID
+    )
 
     if client_id and client_secret:
         return
@@ -333,7 +337,9 @@ async def google_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "google"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "google"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -443,7 +449,9 @@ async def discord_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "discord"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "discord"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -576,7 +584,9 @@ async def github_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "github"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "github"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -690,7 +700,9 @@ async def x_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "x"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "x"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -800,7 +812,9 @@ async def linkedin_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "linkedin"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "linkedin"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -910,7 +924,9 @@ async def facebook_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "facebook"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "facebook"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -1021,7 +1037,9 @@ async def slack_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "slack"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "slack"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -1132,7 +1150,9 @@ async def twitch_callback(
     )
 
     # Emit webhook event
-    await WebhookEmitter.emit_user_event("user.login", user.id, {"provider": "twitch"})
+    await WebhookEmitter.emit_user_event(
+        "user.login", user.id, {"provider": "twitch"}, project_id=project_id_of(db)
+    )
 
     # In development, redirect to debug page to show tokens
     # In production, redirect to frontend
@@ -1439,7 +1459,8 @@ async def _find_or_create_user(
     access_token: str | None,
     refresh_token: str | None,
 ) -> User:
-    """Find existing user or create new one."""
+    """Find an identity only within the required project session."""
+    project_id_of(db)
     from app.models import UserEmail, UserProfile
 
     # First, check if OAuth account exists
@@ -1468,46 +1489,6 @@ async def _find_or_create_user(
         user = oauth_account.user
 
         await db.commit()
-        return user
-
-    # Check if user with same email exists
-    result = await db.execute(
-        select(UserEmail)
-        .options(
-            selectinload(UserEmail.user).selectinload(User.profile),
-            selectinload(UserEmail.user).selectinload(User.emails),
-        )
-        .where(UserEmail.email == email)
-    )
-    user_email = result.scalar_one_or_none()
-
-    if user_email:
-        user = user_email.user
-        # Link new OAuth account to existing user
-        oauth_account = OAuthAccount(
-            user_id=user.id,
-            provider=provider,
-            provider_user_id=provider_user_id,
-            provider_display_name=display_name,
-            provider_avatar_url=avatar_url,
-            provider_email=email,
-            access_token=access_token,
-            refresh_token=refresh_token,
-        )
-        db.add(oauth_account)
-
-        # Update user profile only if empty
-        if user.profile:
-            if display_name and not user.profile.display_name:
-                user.profile.display_name = display_name
-            if avatar_url and not user.profile.avatar_url:
-                user.profile.avatar_url = avatar_url
-
-        await db.commit()
-
-        # Emit webhook for OAuth account linked
-        await WebhookEmitter.emit_user_event("user.oauth_linked", user.id, {"provider": provider})
-
         return user
 
     # Create new user with profile and email
@@ -1559,7 +1540,10 @@ async def _find_or_create_user(
 
     # Emit webhook for new user created
     await WebhookEmitter.emit_user_event(
-        "user.created", user.id, {"provider": provider, "email": email}
+        "user.created",
+        user.id,
+        {"provider": provider, "email": email},
+        project_id=project_id_of(db),
     )
 
     return user

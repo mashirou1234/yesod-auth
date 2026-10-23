@@ -10,10 +10,13 @@ from app.audit.service import AuditLogger, AuthEventType
 
 
 @pytest.mark.asyncio
-async def test_log_event_backfills_request_id_when_missing(monkeypatch):
+async def test_log_event_backfills_request_id_when_missing(monkeypatch, db_session):
     """Missing request-id should be backfilled and marked explicitly."""
     monkeypatch.setenv("TESTING", "0")
-    db = AsyncMock()
+    db = db_session
+    connection = AsyncMock()
+    monkeypatch.setattr("app.db.project._execute_audit_sql", connection.execute)
+    monkeypatch.setattr(db, "commit", AsyncMock())
 
     await AuditLogger.log_event(
         db=db,
@@ -22,7 +25,7 @@ async def test_log_event_backfills_request_id_when_missing(monkeypatch):
         ip_address="127.0.0.1",
     )
 
-    payload = json.loads(db.execute.await_args.args[1]["details"])
+    payload = json.loads(connection.execute.await_args.args[2]["details"])
     assert payload["provider"] == "github"
     assert payload["request_id_backfilled"] is True
     assert "request_id" in payload
@@ -31,10 +34,13 @@ async def test_log_event_backfills_request_id_when_missing(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_log_event_preserves_existing_request_id(monkeypatch):
+async def test_log_event_preserves_existing_request_id(monkeypatch, db_session):
     """Existing request-id value should remain unchanged."""
     monkeypatch.setenv("TESTING", "0")
-    db = AsyncMock()
+    db = db_session
+    connection = AsyncMock()
+    monkeypatch.setattr("app.db.project._execute_audit_sql", connection.execute)
+    monkeypatch.setattr(db, "commit", AsyncMock())
     details = {"provider": "google", "request_id": "req-fixed-123"}
 
     await AuditLogger.log_event(
@@ -43,7 +49,7 @@ async def test_log_event_preserves_existing_request_id(monkeypatch):
         details=details,
     )
 
-    payload = json.loads(db.execute.await_args.args[1]["details"])
+    payload = json.loads(connection.execute.await_args.args[2]["details"])
     assert payload["request_id"] == "req-fixed-123"
     assert payload["request_id_backfilled"] is False
     db.commit.assert_awaited_once()

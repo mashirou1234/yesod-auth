@@ -6,20 +6,25 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, ForeignKeyConstraint, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, ProjectOwned
 
 if TYPE_CHECKING:
     from app.models.user import User
 
 
-class RefreshToken(Base):
+class RefreshToken(ProjectOwned, Base):
     """Refresh token model - stored separately from users for loose coupling."""
 
     __tablename__ = "refresh_tokens"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "user_id"], ["users.project_id", "users.id"], ondelete="CASCADE"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -65,4 +70,6 @@ class RefreshToken(Base):
     )
 
     # Relationship (optional, for convenience)
-    user: Mapped[User] = relationship("User", back_populates="refresh_tokens")
+    user: Mapped[User] = relationship(
+        "User", back_populates="refresh_tokens", foreign_keys=[user_id]
+    )

@@ -41,6 +41,13 @@ OAuth callback の URL トークン引き渡し（[#680](https://github.com/mash
 
 再設計の順序は [OSS ロードマップ](docs/architecture/oss-roadmap.md)、既存 Issue の整理は [Issue 対応表](docs/architecture/oss-issue-map.md)、次の増分の契約は [アプリ登録からログインまでの仕様](docs/architecture/app-registration-login-spec.md) を参照してください。
 
+Issue #800 のデータ境界として既定プロジェクトと `project_id` を導入しました。
+同じメール・provider ID でも別プロジェクトの利用者を統合しません。
+現在の API・管理画面・環境変数の接続設定は既定プロジェクトに固定し、複数プロジェクトの設定画面や管理権限は後続実装です。
+更新後は project claim のない Access Token を再発行するか、再ログインしてください。
+移行・DB 権限・検証条件は [プロジェクト境界の実装範囲](docs/architecture/app-registration-login-spec.md#project-boundary-800) を参照してください。
+
+
 ## Quick Start
 
 ### 1. Clone the repository

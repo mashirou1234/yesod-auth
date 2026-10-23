@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import AuditLogger, AuthEventType
 from app.config import get_settings
+from app.db.project import project_id_of
 from app.db.session import get_db
 from app.models import User
 
@@ -108,6 +109,9 @@ async def get_current_user(
             },
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    if payload.get("project_id") != str(project_id_of(db)):
+        raise HTTPException(status_code=401, detail="Invalid token project")
 
     user_id = payload.get("sub")
     if user_id is None:

@@ -16,6 +16,44 @@
 SPA に client secret を発行しない。server-side client の secret はサーバーだけで扱い、一度だけ表示し、その後は再発行する。
 モバイル独自 scheme、外部組織のセルフサービス登録、dynamic client registration はこの仕様に含めない。
 
+<a id="project-boundary-800"></a>
+
+## M1 プロジェクト境界の実装範囲（Issue #800）
+
+migration `007` は既定プロジェクト `00000000-0000-4000-8000-000000000001` を一つ作成する。
+既存の利用者、プロフィール、メール、OAuth 連携、refresh token、削除待ち利用者、webhook 配信記録、監査記録には、この ID を関連付ける。
+既存の ID、データ、token の失効状態は保持する。
+既定プロジェクトの再作成は `ensure_default_project(connection)` の `ON CONFLICT DO NOTHING` で並行実行時も重複を防ぐ。
+
+アプリケーションのデータアクセスは `async_session_maker(project_id=...)` を必須とする。
+セッションの project は生成後に変更できず、ORM の検索には所有 project の条件を加える。
+関連レコードの project と user は複合外部キーで照合し、更新・削除 SQL にも所有 project を含める。
+セッション経由の任意 SQL と bulk 更新は拒否し、監査・管理画面・集計の既存 SQL にはサーバー側の project 条件を明示する。
+migration と保守用の直接 engine 接続は、権限を持つ運営者向けの別境界として扱う。
+
+PostgreSQL では対象テーブルに強制 RLS を設定し、セッションが transaction ごとに設定する `yesod.project_id` と照合する。
+RLS の追加防御は `NOSUPERUSER NOBYPASSRLS` の実行ロールを前提とする。
+DB 管理者・superuser・BYPASSRLS ロールによる任意 SQL のアクセス制限は保証しない。
+現在の配置でそれらの権限を持つ接続を使う場合も、アプリ側の検索・更新条件は適用される。
+DB 実行ロールの分離や audit partition への直接権限管理は、本番配置時に確認する。
+
+現在の公開 API、管理画面、環境変数の OAuth 資格情報、ファイルの webhook 設定は既定プロジェクトに固定する。
+URL、query、header から任意の project を選ぶ機能は提供しない。
+Access Token は `project_id` を持ち、API は DB セッションの project と一致しない token を拒否する。
+既存の project claim がない token は、再発行または再ログインが必要になる。
+別プロジェクトは環境変数の provider 接続を利用できず、その利用者の event を既定 webhook 接続へ配信しない。
+複数プロジェクト向け接続設定の CRUD、管理者所属・権限、アプリ登録は後続 Issue で実装する。
+
+OAuth 本人識別の一意性は `(project_id, provider, provider_user_id)` に限定する。
+同じメールを持つ別 ID・別 provider・別プロジェクトの利用者は自動連携しない。
+メールはプロフィール属性として扱い、一意性による統合は行わない。
+
+検証は `bash scripts/verify-foundation.sh integration` で、専用 PostgreSQL/Valkey に対して行う。
+二つの project、scope の省略・差し替え、関連レコードの誤接続、改変した detached object、JWT、管理画面、非 bypass role の RLS、既存データを保持する migration を対象とする。
+検証用ユーザーには隔離 DB 内での一時 DB・一時ロール作成権限が必要であり、本番 DB に向けて実行しない。
+この migration の downgrade は project 関連付けを失うため拒否する。
+復旧時は検証済みバックアップと変更前バージョンを使い、本番のデータや失効履歴を巻き戻さない手順を別途確認する。
+
 ## 登録項目と管理操作
 
 提案 API prefix は `/api/v1/admin`。通常の利用者 JWT を管理権限の根拠にしない。

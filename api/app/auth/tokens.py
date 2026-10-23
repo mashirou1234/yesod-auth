@@ -10,17 +10,22 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.db.base import DEFAULT_PROJECT_ID
+from app.db.project import project_id_of
 from app.models import RefreshToken
 
 settings = get_settings()
 ACCESS_TOKEN_HEADER_KID = "local-hs256"
 
 
-def create_access_token(user_id: str, email: str) -> str:
+def create_access_token(
+    user_id: str, email: str, *, project_id: uuid.UUID = DEFAULT_PROJECT_ID
+) -> str:
     """Create a short-lived access token (JWT)."""
     expire = datetime.now(UTC) + timedelta(seconds=settings.ACCESS_TOKEN_LIFETIME_SECONDS)
     payload = {
         "sub": user_id,
+        "project_id": str(project_id),
         "email": email,
         "exp": expire,
         "type": "access",
@@ -75,6 +80,7 @@ async def create_refresh_token(
     ip_address: str | None = None,
 ) -> str:
     """Create and store a new refresh token."""
+    project_id_of(db)
     token = generate_refresh_token()
     token_hash = hash_refresh_token(token)
 
@@ -98,6 +104,7 @@ async def validate_refresh_token(
     token: str,
 ) -> RefreshToken | None:
     """Validate refresh token and return the record if valid."""
+    project_id_of(db)
     token_hash = hash_refresh_token(token)
     now = datetime.now(UTC)
 
@@ -153,6 +160,7 @@ async def classify_refresh_token_failure(
     token: str,
 ) -> str:
     """Classify why refresh token validation failed for audit details."""
+    project_id_of(db)
     token_hash = hash_refresh_token(token)
     now = datetime.now(UTC)
 
@@ -185,6 +193,7 @@ async def revoke_refresh_token(db: AsyncSession, token: str) -> bool:
 
 async def revoke_all_user_tokens(db: AsyncSession, user_id: uuid.UUID) -> int:
     """Revoke all refresh tokens for a user. Returns count of revoked tokens."""
+    project_id_of(db)
     result = await db.execute(
         select(RefreshToken).where(
             and_(
