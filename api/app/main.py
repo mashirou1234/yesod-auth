@@ -13,6 +13,7 @@ from app.auth.rate_limit import limiter, oauth_rate_limit_exceeded_handler
 from app.config import get_settings
 from app.db.session import async_session_factory
 from app.metrics import router as metrics_router
+from app.routers.admin_bootstrap import router as admin_bootstrap_router
 from app.sessions import router as sessions_router
 from app.users import router as users_router
 from app.valkey import close_valkey
@@ -112,6 +113,7 @@ app.include_router(accounts_router, prefix=API_PREFIX)
 app.include_router(sessions_router, prefix=API_PREFIX)
 app.include_router(users_router, prefix=API_PREFIX)
 app.include_router(webhooks_router, prefix=f"{API_PREFIX}/admin")
+app.include_router(admin_bootstrap_router, prefix=f"{API_PREFIX}/admin")
 
 # Metrics at root level (for Prometheus scraping)
 app.include_router(metrics_router)

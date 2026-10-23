@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Create the first administrator · Yesod Auth</title>
+  <link rel="stylesheet" href="/api/v1/admin/bootstrap/assets/admin-bootstrap.css">
+  <script src="/api/v1/admin/bootstrap/assets/admin-bootstrap.js" defer></script>
+</head>
+<body>
+  <main>
+    <p class="brand">YESOD AUTH <span>INITIAL SETUP</span></p>
+    <h1>Create your first administrator</h1>
+    <p class="intro">Use the temporary capability from your server’s local terminal. Only the first successful registration is accepted.</p>
+    <form id="registration" autocomplete="off">
+      <label for="capability">Bootstrap capability</label>
+      <input id="capability" type="password" required minlength="43" maxlength="43" autocomplete="off" spellcheck="false" aria-describedby="capability-help">
+      <p id="capability-help" class="hint">Valid for 15 minutes. If it expires, issue a new capability from the server terminal.</p>
+      <label for="username">Administrator username</label>
+      <input id="username" type="text" required minlength="3" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_.\-]{2,63}" autocomplete="off" spellcheck="false" aria-describedby="username-help">
+      <p id="username-help" class="hint">3–64 letters, numbers, dots, underscores or hyphens. Start with a letter or number.</p>
+      <label for="password">Administrator password</label>
+      <input id="password" type="password" required minlength="16" maxlength="128" autocomplete="off" aria-describedby="password-help">
+      <p id="password-help" class="hint">Use a unique password with 16–128 characters. Keep it in your password manager.</p>
+      <button type="submit">Create administrator</button>
+    </form>
+    <p id="status" role="status" aria-live="polite" tabindex="-1"></p>
+    <p class="footnote">This screen creates the first account. It does not provide administrator sign-in.</p>
+    <noscript>JavaScript is required to submit securely without placing credentials in the URL.</noscript>
+  </main>
+</body>
+</html>
