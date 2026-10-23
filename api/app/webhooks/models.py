@@ -10,7 +10,7 @@ from sqlalchemy import DateTime, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.base import Base
+from app.db.base import Base, ProjectOwned
 
 
 class DeliveryStatus(StrEnum):
@@ -21,7 +21,7 @@ class DeliveryStatus(StrEnum):
     FAILED = "failed"
 
 
-class WebhookDelivery(Base):
+class WebhookDelivery(ProjectOwned, Base):
     """Webhook delivery log entry."""
 
     __tablename__ = "webhook_deliveries"

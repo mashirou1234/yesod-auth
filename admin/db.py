@@ -1,13 +1,33 @@
 """Database operations for admin (sync version)."""
 from typing import Optional
-from sqlalchemy import create_engine, text
+import uuid
+from sqlalchemy import create_engine, text, event
+from sqlalchemy.orm import Session as SASession
 from sqlalchemy.orm import sessionmaker
 import pandas as pd
 
 from config import settings
 
 engine = create_engine(settings.DATABASE_URL)
-Session = sessionmaker(bind=engine)
+DEFAULT_PROJECT_ID = uuid.UUID("00000000-0000-4000-8000-000000000001")
+
+
+class DefaultProjectSession(SASession):
+    def execute(self, statement, params=None, **kwargs):
+        values = dict(params or {})
+        if "project_id" in values and str(values["project_id"]) != str(DEFAULT_PROJECT_ID):
+            raise ValueError("Admin project substitution is forbidden")
+        values["project_id"] = str(DEFAULT_PROJECT_ID)
+        return super().execute(statement, values, **kwargs)
+
+
+@event.listens_for(DefaultProjectSession, "after_begin")
+def _bind_admin_project(session, transaction, connection):
+    connection.execute(text("SELECT set_config('yesod.project_id', :project_id, true)"),
+                       {"project_id": str(DEFAULT_PROJECT_ID)})
+
+
+Session = sessionmaker(bind=engine, class_=DefaultProjectSession)
 
 
 def get_users() -> pd.DataFrame:
@@ -22,10 +42,11 @@ def get_users() -> pd.DataFrame:
                 COUNT(DISTINCT oa.id) as oauth_accounts,
                 COUNT(DISTINCT rt.id) FILTER (WHERE rt.is_revoked = false AND rt.expires_at > NOW()) as active_sessions
             FROM users u
-            LEFT JOIN user_emails ue ON u.id = ue.user_id AND ue.is_primary = true
-            LEFT JOIN user_profiles up ON u.id = up.user_id
-            LEFT JOIN oauth_accounts oa ON u.id = oa.user_id
-            LEFT JOIN refresh_tokens rt ON u.id = rt.user_id
+            LEFT JOIN user_emails ue ON u.id = ue.user_id AND u.project_id = ue.project_id AND ue.is_primary = true
+            LEFT JOIN user_profiles up ON u.id = up.user_id AND u.project_id = up.project_id
+            LEFT JOIN oauth_accounts oa ON u.id = oa.user_id AND u.project_id = oa.project_id
+            LEFT JOIN refresh_tokens rt ON u.id = rt.user_id AND u.project_id = rt.project_id
+            WHERE u.project_id = :project_id
             GROUP BY u.id, ue.email, up.display_name, up.updated_at
             ORDER BY u.created_at DESC
         """))
@@ -41,7 +62,7 @@ def get_user_oauth_accounts(user_id: str) -> pd.DataFrame:
         result = session.execute(text("""
             SELECT provider, provider_user_id, created_at
             FROM oauth_accounts
-            WHERE user_id = :user_id
+            WHERE project_id = :project_id AND user_id = :user_id
             ORDER BY created_at
         """), {"user_id": user_id})
         rows = result.fetchall()
@@ -61,12 +82,13 @@ def get_sessions(user_id: Optional[str] = None) -> pd.DataFrame:
                 rt.created_at,
                 rt.last_used_at
             FROM refresh_tokens rt
-            JOIN users u ON rt.user_id = u.id
-            LEFT JOIN user_emails ue ON u.id = ue.user_id AND ue.is_primary = true
+            JOIN users u ON rt.user_id = u.id AND rt.project_id = u.project_id
+            LEFT JOIN user_emails ue ON u.id = ue.user_id AND u.project_id = ue.project_id AND ue.is_primary = true
         """
+        query += " WHERE rt.project_id = :project_id"
         params = {}
         if user_id:
-            query += " WHERE rt.user_id = :user_id"
+            query += " AND rt.user_id = :user_id"
             params["user_id"] = user_id
         query += " ORDER BY rt.created_at DESC LIMIT 100"
         
@@ -80,11 +102,11 @@ def get_sessions(user_id: Optional[str] = None) -> pd.DataFrame:
 
 def revoke_session(session_id: str) -> bool:
     with Session() as session:
-        session.execute(text("""
-            UPDATE refresh_tokens SET is_revoked = true WHERE id = :id
+        result = session.execute(text("""
+            UPDATE refresh_tokens SET is_revoked = true WHERE project_id = :project_id AND id = :id
         """), {"id": session_id})
         session.commit()
-        return True
+        return result.rowcount > 0
 
 
 def revoke_all_user_sessions(user_id: str) -> int:
@@ -92,7 +114,7 @@ def revoke_all_user_sessions(user_id: str) -> int:
         result = session.execute(text("""
             UPDATE refresh_tokens 
             SET is_revoked = true 
-            WHERE user_id = :user_id AND is_revoked = false
+            WHERE project_id = :project_id AND user_id = :user_id AND is_revoked = false
             RETURNING id
         """), {"user_id": user_id})
         session.commit()
@@ -101,11 +123,11 @@ def revoke_all_user_sessions(user_id: str) -> int:
 
 def get_stats() -> dict:
     with Session() as session:
-        users = session.execute(text("SELECT COUNT(*) FROM users"))
-        oauth = session.execute(text("SELECT COUNT(*) FROM oauth_accounts"))
+        users = session.execute(text("SELECT COUNT(*) FROM users WHERE project_id = :project_id"))
+        oauth = session.execute(text("SELECT COUNT(*) FROM oauth_accounts WHERE project_id = :project_id"))
         active_sessions = session.execute(text("""
             SELECT COUNT(*) FROM refresh_tokens 
-            WHERE is_revoked = false AND expires_at > NOW()
+            WHERE project_id = :project_id AND is_revoked = false AND expires_at > NOW()
         """))
         return {
             "total_users": users.scalar(),
@@ -126,6 +148,7 @@ def get_deleted_users() -> pd.DataFrame:
                 purge_at,
                 oauth_providers
             FROM deleted_users
+            WHERE project_id = :project_id
             ORDER BY deleted_at DESC
         """))
         rows = result.fetchall()
@@ -206,7 +229,15 @@ def get_table_info() -> dict:
                 })
             
             # Get row count
-            count_result = session.execute(text(f'SELECT COUNT(*) FROM "{table}"'))
+            if table == "projects":
+                predicate = " WHERE id = :project_id"
+            elif "project_id" in {column["name"] for column in columns}:
+                predicate = " WHERE project_id = :project_id"
+            else:
+                predicate = ""
+            # Table names came from PostgreSQL metadata; quote identifiers through the dialect.
+            quoted = engine.dialect.identifier_preparer.quote(table)
+            count_result = session.execute(text(f"SELECT COUNT(*) FROM {quoted}{predicate}"))
             row_count = count_result.scalar()
             
             table_info[table] = {
@@ -265,6 +296,7 @@ def get_login_history(limit: int = 100) -> pd.DataFrame:
                     failure_reason,
                     created_at
                 FROM audit.login_history
+                WHERE project_id = :project_id
                 ORDER BY created_at DESC
                 LIMIT :limit
             """), {"limit": limit})
@@ -290,6 +322,7 @@ def get_auth_events(limit: int = 100) -> pd.DataFrame:
                     ip_address,
                     created_at
                 FROM audit.auth_events
+                WHERE project_id = :project_id
                 ORDER BY created_at DESC
                 LIMIT :limit
             """), {"limit": limit})
@@ -311,14 +344,14 @@ def get_audit_stats() -> dict:
                     COUNT(*) FILTER (WHERE success = true) as success,
                     COUNT(*) FILTER (WHERE success = false) as failed
                 FROM audit.login_history
-                WHERE created_at > NOW() - INTERVAL '24 hours'
+                WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
             """))
             login_row = logins_24h.fetchone()
             
             # Events last 24h
             events_24h = session.execute(text("""
                 SELECT COUNT(*) FROM audit.auth_events
-                WHERE created_at > NOW() - INTERVAL '24 hours'
+                WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
             """))
             
             return {

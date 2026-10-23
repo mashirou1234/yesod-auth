@@ -6,20 +6,29 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    ForeignKey,
+    ForeignKeyConstraint,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db.base import Base, ProjectOwned
 
 if TYPE_CHECKING:
     from app.models.refresh_token import RefreshToken
 
 
-class User(Base):
-    """User model - contains only ID (loose coupling design)."""
+class User(ProjectOwned, Base):
+    """User identity and its owning project."""
 
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("project_id", "id", name="uq_users_project_id"),)
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -34,22 +43,26 @@ class User(Base):
     # Relationships
     profile: Mapped[UserProfile | None] = relationship(
         "UserProfile",
+        foreign_keys="UserProfile.user_id",
         back_populates="user",
         uselist=False,
         cascade="all, delete-orphan",
     )
     emails: Mapped[list[UserEmail]] = relationship(
         "UserEmail",
+        foreign_keys="UserEmail.user_id",
         back_populates="user",
         cascade="all, delete-orphan",
     )
     oauth_accounts: Mapped[list[OAuthAccount]] = relationship(
         "OAuthAccount",
+        foreign_keys="OAuthAccount.user_id",
         back_populates="user",
         cascade="all, delete-orphan",
     )
     refresh_tokens: Mapped[list[RefreshToken]] = relationship(
         "RefreshToken",
+        foreign_keys="RefreshToken.user_id",
         back_populates="user",
         cascade="all, delete-orphan",
     )
@@ -73,10 +86,15 @@ class User(Base):
         return self.profile.avatar_url if self.profile else None
 
 
-class UserProfile(Base):
+class UserProfile(ProjectOwned, Base):
     """User profile - display information."""
 
     __tablename__ = "user_profiles"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "user_id"], ["users.project_id", "users.id"], ondelete="CASCADE"
+        ),
+    )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -101,13 +119,20 @@ class UserProfile(Base):
     user: Mapped[User] = relationship(
         "User",
         back_populates="profile",
+        foreign_keys=[user_id],
     )
 
 
-class UserEmail(Base):
+class UserEmail(ProjectOwned, Base):
     """User email - supports multiple emails per user."""
 
     __tablename__ = "user_emails"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["project_id", "user_id"], ["users.project_id", "users.id"], ondelete="CASCADE"
+        ),
+    )
+    # Email is an attribute, never an identity/linking key.
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -121,7 +146,6 @@ class UserEmail(Base):
     )
     email: Mapped[str] = mapped_column(
         String(255),
-        unique=True,
         nullable=False,
         index=True,
     )
@@ -142,10 +166,11 @@ class UserEmail(Base):
     user: Mapped[User] = relationship(
         "User",
         back_populates="emails",
+        foreign_keys=[user_id],
     )
 
 
-class DeletedUser(Base):
+class DeletedUser(ProjectOwned, Base):
     """Soft-deleted user - for recovery within grace period."""
 
     __tablename__ = "deleted_users"
@@ -178,10 +203,18 @@ class DeletedUser(Base):
     )
 
 
-class OAuthAccount(Base):
+class OAuthAccount(ProjectOwned, Base):
     """OAuth account linked to a user."""
 
     __tablename__ = "oauth_accounts"
+    __table_args__ = (
+        UniqueConstraint(
+            "project_id", "provider", "provider_user_id", name="uq_oauth_project_identity"
+        ),
+        ForeignKeyConstraint(
+            ["project_id", "user_id"], ["users.project_id", "users.id"], ondelete="CASCADE"
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -232,4 +265,5 @@ class OAuthAccount(Base):
     user: Mapped[User] = relationship(
         "User",
         back_populates="oauth_accounts",
+        foreign_keys=[user_id],
     )

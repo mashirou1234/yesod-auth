@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import AuditLogger, AuthEventType
 from app.auth.jwt import get_current_user
 from app.config import get_settings
+from app.db.project import project_id_of
 from app.db.session import get_db
 from app.models import DeletedUser, OAuthAccount, User, UserProfile
 from app.webhooks.emitter import WebhookEmitter
@@ -113,7 +114,7 @@ async def update_profile(
 
         # Emit webhook for profile update
         await WebhookEmitter.emit_user_event(
-            "user.updated", user.id, {"changes": list(changes.keys())}
+            "user.updated", user.id, {"changes": list(changes.keys())}, project_id=project_id_of(db)
         )
 
     # Reload with all relationships
@@ -185,7 +186,10 @@ async def delete_account(
 
     # Emit webhook for account deletion (before actual deletion)
     await WebhookEmitter.emit_user_event(
-        "user.deleted", user_id, {"email": email, "oauth_providers": oauth_providers}
+        "user.deleted",
+        user_id,
+        {"email": email, "oauth_providers": oauth_providers},
+        project_id=project_id_of(db),
     )
 
     # Create soft delete record

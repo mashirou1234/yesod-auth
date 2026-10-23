@@ -6,10 +6,12 @@ from threading import Lock
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import PlainTextResponse
-from sqlalchemy import text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.project import project_id_of
 from app.db.session import get_db
+from app.models import DeletedUser, OAuthAccount, RefreshToken, User
 
 router = APIRouter(tags=["metrics"])
 _oauth_failure_counts: dict[tuple[str, str], int] = defaultdict(int)
@@ -85,36 +87,33 @@ async def metrics(db: AsyncSession = Depends(get_db)):
     metrics_output = []
 
     # User metrics
-    result = await db.execute(text("SELECT COUNT(*) FROM users"))
+    result = await db.execute(select(func.count()).select_from(User))
     total_users = result.scalar()
     metrics_output.append(f"yesod_users_total {total_users}")
 
     # OAuth accounts
-    result = await db.execute(text("SELECT COUNT(*) FROM oauth_accounts"))
+    result = await db.execute(select(func.count()).select_from(OAuthAccount))
     total_oauth = result.scalar()
     metrics_output.append(f"yesod_oauth_accounts_total {total_oauth}")
 
     # OAuth by provider
     result = await db.execute(
-        text("""
-        SELECT provider, COUNT(*) FROM oauth_accounts GROUP BY provider
-    """)
+        select(OAuthAccount.provider, func.count()).group_by(OAuthAccount.provider)
     )
     for row in result.fetchall():
         metrics_output.append(f'yesod_oauth_accounts_by_provider{{provider="{row[0]}"}} {row[1]}')
 
     # Active sessions
     result = await db.execute(
-        text("""
-        SELECT COUNT(*) FROM refresh_tokens
-        WHERE is_revoked = false AND expires_at > NOW()
-    """)
+        select(func.count())
+        .select_from(RefreshToken)
+        .where(RefreshToken.is_revoked.is_(False), RefreshToken.expires_at > func.now())
     )
     active_sessions = result.scalar()
     metrics_output.append(f"yesod_active_sessions {active_sessions}")
 
     # Deleted users pending purge
-    result = await db.execute(text("SELECT COUNT(*) FROM deleted_users"))
+    result = await db.execute(select(func.count()).select_from(DeletedUser))
     deleted_users = result.scalar()
     metrics_output.append(f"yesod_deleted_users_pending {deleted_users}")
 
@@ -123,28 +122,30 @@ async def metrics(db: AsyncSession = Depends(get_db)):
 
     # Login stats (last 24h) - only if audit schema exists
     try:
-        result = await db.execute(
+        result = await (await db.connection()).execute(
             text("""
             SELECT
                 success,
                 COUNT(*)
             FROM audit.login_history
-            WHERE created_at > NOW() - INTERVAL '24 hours'
+            WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
             GROUP BY success
-        """)
+        """),
+            {"project_id": str(project_id_of(db))},
         )
         for row in result.fetchall():
             status = "success" if row[0] else "failed"
             metrics_output.append(f'yesod_logins_24h{{status="{status}"}} {row[1]}')
 
         # Auth events (last 24h)
-        result = await db.execute(
+        result = await (await db.connection()).execute(
             text("""
             SELECT event_type, COUNT(*)
             FROM audit.auth_events
-            WHERE created_at > NOW() - INTERVAL '24 hours'
+            WHERE project_id = :project_id AND created_at > NOW() - INTERVAL '24 hours'
             GROUP BY event_type
-        """)
+        """),
+            {"project_id": str(project_id_of(db))},
         )
         for row in result.fetchall():
             metrics_output.append(f'yesod_auth_events_24h{{event_type="{row[0]}"}} {row[1]}')

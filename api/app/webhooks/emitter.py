@@ -8,6 +8,7 @@ import os
 import uuid
 from typing import Any
 
+from app.db.base import DEFAULT_PROJECT_ID
 from app.valkey import get_valkey
 from app.webhooks.config import WebhookConfigLoader
 from app.webhooks.event import WebhookEvent
@@ -81,6 +82,8 @@ class WebhookEmitter:
         event_type: str,
         user_id: uuid.UUID,
         extra_data: dict[str, Any] | None = None,
+        *,
+        project_id: uuid.UUID = DEFAULT_PROJECT_ID,
     ) -> WebhookEvent | None:
         """
         Convenience method for user-related events.
@@ -93,7 +96,10 @@ class WebhookEmitter:
         Returns:
             The created WebhookEvent, or None if skipped
         """
-        data: dict[str, Any] = {"user_id": str(user_id)}
+        if project_id != DEFAULT_PROJECT_ID:
+            # Other projects have no configured connection in this increment.
+            return None
+        data: dict[str, Any] = {"user_id": str(user_id), "project_id": str(project_id)}
         if extra_data:
             data.update(extra_data)
 

@@ -7,6 +7,8 @@ from enum import StrEnum
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.project import write_audit
+
 
 def _is_testing() -> bool:
     """Check if running in test environment."""
@@ -66,11 +68,12 @@ class AuditLogger:
         if _is_testing():
             return  # Skip audit logging in test environment
 
-        await db.execute(
+        await write_audit(
+            db,
             text("""
                 INSERT INTO audit.login_history
-                (user_id, provider, ip_address, user_agent, success, failure_reason)
-                VALUES (:user_id, :provider, :ip_address, :user_agent, :success, :failure_reason)
+                (project_id, user_id, provider, ip_address, user_agent, success, failure_reason)
+                VALUES (:project_id, :user_id, :provider, :ip_address, :user_agent, :success, :failure_reason)
             """),
             {
                 "user_id": str(user_id) if user_id else None,
@@ -100,11 +103,12 @@ class AuditLogger:
 
         normalized_details = AuditLogger._normalize_event_details(details)
 
-        await db.execute(
+        await write_audit(
+            db,
             text("""
                 INSERT INTO audit.auth_events
-                (user_id, event_type, details, ip_address, user_agent)
-                VALUES (:user_id, :event_type, :details::jsonb, :ip_address, :user_agent)
+                (project_id, user_id, event_type, details, ip_address, user_agent)
+                VALUES (:project_id, :user_id, :event_type, CAST(:details AS jsonb), :ip_address, :user_agent)
             """),
             {
                 "user_id": str(user_id) if user_id else None,

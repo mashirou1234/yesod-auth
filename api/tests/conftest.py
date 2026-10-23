@@ -17,9 +17,11 @@ os.environ["TESTING"] = "1"
 os.environ["DEBUG_OAUTH_ENABLED"] = "0"
 os.environ["MOCK_OAUTH_ENABLED"] = "1"
 
-from app.db.base import Base
+from app.db.base import DEFAULT_PROJECT_ID, Base
+from app.db.project import ProjectAsyncSession
 from app.db.session import get_db
 from app.main import app
+from app.models.project import Project
 
 # Test database URL (in-memory SQLite for speed)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -44,6 +46,7 @@ async def db_engine():
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(Project.__table__.insert().values(id=DEFAULT_PROJECT_ID, name="Default"))
 
     yield engine
 
@@ -56,7 +59,9 @@ async def db_engine():
 @pytest_asyncio.fixture
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     """Create test database session."""
-    async_session = async_sessionmaker(db_engine, class_=AsyncSession, expire_on_commit=False)
+    async_session = async_sessionmaker(
+        db_engine, class_=ProjectAsyncSession, project_id=DEFAULT_PROJECT_ID, expire_on_commit=False
+    )
 
     async with async_session() as session:
         yield session

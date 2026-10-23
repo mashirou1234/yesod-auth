@@ -1,8 +1,10 @@
 """Database session management."""
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.config import get_settings
+from app.db.base import DEFAULT_PROJECT_ID
+from app.db.project import ProjectAsyncSession
 
 settings = get_settings()
 
@@ -14,17 +16,20 @@ engine = create_async_engine(
 
 async_session_maker = async_sessionmaker(
     engine,
-    class_=AsyncSession,
+    class_=ProjectAsyncSession,
     expire_on_commit=False,
 )
 
-# Alias for webhook worker
-async_session_factory = async_session_maker
+
+# Explicit default-project factory for the existing worker.
+def async_session_factory():
+    """The existing webhook worker owns only the default project."""
+    return async_session_maker(project_id=DEFAULT_PROJECT_ID)
 
 
 async def get_db():
     """Dependency for getting database session."""
-    async with async_session_maker() as session:
+    async with async_session_maker(project_id=DEFAULT_PROJECT_ID) as session:
         try:
             yield session
         except Exception:

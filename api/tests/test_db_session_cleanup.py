@@ -24,7 +24,7 @@ async def test_get_db_normal_flow_closes_session(monkeypatch):
     monkeypatch.setattr(
         db_session_module,
         "async_session_maker",
-        lambda: _SessionContext(fake_session),
+        lambda **kwargs: _SessionContext(fake_session),
     )
 
     gen = db_session_module.get_db()
@@ -45,7 +45,7 @@ async def test_get_db_exception_flow_rolls_back_and_closes_session(monkeypatch):
     monkeypatch.setattr(
         db_session_module,
         "async_session_maker",
-        lambda: _SessionContext(fake_session),
+        lambda **kwargs: _SessionContext(fake_session),
     )
 
     gen = db_session_module.get_db()
