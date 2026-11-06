@@ -1,0 +1,25 @@
+name: Cloud tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up isolated test environment
+        run: bash scripts/cloud-setup.sh
+      - name: Lint and format
+        run: |
+          .venv/bin/ruff check api/
+          .venv/bin/ruff format --check api/
+      - name: Run SQLite and mocked OAuth tests
+        run: bash scripts/cloud-test.sh

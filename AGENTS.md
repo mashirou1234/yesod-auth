@@ -2,6 +2,7 @@
 
 - 日本語で簡潔に報告する
 - まず `artifacts/` を確認して前回結果を把握する
+- クラウド開発のセットアップ・検証は `docs/guides/codex-cloud-development.md` を参照し、`bash scripts/cloud-setup.sh` / `bash scripts/cloud-test.sh` を使う。本番シークレット不要。実OAuthログインとSQLite・モックテストの検証範囲を区別する。
 - 自動レーンは `<ORCH_RUN_COMMAND>` を使い、必ず 1 run 1 issue を守る
 - 自動レーンの commit/push は原則許可。Issue 指示やプロンプトで明示禁止がある場合のみ停止する
 - 手動レーン（Power User の直接対応）は一括処理可。ただし `codex:queue` 系ラベル遷移の整合は維持する

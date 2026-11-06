@@ -414,6 +414,9 @@ curl "http://localhost:8000/api/v1/auth/mock/users"
 
 ### Running Tests
 
+Codexクラウドでの継続開発（Docker・本番シークレット不要）は
+[`docs/guides/codex-cloud-development.md`](docs/guides/codex-cloud-development.md) を参照してください。
+
 ```bash
 cd api
 pip install -r requirements.txt
