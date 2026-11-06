@@ -84,7 +84,7 @@ CIプロファイルのDBは `postgres:16-alpine`、通常プロファイルはp
 
 テスト・lintのCIはコスト方針により **Woodpeckerのみ** で実行します。
 `.woodpecker.yml` の `python-checks` はPRとmain/masterへのpushを対象に、
-`python:3.12-slim` でセットアップ・Ruff・SQLite/モックテストを実行します。
+`python:3.12-slim` でセットアップ・Ruff・SQLite/モックテストとPR自動化のモックテストを実行します。
 クラウド用スクリプトを共有するため、OAuthシークレットやDockerソケットのマウントは不要です。
 `docs/**`, `README.md`, `AGENTS.md` のみの変更はスキップし、他のファイルを含む場合や
 変更一覧が空の場合は実行します。失敗時の既存ntfy通知設定は維持しています。
@@ -93,8 +93,9 @@ CIの運用上の注意点:
 
 - GitHub Actionsの旧 `ci.yml` と追加時の `cloud-tests.yml` は削除しました。
   旧Docker CIにあったTwitch secret生成漏れの経路も廃止しています。
-- PR自動承認・自動マージの既存GitHub Actionsは維持しています。テスト・lintとは別の
-  ランナー実行なので、GitHubランナーを完全に停止する場合はこれらと必須チェックの設定も見直してください。
+- PR自動承認・自動マージのGitHub Actionsも削除しました。Woodpeckerのmain cronに移行します。
+  bot用secret・cron・旧必須チェックの移行は [PR自動化ガイド](woodpecker-pr-automation.md) を参照してください。
+  リポジトリの設定ファイルだけではcronやsecretは登録されません。
 - Woodpecker runnerにはコンテナレジストリとPyPIへのアクセスが必要です。
   プロキシ配下ではrunner側でプロキシ・CAを設定してください。セッション固有のCAはリポジトリに保存しません。
 - 必須チェックは実際に報告されるWoodpeckerのコンテキストを使用します
@@ -119,3 +120,4 @@ Woodpecker移行時には、公式CLI v3.20.1の `woodpecker-cli lint --strict .
 変更前のアプリテスト失敗はありません。初回のclone・Dockerソケットエラーは
 サンドボックス実行権限によるもので、権限付き実行で解消しました。
 Woodpeckerサーバー上の実行結果はPRのチェックで確認してください。
+PR自動化の回帰テストは `python3 -m unittest discover -s scripts/tests -v` で実行できます。

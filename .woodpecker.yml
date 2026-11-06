@@ -1,7 +1,10 @@
-# テスト・lintはWoodpeckerで実行する（GitHub Actionsでは実行しない）。
+# CIとPR自動化はWoodpeckerで実行する。
 when:
   - event: [pull_request]
   - event: [push]
+    branch: [main, master]
+  - event: [cron]
+    cron: pr-maintenance
     branch: [main, master]
 
 steps:
@@ -16,7 +19,24 @@ steps:
       - bash scripts/cloud-setup.sh
       - .venv/bin/ruff check api/
       - .venv/bin/ruff format --check api/
+      - .venv/bin/ruff check --config api/pyproject.toml scripts/woodpecker_pr_automation.py scripts/tests/
+      - .venv/bin/ruff format --config api/pyproject.toml --check scripts/woodpecker_pr_automation.py scripts/tests/
+      - python -m unittest discover -s scripts/tests -v
       - bash scripts/cloud-test.sh
+
+  # Repository secret must allow ONLY cron events in Woodpecker settings.
+  # The scheduled ref must be the protected main/master branch, never a PR ref.
+  - name: pr-maintenance
+    image: python:3.12-slim
+    when:
+      - event: [cron]
+        cron: pr-maintenance
+        branch: [main, master]
+    environment:
+      PR_AUTOMATION_TOKEN:
+        from_secret: pr_automation_token
+    commands:
+      - python scripts/woodpecker_pr_automation.py --apply
 
   - name: notify-failure-ntfy
     image: codeberg.org/l-x/woodpecker-ntfy

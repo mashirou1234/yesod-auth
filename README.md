@@ -437,21 +437,19 @@ rg -n '^/artifacts/$|^artifacts/\\*\\*$|^api/.hypothesis/$|^\\.codex/skills/$' .
 
 ## PR Auto-Approve + Auto-Merge
 
-This repository includes GitHub Actions workflows for automatic PR approval and merge:
+PR自動承認・自動マージもWoodpeckerで実行します。GitHub Actionsのワークフローは使用しません。
+保護されたmainの `pr-maintenance` 定期実行が、ドラフト以外のPRを確認します。
+最新コミットのWoodpeckerチェックと他のチェックが成功したPRをbotが承認し、
+GitHubのマージ要件を満たした場合に、そのコミットを指定してsquashマージします。
+PRのコードは定期実行でcheckoutしません。
 
-- `.github/workflows/pr-auto-approve.yml`
-  - Automatically approves pull requests targeting `main` or `master`
-- `.github/workflows/pr-auto-merge.yml`
-  - Enables GitHub auto-merge (squash) for pull requests targeting `main` or `master`
-  - Actual merge happens only after all required checks pass
+初期設定（bot用secret・cron・必須チェック）と動作確認は
+[`Woodpecker PR自動化ガイド`](docs/guides/woodpecker-pr-automation.md) を参照してください。
+レビュー前のPRを維持したい場合はドラフトにしてください。
 
-### Required GitHub repository settings
+### Repository setup
 
-1. Enable `Allow auto-merge` in repository settings
-2. Configure branch protection for `main`/`master` with required status checks
-3. Register your CI checks (including external CI like Woodpecker) as required checks
-4. Keep `PR Auto Approve` and `PR Auto Merge` workflows enabled in GitHub Actions
-5. Bootstrap Codex labels when setting up the repository:
+Codexラベルの初期化:
 
 ```bash
 ./scripts/ensure_github_labels.sh
@@ -483,9 +481,8 @@ python3 scripts/queue_seed_snapshot.py --repo mashirou1234/yesod-auth --format m
 - `duplicate_slots` が空
 - `bench_count` は `0`（番号プレフィックス廃止方針）
 
-If a pull request was opened while the auto-approve / auto-merge workflows were disabled, enabling the workflows later does not retroactively register auto-merge for that PR. In that case, reopen/synchronize the PR or enable auto-merge manually.
-
-With this setup, a PR is auto-approved and put into auto-merge waiting state on open/update, then merged automatically when required CI checks complete successfully.
+設定済みのcronが次回実行時に対象PRを再確認するため、PRを開き直す必要はありません。
+GitHubのauto-merge待機キューは使用せず、各cronがCIとマージ要件を確認して実行します。
 
 ## Codex Automation Ops（commit/push と issue 処理）
 
@@ -509,7 +506,8 @@ codex-orch 運用の基本方針は、手動レーンと自動レーンで責務
 
 docs-only として扱う対象は `docs/**`, `README.md`, `AGENTS.md` に固定します。
 これ以外のファイルが 1 つでも含まれる場合、または判定できない場合は通常 CI を実行します。
-branch protection の必須チェック例は `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` です。
+branch protection の必須チェックはPRで報告される `ci/woodpecker/pr/woodpecker` を使用します。
+廃止した `auto-approve` / `enable-auto-merge` を必須チェックに残さないでください。
 
 ### Generate TypeScript Types
 

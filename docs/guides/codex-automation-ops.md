@@ -10,7 +10,7 @@ README / AGENTS / CI 設定を同時に揃える前提で利用してくださ�
 | `<ORCH_RUN_COMMAND>` | 自動レーン実行コマンド | 実行環境ごとの orch 実コマンド |
 | `<REPO_SLUG>` | `owner/repo` 形式 | `mashirou1234/yesod-auth` |
 | `<BASE_BRANCH>` | 既定マージ先ブランチ | `main` |
-| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `ci/woodpecker/push/woodpecker`, `auto-approve`, `enable-auto-merge` など |
+| `<REQUIRED_CHECKS>` | branch protection 必須チェック | `ci/woodpecker/pr/woodpecker`（PRで報告される名前を確認） |
 | `<LABEL_SET>` | codex 系ラベルセット | `codex`, `codex-automation`, `codex:priority`, `codex:queue`, `codex:claimed`, `codex:blocked`, `codex:pr-opened` |
 
 ## 2. 標準運用ルール（テンプレ文面）
@@ -85,3 +85,9 @@ bash scripts/weekly_git_inventory.sh
 - [ ] `queue -> claimed -> (blocked | pr-opened) -> merge確認 -> close` が運用文書で一致している
 - [ ] `codex:priority` を含む issue 選定順が README / AGENTS / 実行プロンプトと矛盾していない
 - [ ] run 記録が preflight / snapshot / run log / PR reconcile / memory の順で追跡できる
+
+## 7. WoodpeckerでのPR承認・マージ
+
+GitHub Actionsは使用せず、保護されたmainのcronからPRを処理します。
+secretのイベント制限、bot権限、旧必須チェックの移行は
+[Woodpecker PR自動化ガイド](woodpecker-pr-automation.md) を参照してください。
