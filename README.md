@@ -416,6 +416,8 @@ curl "http://localhost:8000/api/v1/auth/mock/users"
 
 Codexクラウドでの継続開発（Docker・本番シークレット不要）は
 [`docs/guides/codex-cloud-development.md`](docs/guides/codex-cloud-development.md) を参照してください。
+テスト・lintのCIはWoodpeckerのみで実行します。PRとmain/masterへのpushで、
+Python 3.12上のRuff・SQLite/モックテストを実行し、GitHub Actionsのテスト実行は使用しません。
 
 ```bash
 cd api

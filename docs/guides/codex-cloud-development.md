@@ -82,17 +82,23 @@ CIプロファイルのDBは `postgres:16-alpine`、通常プロファイルはp
 
 ## CIと今回の確認結果
 
-追加した `.github/workflows/cloud-tests.yml` はPRと手動起動で、Python 3.12上の
-セットアップ・Ruff・SQLite/モックテストを実行します。PRをドラフトにしてレビューし、
-既存の自動マージを有効にする操作は行いません。
+テスト・lintのCIはコスト方針により **Woodpeckerのみ** で実行します。
+`.woodpecker.yml` の `python-checks` はPRとmain/masterへのpushを対象に、
+`python:3.12-slim` でセットアップ・Ruff・SQLite/モックテストを実行します。
+クラウド用スクリプトを共有するため、OAuthシークレットやDockerソケットのマウントは不要です。
+`docs/**`, `README.md`, `AGENTS.md` のみの変更はスキップし、他のファイルを含む場合や
+変更一覧が空の場合は実行します。失敗時の既存ntfy通知設定は維持しています。
 
-既存CIの注意点:
+CIの運用上の注意点:
 
-- `.github/workflows/ci.yml` は手動起動のみ。Dockerテスト用secret生成にTwitchの2ファイルがなく、
-  `api-ci` が参照する全secretと一致していません。この経路は今回変更・実行していません。
-- `.woodpecker.yml` はRust向けで、Cargo.tomlがないこのPythonリポジトリではスキップする設定です。
-  Pythonテストを保証しません。既存の必須チェックや外部CIの運用変更は別途検討してください。
-- 新しいCloud testsを必須チェックにするにはリポジトリ管理側の設定が必要です。今回設定は変更しません。
+- GitHub Actionsの旧 `ci.yml` と追加時の `cloud-tests.yml` は削除しました。
+  旧Docker CIにあったTwitch secret生成漏れの経路も廃止しています。
+- PR自動承認・自動マージの既存GitHub Actionsは維持しています。テスト・lintとは別の
+  ランナー実行なので、GitHubランナーを完全に停止する場合はこれらと必須チェックの設定も見直してください。
+- Woodpecker runnerにはコンテナレジストリとPyPIへのアクセスが必要です。
+  プロキシ配下ではrunner側でプロキシ・CAを設定してください。セッション固有のCAはリポジトリに保存しません。
+- 必須チェックは実際に報告されるWoodpeckerのコンテキストを使用します
+  （このPRでは `ci/woodpecker/pr/woodpecker`）。リポジトリの保護設定は今回変更していません。
 
 2026-11-06、ベース `e3a896f83875aee27fb9fd4152933de24dbdd711` での結果:
 
@@ -105,6 +111,11 @@ CIプロファイルのDBは `postgres:16-alpine`、通常プロファイルはp
 | PostgreSQL 16 / Valkey | 未起動 | healthy / healthy |
 | 空DBへのAlembic upgrade head | 未実行 | 001〜006成功 |
 
+Woodpecker移行時には、公式CLI v3.20.1の `woodpecker-cli lint --strict .woodpecker.yml` が成功しました。
+さらに `python:3.12-slim` の新規コンテナで `python-checks` と同じ4コマンドを実行し、
+依存整合性・Ruff lint/format・326テストが成功しました。
+クラウドのCAバンドルを読み取り専用でマウントして `PIP_CERT` に指定し、TLS検証を維持しています。
+
 変更前のアプリテスト失敗はありません。初回のclone・Dockerソケットエラーは
 サンドボックス実行権限によるもので、権限付き実行で解消しました。
-GitHub Actions上の新規ワークフローの実行結果はPRのチェックで別途確認してください。
+Woodpeckerサーバー上の実行結果はPRのチェックで確認してください。
