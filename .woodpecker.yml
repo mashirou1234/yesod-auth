@@ -1,108 +1,42 @@
-# push(main/master) と pull_request を有効化。
-# 非Rustリポジトリで誤配布された場合は、Cargo.toml 未検出時に各ステップを成功スキップする。
+# CIとPR自動化はWoodpeckerで実行する。
 when:
   - event: [pull_request]
   - event: [push]
     branch: [main, master]
+  - event: [cron]
+    cron: pr-maintenance
+    branch: [main, master]
 
 steps:
-  - name: fmt
-    image: rust:1
+  - name: python-checks
+    image: python:3.12-slim
+    when:
+      - event: [pull_request, push]
+        path:
+          exclude: ["docs/**", "README.md", "AGENTS.md"]
+          on_empty: true
     commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip fmt."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - rustup component add rustfmt
-      - cargo fmt --check
+      - bash scripts/cloud-setup.sh
+      - .venv/bin/ruff check api/
+      - .venv/bin/ruff format --check api/
+      - .venv/bin/ruff check --config api/pyproject.toml scripts/woodpecker_pr_automation.py scripts/tests/
+      - .venv/bin/ruff format --config api/pyproject.toml --check scripts/woodpecker_pr_automation.py scripts/tests/
+      - python -m unittest discover -s scripts/tests -v
+      - bash scripts/cloud-test.sh
 
-  - name: clippy
-    image: rust:1
+  # Repository secret must allow ONLY cron events in Woodpecker settings.
+  # The scheduled ref must be the protected main/master branch, never a PR ref.
+  - name: pr-maintenance
+    image: python:3.12-slim
+    when:
+      - event: [cron]
+        cron: pr-maintenance
+        branch: [main, master]
+    environment:
+      PR_AUTOMATION_TOKEN:
+        from_secret: pr_automation_token
     commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip clippy."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - rustup component add clippy
-      - cargo clippy -- -D warnings
-
-  - name: test
-    image: rust:1
-    commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip test."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - cargo test
-
-  - name: build-release
-    image: rust:1
-    commands:
-      - |
-        set -eu
-        if [ ! -f Cargo.toml ]; then
-          echo "Cargo.toml not found. Skip build-release."
-          exit 0
-        fi
-        if [ -f rust-toolchain.toml ]; then
-          toolchain="$(sed -nE 's/^[[:space:]]*channel[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' rust-toolchain.toml | head -n 1)"
-        elif [ -f rust-toolchain ]; then
-          toolchain="$(head -n 1 rust-toolchain | tr -d '[:space:]')"
-        else
-          toolchain=""
-        fi
-        if [ -n "${toolchain}" ]; then
-          rustup toolchain install "${toolchain}" --profile minimal
-          rustup default "${toolchain}"
-        else
-          echo "rust-toolchain* not found. Use rust:1 (stable)."
-        fi
-      - cargo build --release
+      - python scripts/woodpecker_pr_automation.py --apply
 
   - name: notify-failure-ntfy
     image: codeberg.org/l-x/woodpecker-ntfy
